@@ -19,7 +19,7 @@ Bellow a couple examples of what's possible (but not limited to) with B1SLayer:
 var serviceLayer = new SLConnection("https://mysapserver:50000/b1s/v1", "SBO_COMPANYDB", "manager", "123456");
 
 // Performs a GET on /Orders(823) and deserializes the result in a custom model class
-var bp = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
+var order = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
 
 // Performs GET on /BusinessPartners with query string and header parameters supported by Service Layer
 // The result is deserialized in a List of a custom model class
