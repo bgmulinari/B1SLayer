@@ -9,10 +9,23 @@
     <RepositoryUrl>https://github.com/bgmulinari/B1SLayer.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>fluent sap business one b1 service layer client flurl</PackageTags>
+    <PackageTags>sap business one;sap b1;service layer;http client;fluent;flurl</PackageTags>
     <PackageReleaseNotes>https://github.com/bgmulinari/B1SLayer/releases</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>1.0.1</Version>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>B1SLayer.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="B1SLayer.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="B1SLayer.xml" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Flurl.Http" Version="3.0.1" />
