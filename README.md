@@ -16,7 +16,7 @@ Bellow a couple examples of what's possible (but not limited to) with B1SLayer:
 ````c#
 // The connection object. Only one instance per company/user should be used in the application
 // The Service Layer session is managed automatically and renewed whenever necessary
-var serviceLayer = new SLConnection("https://mysapserver:50000/b1s/v1", "SBO_COMPANYDB", "manager", "123456");
+var serviceLayer = new SLConnection("https://mysapserver:50000/b1s/v1", "SBO_COMPANYDB", "manager", "12345");
 
 // Performs a GET on /Orders(823) and deserializes the result in a custom model class
 var order = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
@@ -35,8 +35,8 @@ var bpList = await serviceLayer.Request("BusinessPartners")
 // creating a new order and deserializing the result in a custom model class
 var newOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNewOrderObject);
 
-// Performs PATCH on /BusinessPartners, updating the CardName of the Business Partner
-await serviceLayer.Request("BusinessPartners('C00001')").PatchAsync(new { CardName = "An updated BP name" });
+// Performs PATCH on /BusinessPartners('C00001'), updating the CardName of the Business Partner
+await serviceLayer.Request("BusinessPartners", "C00001").PatchAsync(new { CardName = "An updated BP name" });
 
 // Performs a POST on /Attachments2 with the provided file as the attachment
 var newAttachment = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
@@ -44,8 +44,14 @@ var newAttachment = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf
 // Batch requests! Performs multiple operations in SAP in a single HTTP request
 var batchRequests = new BatchRequest[]
 {
-    new BatchRequest(HttpMethod.Post, "BusinessPartners", new { CardCode = "C00001", CardName = "I'm a new BP" }),
-    new BatchRequest(HttpMethod.Patch, "BusinessPartners('C00001')", new { CardName = "This is my updated name" }),
+    new BatchRequest(HttpMethod.Post, // HTTP method
+        "BusinessPartners", // resource
+        new { CardCode = "C00001", CardName = "I'm a new BP" } // object to be sent as the JSON body
+    ),
+    new BatchRequest(HttpMethod.Patch, 
+        "BusinessPartners('C00001')", 
+        new { CardName = "This is my updated name" }
+    ),  
     new BatchRequest(HttpMethod.Delete, "BusinessPartners('C00001')")
 };
 
