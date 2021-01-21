@@ -139,6 +139,17 @@ namespace B1SLayer
         }
 
         /// <summary>
+        /// Performs a POST request without a JSON body.
+        /// </summary>
+        public async Task PostAsync()
+        {
+            await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync();
+            });
+        }
+
+        /// <summary>
         /// Performs a PATCH request with the provided parameters.
         /// </summary>
         public async Task PatchAsync(object data)
