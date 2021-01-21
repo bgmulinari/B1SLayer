@@ -1,5 +1,6 @@
 ﻿using Flurl;
 using Flurl.Http;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
@@ -58,6 +59,25 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 return await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
+            });
+        }
+
+        /// <summary>
+        /// Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+        /// </summary>
+        /// <param name="anonymousTypeObject">
+        /// The anonymous type object.
+        /// </param>
+        /// <param name="jsonSerializerSettings">
+        /// The <see cref="JsonSerializerSettings"/> used to deserialize the object. If this is null, 
+        /// default serialization settings will be used.
+        /// </param>
+        public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerSettings jsonSerializerSettings = null)
+        {
+            return await _slConnection.ExecuteRequest(async () =>
+            {
+                string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
+                return JsonConvert.DeserializeAnonymousType(stringResult, anonymousTypeObject, jsonSerializerSettings);
             });
         }
 

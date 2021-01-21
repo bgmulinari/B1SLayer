@@ -465,6 +465,18 @@
             Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.String"/>.
             </summary>
         </member>
+        <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,Newtonsoft.Json.JsonSerializerSettings)">
+            <summary>
+            Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+            </summary>
+            <param name="anonymousTypeObject">
+            The anonymous type object.
+            </param>
+            <param name="jsonSerializerSettings">
+            The <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> used to deserialize the object. If this is null, 
+            default serialization settings will be used.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLRequest.GetBytesAsync">
             <summary>
             Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.Byte"/> array.
