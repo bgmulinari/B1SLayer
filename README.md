@@ -60,9 +60,11 @@ var batchRequests = new BatchRequest[]
 var batchResult = await serviceLayer.PostBatchAsync(batchRequests);
 ````
 
-## Get it on NuGet:
+## Get it on NuGet
 
 `PM> Install-Package B1SLayer`
+
+`dotnet add package B1SLayer`
 
 #### Special thanks
 
