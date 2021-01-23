@@ -42,17 +42,17 @@ await serviceLayer.Request("BusinessPartners", "C00001").PatchAsync(new { CardNa
 var newAttachment = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
 
 // Batch requests! Performs multiple operations in SAP in a single HTTP request
-var batchRequests = new BatchRequest[]
+var batchRequests = new SLBatchRequest[]
 {
-    new BatchRequest(HttpMethod.Post, // HTTP method
+    new SLBatchRequest(HttpMethod.Post, // HTTP method
         "BusinessPartners", // resource
         new { CardCode = "C00001", CardName = "I'm a new BP" } // object to be sent as the JSON body
     ),
-    new BatchRequest(HttpMethod.Patch, 
+    new SLBatchRequest(HttpMethod.Patch, 
         "BusinessPartners('C00001')", 
         new { CardName = "This is my updated name" }
     ),  
-    new BatchRequest(HttpMethod.Delete, 
+    new SLBatchRequest(HttpMethod.Delete, 
         "BusinessPartners('C00001')"
     )
 };
