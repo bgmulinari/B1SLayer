@@ -100,9 +100,6 @@ namespace B1SLayer
         /// <param name="password">
         /// The password for the provided user.
         /// </param>
-        /// <param name="loginNow">
-        /// Whether the login should be performed immediately. By default the login is performed automatically before the first request.
-        /// </param>
         /// <param name="language">
         /// The language code to be used. Specify a code if you want error messages in some specific language other than English.
         /// A GET request to the UserLanguages resource will return all available languages and their respective codes.
@@ -111,7 +108,7 @@ namespace B1SLayer
         /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
         /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
         /// </param>
-        public SLConnection(Uri serviceLayerRoot, string companyDB, string userName, string password, bool loginNow = false, int? language = null, int numberOfAttempts = 3)
+        public SLConnection(Uri serviceLayerRoot, string companyDB, string userName, string password, int? language = null, int numberOfAttempts = 3)
         {
             ServiceLayerRoot = serviceLayerRoot;
             CompanyDB = companyDB;
@@ -128,12 +125,6 @@ namespace B1SLayer
 
             if (string.IsNullOrWhiteSpace(Password))
                 throw new ArgumentException("password can not be empty.");
-
-            if (loginNow)
-            {
-                Login().Wait();
-                _lastRequest = DateTime.Now;
-            }
         }
 
         /// <summary>
@@ -152,9 +143,6 @@ namespace B1SLayer
         /// <param name="password">
         /// The password for the provided user.
         /// </param>
-        /// <param name="loginNow">
-        /// Whether the login should be performed immediately. By default the login is performed automatically before the first request.
-        /// </param>
         /// <param name="language">
         /// The language code to be used. Specify a code if you want error messages in some specific language other than English.
         /// A GET request to the UserLanguages resource will return all available languages and their respective codes.
@@ -163,8 +151,8 @@ namespace B1SLayer
         /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
         /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
         /// </param>
-        public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, bool loginNow = false, int? language = null, int numberOfAttempts = 3)
-            : this(new Uri(serviceLayerRoot), companyDB, userName, password, loginNow, language, numberOfAttempts) { }
+        public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language = null, int numberOfAttempts = 3)
+            : this(new Uri(serviceLayerRoot), companyDB, userName, password, language, numberOfAttempts) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLConnection"/> class.
@@ -183,7 +171,7 @@ namespace B1SLayer
         /// The password for the provided user.
         /// </param>
         public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password)
-            : this(new Uri(serviceLayerRoot), companyDB, userName, password, false, null) { }
+            : this(new Uri(serviceLayerRoot), companyDB, userName, password, null) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLConnection"/> class.
@@ -206,7 +194,7 @@ namespace B1SLayer
         /// A GET request to the UserLanguages resource will return all available languages and their respective codes.
         /// </param>
         public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language)
-            : this(new Uri(serviceLayerRoot), companyDB, userName, password, false, language) { }
+            : this(new Uri(serviceLayerRoot), companyDB, userName, password, language) { }
         #endregion
 
         #region Authentication Methods
