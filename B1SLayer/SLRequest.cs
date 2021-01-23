@@ -22,21 +22,30 @@ namespace B1SLayer
 
         /// <summary>
         /// Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
-        /// This automatically deals with collections, so enveloping your collection in a root class is not necessary.
         /// </summary>
         /// <typeparam name="T">
         /// The object type for the result to be deserialized into.
         /// </typeparam>
-        public async Task<T> GetAsync<T>()
+        /// <param name="unwrapCollection">
+        /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+        /// </param>
+        public async Task<T> GetAsync<T>(bool unwrapCollection = true)
         {
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
                 var jObject = JObject.Parse(stringResult);
 
-                // Checks if the result is a collection by selecting the "value" token
-                var valueCollection = jObject.SelectToken("value");
-                return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
+                if (unwrapCollection)
+                {
+                    // Checks if the result is a collection by selecting the "value" token
+                    var valueCollection = jObject.SelectToken("value");
+                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
+                }
+                else
+                {
+                    return jObject.ToObject<T>();
+                }
             });
         }
 
