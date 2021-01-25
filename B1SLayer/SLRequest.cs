@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 
 namespace B1SLayer
 {
+    /// <summary>
+    /// Represents a request to the Service Layer.
+    /// </summary>
+    /// <remarks>
+    /// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
+    /// </remarks>
     public class SLRequest
     {
         private readonly SLConnection _slConnection;

@@ -9,12 +9,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace B1SLayer
 {
     /// <summary>
-    /// Represents a connection to the SAP Business One Service Layer.
+    /// Represents a connection to the Service Layer.
     /// </summary>
     /// <remarks>
     /// Only one instance per company/user should be used in the application.
@@ -22,8 +23,9 @@ namespace B1SLayer
     public class SLConnection
     {
         #region Fields
-        private int _sessionTimeout;
         private DateTime _lastRequest = DateTime.MinValue;
+        private SLLoginResponse _loginResponse;
+        private SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly HttpStatusCode[] _returnCodesToRetry = new[]
         {
             HttpStatusCode.Unauthorized,
@@ -63,7 +65,28 @@ namespace B1SLayer
         /// A container that keeps the session cookies returned by the Login request. 
         /// These cookies are sent in every request and overwritten whenever a new Login is performed.
         /// </summary>
-        public CookieJar Cookies { get; private set; }
+        internal CookieJar Cookies { get; private set; }
+        /// <summary>
+        /// Gets information about the latest Login request.
+        /// </summary>
+        public SLLoginResponse LoginResponse
+        {
+            get
+            {
+                // Returns a new object so the login control can't be manipulated externally
+                return new SLLoginResponse()
+                {
+                    LastLogin = _loginResponse.LastLogin,
+                    SessionId = _loginResponse.SessionId,
+                    SessionTimeout = _loginResponse.SessionTimeout,
+                    Version = _loginResponse.Version
+                };
+            }
+            private set
+            {
+                _loginResponse = value;
+            }
+        }
         #endregion
 
         #region Constructors
@@ -110,21 +133,22 @@ namespace B1SLayer
         /// </param>
         public SLConnection(Uri serviceLayerRoot, string companyDB, string userName, string password, int? language = null, int numberOfAttempts = 3)
         {
+            if (string.IsNullOrWhiteSpace(companyDB))
+                throw new ArgumentException("companyDB can not be empty.");
+
+            if (string.IsNullOrWhiteSpace(userName))
+                throw new ArgumentException("userName can not be empty.");
+
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("password can not be empty.");
+
             ServiceLayerRoot = serviceLayerRoot;
             CompanyDB = companyDB;
             UserName = userName;
             Password = password;
             Language = language;
             NumberOfAttempts = numberOfAttempts;
-
-            if (string.IsNullOrWhiteSpace(CompanyDB))
-                throw new ArgumentException("companyDB can not be empty.");
-
-            if (string.IsNullOrWhiteSpace(UserName))
-                throw new ArgumentException("userName can not be empty.");
-
-            if (string.IsNullOrWhiteSpace(Password))
-                throw new ArgumentException("password can not be empty.");
+            LoginResponse = new SLLoginResponse();
         }
 
         /// <summary>
@@ -199,32 +223,59 @@ namespace B1SLayer
 
         #region Authentication Methods
         /// <summary>
-        /// If the current session is expired or non-existent, performs a POST Login request with the provided information. 
-        /// If successfull, keeps the returned session timeout  value in order to control the session expiration time. 
-        /// It will also keep the returned cookies in the <see cref="Cookies"/> property to be sent in the subsequent requests.
+        /// If the current session is expired or non-existent, performs a POST Login request with the provided information.
+        /// Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
         /// </summary>
         /// <param name="forceLogin">
         /// Whether the login request should be forced even if the current session has not expired.
         /// </param>
-        private async Task Login(bool forceLogin = false)
+        public async Task<SLLoginResponse> Login(bool forceLogin = false)
         {
-            if (forceLogin)
-                _lastRequest = DateTime.MinValue;
+            return await ExecuteLogin(forceLogin, true);
+        }
 
-            // Session still valid, no need to login again
-            if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _sessionTimeout)
-                return;
+        /// <summary>
+        /// Internal login method where a return is not needed.
+        /// </summary>
+        private async Task LoginInternal(bool forceLogin = false)
+        {
+            await ExecuteLogin(forceLogin, false);
+        }
+
+        /// <summary>
+        /// Performs the POST Login request to the Service Layer.
+        /// </summary>
+        /// <param name="forceLogin">
+        /// Whether the login request should be forced even if the current session has not expired.
+        /// </param>
+        /// <param name="expectReturn">
+        /// Wheter the login information should be returned.
+        /// </param>
+        private async Task<SLLoginResponse> ExecuteLogin(bool forceLogin = false, bool expectReturn = false)
+        {
+            // Prevents multiple login requests in a multi-threaded scenario
+            await _semaphoreSlim.WaitAsync();
 
             try
             {
+                if (forceLogin)
+                    _lastRequest = default;
+
+                // Session still valid, no need to login again
+                if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout)
+                    return expectReturn ? LoginResponse : null;
+
                 var loginResponse = await ServiceLayerRoot
                     .AppendPathSegment("Login")
                     .WithCookies(out var cookieJar)
                     .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
                     .ReceiveJson<SLLoginResponse>();
 
-                _sessionTimeout = loginResponse.SessionTimeout;
                 Cookies = cookieJar;
+                _loginResponse = loginResponse;
+                _loginResponse.LastLogin = DateTime.Now;
+
+                return expectReturn ? LoginResponse : null;
             }
             catch (FlurlHttpException ex)
             {
@@ -235,6 +286,10 @@ namespace B1SLayer
                     throw new SLException(response.Error.Message.Value, response.Error, ex);
                 }
                 catch { throw ex; }
+            }
+            finally
+            {
+                _semaphoreSlim.Release();
             }
         }
 
@@ -248,7 +303,8 @@ namespace B1SLayer
             try
             {
                 await ServiceLayerRoot.AppendPathSegment("Logout").WithCookies(Cookies).PostAsync();
-                _lastRequest = DateTime.MinValue;
+                _loginResponse = new SLLoginResponse();
+                _lastRequest = default;
                 Cookies = null;
             }
             catch (FlurlHttpException ex)
@@ -303,27 +359,30 @@ namespace B1SLayer
         /// </summary>
         internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action)
         {
+            _lastRequest = DateTime.Now;
+
             if (NumberOfAttempts < 1)
                 throw new ArgumentException("The number of attempts can not be lower than 1.");
 
             int retryCount = NumberOfAttempts;
             var exceptions = new List<Exception>();
 
-            await Login();
+            await LoginInternal();
 
             while (true)
             {
                 try
                 {
                     var result = await action();
-                    _lastRequest = DateTime.Now;
                     return result;
                 }
                 catch (FlurlHttpException ex)
                 {
                     try
                     {
-                        if (ex.Call.HttpResponseMessage == null) throw;
+                        if (ex.Call.HttpResponseMessage == null) 
+                            throw;
+
                         var response = await ex.GetResponseJsonAsync<SLResponseError>();
                         exceptions.Add(new SLException(response.Error.Message.Value, response.Error, ex));
                     }
@@ -333,15 +392,15 @@ namespace B1SLayer
                     }
 
                     // Whether the request should be retried
-                    if (!_returnCodesToRetry.Any(x => x == ex.Call.HttpResponseMessage.StatusCode))
+                    if (!_returnCodesToRetry.Any(x => x == ex.Call.HttpResponseMessage?.StatusCode))
                     {
                         break;
                     }
 
                     // Forces a new login request in case the response is 401 Unauthorized
-                    if (ex.Call.HttpResponseMessage.StatusCode == HttpStatusCode.Unauthorized)
+                    if (ex.Call.HttpResponseMessage?.StatusCode == HttpStatusCode.Unauthorized)
                     {
-                        await Login(true);
+                        await LoginInternal(true);
                     }
                 }
                 catch (Exception)
@@ -504,7 +563,7 @@ namespace B1SLayer
         /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
         /// </returns>
         public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files)
-        { 
+        {
             return await PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
         }
 

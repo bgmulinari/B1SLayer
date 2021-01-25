@@ -4,9 +4,14 @@
         <name>B1SLayer</name>
     </assembly>
     <members>
+        <member name="T:B1SLayer.SLBatchRequest">
+            <summary>
+            Represents a single request to be sent in a batch to the Service Layer.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLConnection">
             <summary>
-            Represents a connection to the SAP Business One Service Layer.
+            Represents a connection to the Service Layer.
             </summary>
             <remarks>
             Only one instance per company/user should be used in the application.
@@ -48,12 +53,17 @@
             These cookies are sent in every request and overwritten whenever a new Login is performed.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLConnection.LoginResponse">
+            <summary>
+            Gets information about the latest Login request.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLConnection.#cctor">
             <summary>
             Set the default settings to Flurl.Http.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Boolean,System.Nullable{System.Int32},System.Int32)">
+        <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLConnection"/> class.
             Only one instance per company/user should be used in the application.
@@ -69,9 +79,6 @@
             </param>
             <param name="password">
             The password for the provided user.
-            </param>
-            <param name="loginNow">
-            Whether the login should be performed immediately. By default the login is performed automatically before the first request.
             </param>
             <param name="language">
             The language code to be used. Specify a code if you want error messages in some specific language other than English.
@@ -82,7 +89,7 @@
             If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Boolean,System.Nullable{System.Int32},System.Int32)">
+        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLConnection"/> class.
             Only one instance per company/user should be used in the application.
@@ -98,9 +105,6 @@
             </param>
             <param name="password">
             The password for the provided user.
-            </param>
-            <param name="loginNow">
-            Whether the login should be performed immediately. By default the login is performed automatically before the first request.
             </param>
             <param name="language">
             The language code to be used. Specify a code if you want error messages in some specific language other than English.
@@ -153,9 +157,8 @@
         </member>
         <member name="M:B1SLayer.SLConnection.Login(System.Boolean)">
             <summary>
-            If the current session is expired or non-existent, performs a POST Login request with the provided information. 
-            If successfull, keeps the returned session timeout  value in order to control the session expiration time. 
-            It will also keep the returned cookies in the <see cref="P:B1SLayer.SLConnection.Cookies"/> property to be sent in the subsequent requests.
+            If the current session is expired or non-existent, performs a POST Login request with the provided information.
+            Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
             </summary>
             <param name="forceLogin">
             Whether the login request should be forced even if the current session has not expired.
@@ -446,14 +449,29 @@
             Custom HttpClientFactory implementation for Service Layer.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLRequest.GetAsync``1">
+        <member name="T:B1SLayer.SLException">
+            <summary>
+            Represents a Service Layer exception.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLRequest">
+            <summary>
+            Represents a request to the Service Layer.
+            </summary>
+            <remarks>
+            The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions"/>.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean)">
             <summary>
             Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
-            This automatically deals with collections, so enveloping your collection in a root class is not necessary.
             </summary>
             <typeparam name="T">
             The object type for the result to be deserialized into.
             </typeparam>
+            <param name="unwrapCollection">
+            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+            </param>
         </member>
         <member name="M:B1SLayer.SLRequest.GetAsync">
             <summary>
@@ -500,6 +518,11 @@
         <member name="M:B1SLayer.SLRequest.PostAsync(System.Object)">
             <summary>
             Performs a POST request with the provided parameters.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PostAsync">
+            <summary>
+            Performs a POST request without a JSON body.
             </summary>
         </member>
         <member name="M:B1SLayer.SLRequest.PatchAsync(System.Object)">

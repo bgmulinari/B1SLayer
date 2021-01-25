@@ -2,11 +2,14 @@
 
 namespace B1SLayer
 {
+    /// <summary>
+    /// Represents a Service Layer exception.
+    /// </summary>
     public class SLException : Exception
     {
         public SLErrorDetails ErrorDetails { get; set; }
 
-        public SLException(string message, SLErrorDetails errorDetails, Exception innerException) : base(message, innerException)
+        internal SLException(string message, SLErrorDetails errorDetails, Exception innerException) : base(message, innerException)
         {
             ErrorDetails = errorDetails;
         }

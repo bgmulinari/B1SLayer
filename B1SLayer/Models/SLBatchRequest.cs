@@ -4,6 +4,9 @@ using System.Text;
 
 namespace B1SLayer
 {
+    /// <summary>
+    /// Represents a single request to be sent in a batch to the Service Layer.
+    /// </summary>
     public class SLBatchRequest
     {
         public HttpMethod HttpMethod { get; set; }
