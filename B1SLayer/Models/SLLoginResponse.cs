@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Newtonsoft.Json")]
 namespace B1SLayer
 {
     public class SLLoginResponse
