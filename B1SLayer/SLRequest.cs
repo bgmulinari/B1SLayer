@@ -143,6 +143,17 @@ namespace B1SLayer
         }
 
         /// <summary>
+        /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
+        /// </summary>
+        public async Task<T> PostAsync<T>()
+        {
+            return await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveJson<T>();
+            });
+        }
+
+        /// <summary>
         /// Performs a POST request with the provided parameters.
         /// </summary>
         public async Task PostAsync(object data)
@@ -154,7 +165,7 @@ namespace B1SLayer
         }
 
         /// <summary>
-        /// Performs a POST request without a JSON body.
+        /// Performs a POST request with the provided parameters.
         /// </summary>
         public async Task PostAsync()
         {
