@@ -164,6 +164,22 @@
             Whether the login request should be forced even if the current session has not expired.
             </param>
         </member>
+        <member name="M:B1SLayer.SLConnection.LoginInternal(System.Boolean)">
+            <summary>
+            Internal login method where a return is not needed.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.ExecuteLogin(System.Boolean,System.Boolean)">
+            <summary>
+            Performs the POST Login request to the Service Layer.
+            </summary>
+            <param name="forceLogin">
+            Whether the login request should be forced even if the current session has not expired.
+            </param>
+            <param name="expectReturn">
+            Wheter the login information should be returned.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLConnection.Logout">
             <summary>
             Performs a POST Logout request, ending the current session.
