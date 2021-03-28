@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace B1SLayer
 {
-    public static class MultipartExtensions
+    internal static class MultipartExtensions
     {
-        public static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, CancellationToken cancellationToken = default(CancellationToken))
+        internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, CancellationToken cancellationToken = default(CancellationToken))
         {
             var cmc = new CapturedMultipartContent(request.Settings);
             buildContent(cmc);
