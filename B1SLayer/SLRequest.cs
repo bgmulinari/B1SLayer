@@ -134,28 +134,70 @@ namespace B1SLayer
         /// <summary>
         /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
         /// </summary>
-        public async Task<T> PostAsync<T>(object data)
+        /// <param name="data">
+        /// The object to be sent as the JSON body.
+        /// </param>
+        /// <typeparam name="T">
+        /// The object type for the result to be deserialized into.
+        /// </typeparam>
+        /// <param name="unwrapCollection">
+        /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+        /// </param>
+        public async Task<T> PostAsync<T>(object data, bool unwrapCollection = true)
         {
             return await _slConnection.ExecuteRequest(async () =>
             {
-                return await FlurlRequest.WithCookies(_slConnection.Cookies).PostJsonAsync(data).ReceiveJson<T>();
+                string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostJsonAsync(data).ReceiveString();
+                var jObject = JObject.Parse(stringResult);
+
+                if (unwrapCollection)
+                {
+                    // Checks if the result is a collection by selecting the "value" token
+                    var valueCollection = jObject.SelectToken("value");
+                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
+                }
+                else
+                {
+                    return jObject.ToObject<T>();
+                }
             });
         }
 
         /// <summary>
         /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
         /// </summary>
-        public async Task<T> PostAsync<T>()
+        /// <typeparam name="T">
+        /// The object type for the result to be deserialized into.
+        /// </typeparam>
+        /// <param name="unwrapCollection">
+        /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+        /// </param>
+        public async Task<T> PostAsync<T>(bool unwrapCollection = true)
         {
             return await _slConnection.ExecuteRequest(async () =>
             {
-                return await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveJson<T>();
+                string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveString();
+                var jObject = JObject.Parse(stringResult);
+
+                if (unwrapCollection)
+                {
+                    // Checks if the result is a collection by selecting the "value" token
+                    var valueCollection = jObject.SelectToken("value");
+                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
+                }
+                else
+                {
+                    return jObject.ToObject<T>();
+                }
             });
         }
 
         /// <summary>
         /// Performs a POST request with the provided parameters.
         /// </summary>
+        /// <param name="data">
+        /// The object to be sent as the JSON body.
+        /// </param>
         public async Task PostAsync(object data)
         {
             await _slConnection.ExecuteRequest(async () =>
@@ -178,6 +220,9 @@ namespace B1SLayer
         /// <summary>
         /// Performs a PATCH request with the provided parameters.
         /// </summary>
+        /// <param name="data">
+        /// The object to be sent as the JSON body.
+        /// </param>
         public async Task PatchAsync(object data)
         {
             await _slConnection.ExecuteRequest(async () =>
@@ -189,6 +234,9 @@ namespace B1SLayer
         /// <summary>
         /// Performs a PUT request with the provided parameters.
         /// </summary>
+        /// <param name="data">
+        /// The object to be sent as the JSON body.
+        /// </param>
         public async Task PutAsync(object data)
         {
             await _slConnection.ExecuteRequest(async () =>

@@ -229,17 +229,17 @@ namespace B1SLayer
         /// <param name="forceLogin">
         /// Whether the login request should be forced even if the current session has not expired.
         /// </param>
-        public async Task<SLLoginResponse> Login(bool forceLogin = false)
+        public async Task<SLLoginResponse> LoginAsync(bool forceLogin = false)
         {
-            return await ExecuteLogin(forceLogin, true);
+            return await ExecuteLoginAsync(forceLogin, true);
         }
 
         /// <summary>
         /// Internal login method where a return is not needed.
         /// </summary>
-        private async Task LoginInternal(bool forceLogin = false)
+        private async Task LoginInternalAsync(bool forceLogin = false)
         {
-            await ExecuteLogin(forceLogin, false);
+            await ExecuteLoginAsync(forceLogin, false);
         }
 
         /// <summary>
@@ -251,7 +251,7 @@ namespace B1SLayer
         /// <param name="expectReturn">
         /// Wheter the login information should be returned.
         /// </param>
-        private async Task<SLLoginResponse> ExecuteLogin(bool forceLogin = false, bool expectReturn = false)
+        private async Task<SLLoginResponse> ExecuteLoginAsync(bool forceLogin = false, bool expectReturn = false)
         {
             // Prevents multiple login requests in a multi-threaded scenario
             await _semaphoreSlim.WaitAsync();
@@ -296,7 +296,7 @@ namespace B1SLayer
         /// <summary>
         /// Performs a POST Logout request, ending the current session.
         /// </summary>
-        public async Task Logout()
+        public async Task LogoutAsync()
         {
             if (Cookies == null) return;
 
@@ -367,7 +367,7 @@ namespace B1SLayer
             int retryCount = NumberOfAttempts;
             var exceptions = new List<Exception>();
 
-            await LoginInternal();
+            await LoginInternalAsync();
 
             while (true)
             {
@@ -400,7 +400,7 @@ namespace B1SLayer
                     // Forces a new login request in case the response is 401 Unauthorized
                     if (ex.Call.HttpResponseMessage?.StatusCode == HttpStatusCode.Unauthorized)
                     {
-                        await LoginInternal(true);
+                        await LoginInternalAsync(true);
                     }
                 }
                 catch (Exception)

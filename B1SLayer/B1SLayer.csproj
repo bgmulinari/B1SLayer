@@ -12,7 +12,7 @@
     <PackageTags>sap business one;b1;service layer;http client;fluent;flurl</PackageTags>
     <PackageReleaseNotes>https://github.com/bgmulinari/B1SLayer/releases</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

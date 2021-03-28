@@ -23,7 +23,10 @@ namespace B1SLayer
             Data = data;
             ContentID = contentID;
             Encoding = Encoding.UTF8;
-            JsonSerializerSettings = new JsonSerializerSettings();
+            JsonSerializerSettings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            };
         }
     }
 }
