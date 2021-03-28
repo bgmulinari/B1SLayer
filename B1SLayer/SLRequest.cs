@@ -4,6 +4,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
+using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace B1SLayer
@@ -228,6 +230,58 @@ namespace B1SLayer
             await _slConnection.ExecuteRequest(async () =>
             {
                 return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchJsonAsync(data);
+            });
+        }
+
+        /// <summary>
+        /// Performs a PATCH request with the provided file.
+        /// </summary>
+        /// <param name="path">
+        /// The path to the file to be sent.
+        /// </param>
+        public async Task PatchWithFileAsync(string path)
+        {
+            await PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+        }
+
+        /// <summary>
+        /// Performs a PATCH request with the provided file.
+        /// </summary>
+        /// <param name="fileName">
+        /// The file name of the file including the file extension.
+        /// </param>
+        /// <param name="file">
+        /// The file to be sent.
+        /// </param>
+        public async Task PatchWithFileAsync(string fileName, byte[] file)
+        {
+            await PatchWithFileAsync(fileName, new MemoryStream(file));
+        }
+
+        /// <summary>
+        /// Performs a PATCH request with the provided file.
+        /// </summary>
+        /// <param name="fileName">
+        /// The file name of the file including the file extension.
+        /// </param>
+        /// <param name="file">
+        /// The file to be sent.
+        /// </param>
+        public async Task PatchWithFileAsync(string fileName, Stream file)
+        {
+            await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchMultipartAsync(mp =>
+                {
+                    // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
+                    var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
+                    boundary.Value = boundary.Value.Replace("\"", string.Empty);
+
+                    var content = new StreamContent(file);
+                    content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
+                    content.Headers.Add("Content-Type", "application/octet-stream");
+                    mp.Add(content);
+                });
             });
         }
 

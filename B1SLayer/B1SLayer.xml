@@ -155,7 +155,7 @@
             A GET request to the UserLanguages resource will return all available languages and their respective codes.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.Login(System.Boolean)">
+        <member name="M:B1SLayer.SLConnection.LoginAsync(System.Boolean)">
             <summary>
             If the current session is expired or non-existent, performs a POST Login request with the provided information.
             Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
@@ -164,12 +164,12 @@
             Whether the login request should be forced even if the current session has not expired.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.LoginInternal(System.Boolean)">
+        <member name="M:B1SLayer.SLConnection.LoginInternalAsync(System.Boolean)">
             <summary>
             Internal login method where a return is not needed.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.ExecuteLogin(System.Boolean,System.Boolean)">
+        <member name="M:B1SLayer.SLConnection.ExecuteLoginAsync(System.Boolean,System.Boolean)">
             <summary>
             Performs the POST Login request to the Service Layer.
             </summary>
@@ -180,7 +180,7 @@
             Wheter the login information should be returned.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.Logout">
+        <member name="M:B1SLayer.SLConnection.LogoutAsync">
             <summary>
             Performs a POST Logout request, ending the current session.
             </summary>
@@ -526,30 +526,89 @@
             Performs a GET request that returns the count of an entity collection.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Object)">
+        <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Object,System.Boolean)">
             <summary>
             Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
             </summary>
+            <param name="data">
+            The object to be sent as the JSON body.
+            </param>
+            <typeparam name="T">
+            The object type for the result to be deserialized into.
+            </typeparam>
+            <param name="unwrapCollection">
+            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Boolean)">
+            <summary>
+            Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
+            </summary>
+            <typeparam name="T">
+            The object type for the result to be deserialized into.
+            </typeparam>
+            <param name="unwrapCollection">
+            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+            </param>
         </member>
         <member name="M:B1SLayer.SLRequest.PostAsync(System.Object)">
             <summary>
             Performs a POST request with the provided parameters.
             </summary>
+            <param name="data">
+            The object to be sent as the JSON body.
+            </param>
         </member>
         <member name="M:B1SLayer.SLRequest.PostAsync">
             <summary>
-            Performs a POST request without a JSON body.
+            Performs a POST request with the provided parameters.
             </summary>
         </member>
         <member name="M:B1SLayer.SLRequest.PatchAsync(System.Object)">
             <summary>
             Performs a PATCH request with the provided parameters.
             </summary>
+            <param name="data">
+            The object to be sent as the JSON body.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String)">
+            <summary>
+            Performs a PATCH request with the provided file.
+            </summary>
+            <param name="path">
+            The path to the file to be sent.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.Byte[])">
+            <summary>
+            Performs a PATCH request with the provided file.
+            </summary>
+            <param name="fileName">
+            The file name of the file including the file extension.
+            </param>
+            <param name="file">
+            The file to be sent.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.IO.Stream)">
+            <summary>
+            Performs a PATCH request with the provided file.
+            </summary>
+            <param name="fileName">
+            The file name of the file including the file extension.
+            </param>
+            <param name="file">
+            The file to be sent.
+            </param>
         </member>
         <member name="M:B1SLayer.SLRequest.PutAsync(System.Object)">
             <summary>
             Performs a PUT request with the provided parameters.
             </summary>
+            <param name="data">
+            The object to be sent as the JSON body.
+            </param>
         </member>
         <member name="M:B1SLayer.SLRequest.DeleteAsync">
             <summary>

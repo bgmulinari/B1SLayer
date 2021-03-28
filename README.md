@@ -38,8 +38,11 @@ var newOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNe
 // Performs PATCH on /BusinessPartners('C00001'), updating the CardName of the Business Partner
 await serviceLayer.Request("BusinessPartners", "C00001").PatchAsync(new { CardName = "Updated BP name" });
 
+// Performs a PATCH on /ItemImages('A00001'), adding or updating the item image
+await serviceLayer.Request("ItemImages", "A00001").PatchWithFileAsync(@"C:\ItemImages\A00001.jpg");
+
 // Performs a POST on /Attachments2 with the provided file as the attachment (other overloads available)
-var newAttachment = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
+var attachmentEntry = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
 
 // Batch requests! Performs multiple operations in SAP in a single HTTP request
 var batchRequests = new SLBatchRequest[]
