@@ -15,13 +15,13 @@ Bellow a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
 // The connection object. Only one instance per company/user should be used in the application
-// The Service Layer session (Login) is managed automatically and renewed whenever necessary
-var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "COMPANYDB", "manager", "12345");
+// There's no need to manually Login! The session is managed automatically and renewed whenever necessary
+var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
 
 // Performs a GET on /Orders(823) and deserializes the result in a custom model class
 var order = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
 
-// Performs GET on /BusinessPartners with query string and header parameters supported by Service Layer
+// Performs a GET on /BusinessPartners with query string and header parameters supported by Service Layer
 // The result is deserialized in a List of a custom model class
 var bpList = await serviceLayer.Request("BusinessPartners")
     .Filter("startswith(CardCode, 'c')")
@@ -32,10 +32,10 @@ var bpList = await serviceLayer.Request("BusinessPartners")
     .GetAsync<List<MyBusinessPartnerModel>>();
 
 // Performs a POST on /Orders with the provided object as the JSON body, 
-// creating a new order and deserializing the result in a custom model class
-var newOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNewOrderObject);
+// creating a new order and deserializing the created order in a custom model class
+var createdOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNewOrderObject);
 
-// Performs PATCH on /BusinessPartners('C00001'), updating the CardName of the Business Partner
+// Performs a PATCH on /BusinessPartners('C00001'), updating the CardName of the Business Partner
 await serviceLayer.Request("BusinessPartners", "C00001").PatchAsync(new { CardName = "Updated BP name" });
 
 // Performs a PATCH on /ItemImages('A00001'), adding or updating the item image
