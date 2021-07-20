@@ -239,10 +239,8 @@ namespace B1SLayer
         /// <param name="path">
         /// The path to the file to be sent.
         /// </param>
-        public async Task PatchWithFileAsync(string path)
-        {
+        public async Task PatchWithFileAsync(string path) =>
             await PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
-        }
 
         /// <summary>
         /// Performs a PATCH request with the provided file.
@@ -253,10 +251,8 @@ namespace B1SLayer
         /// <param name="file">
         /// The file to be sent.
         /// </param>
-        public async Task PatchWithFileAsync(string fileName, byte[] file)
-        {
+        public async Task PatchWithFileAsync(string fileName, byte[] file) =>
             await PatchWithFileAsync(fileName, new MemoryStream(file));
-        }
 
         /// <summary>
         /// Performs a PATCH request with the provided file.

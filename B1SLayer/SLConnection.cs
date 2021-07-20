@@ -71,21 +71,16 @@ namespace B1SLayer
         /// </summary>
         public SLLoginResponse LoginResponse
         {
-            get
+            // Returns a new object so the login control can't be manipulated externally
+            get => new SLLoginResponse()
             {
-                // Returns a new object so the login control can't be manipulated externally
-                return new SLLoginResponse()
-                {
-                    LastLogin = _loginResponse.LastLogin,
-                    SessionId = _loginResponse.SessionId,
-                    SessionTimeout = _loginResponse.SessionTimeout,
-                    Version = _loginResponse.Version
-                };
-            }
-            private set
-            {
-                _loginResponse = value;
-            }
+                LastLogin = _loginResponse.LastLogin,
+                SessionId = _loginResponse.SessionId,
+                SessionTimeout = _loginResponse.SessionTimeout,
+                Version = _loginResponse.Version
+            };
+
+            private set => _loginResponse = value;
         }
         #endregion
 
@@ -223,18 +218,12 @@ namespace B1SLayer
         /// <param name="forceLogin">
         /// Whether the login request should be forced even if the current session has not expired.
         /// </param>
-        public async Task<SLLoginResponse> LoginAsync(bool forceLogin = false)
-        {
-            return await ExecuteLoginAsync(forceLogin, true);
-        }
+        public async Task<SLLoginResponse> LoginAsync(bool forceLogin = false) => await ExecuteLoginAsync(forceLogin, true);
 
         /// <summary>
         /// Internal login method where a return is not needed.
         /// </summary>
-        private async Task LoginInternalAsync(bool forceLogin = false)
-        {
-            await ExecuteLoginAsync(forceLogin, false);
-        }
+        private async Task LoginInternalAsync(bool forceLogin = false) => await ExecuteLoginAsync(forceLogin, false);
 
         /// <summary>
         /// Performs the POST Login request to the Service Layer.
@@ -324,10 +313,8 @@ namespace B1SLayer
         /// <param name="resource">
         /// The resource name to be requested.
         /// </param>
-        public SLRequest Request(string resource)
-        {
-            return new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(resource)));
-        }
+        public SLRequest Request(string resource) =>
+            new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(resource)));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
@@ -341,10 +328,8 @@ namespace B1SLayer
         /// <param name="id">
         /// The entity ID to be requested.
         /// </param>
-        public SLRequest Request(string resource, object id)
-        {
-            return new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(id is string ? $"{resource}('{id}')" : $"{resource}({id})"))); ;
-        }
+        public SLRequest Request(string resource, object id) =>
+            new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(id is string ? $"{resource}('{id}')" : $"{resource}({id})")));
 
         /// <summary>
         /// Calls the Login method to ensure a valid session and then executes the provided request.
@@ -423,10 +408,7 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLPingResponse"/> object containing the response details.
         /// </returns>
-        public async Task<SLPingResponse> PingAsync()
-        {
-            return await ExecutePingAsync("ping/");
-        }
+        public async Task<SLPingResponse> PingAsync() => await ExecutePingAsync("ping/");
 
         /// <summary>
         /// Provides a direct response from the Apache server that can be used for network testing and component monitoring.
@@ -441,10 +423,8 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLPingResponse"/> object containing the response details.
         /// </returns>
-        public async Task<SLPingResponse> PingNodeAsync(int? node = null)
-        {
-            return await ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer");
-        }
+        public async Task<SLPingResponse> PingNodeAsync(int? node = null) =>
+            await ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer");
 
         /// <summary>
         /// Performs the ping request with the provided path segment.
@@ -487,13 +467,8 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
-        public void BeforeCall(Func<FlurlCall, Task> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.BeforeCall(action);
-            });
-        }
+        public void BeforeCall(Func<FlurlCall, Task> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.BeforeCall(action));
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
@@ -502,13 +477,8 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
-        public void BeforeCall(Action<FlurlCall> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.BeforeCall(action);
-            });
-        }
+        public void BeforeCall(Action<FlurlCall> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.BeforeCall(action));
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
@@ -516,13 +486,8 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void AfterCall(Func<FlurlCall, Task> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.AfterCall(action);
-            });
-        }
+        public void AfterCall(Func<FlurlCall, Task> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.AfterCall(action));
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
@@ -530,13 +495,8 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void AfterCall(Action<FlurlCall> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.AfterCall(action);
-            });
-        }
+        public void AfterCall(Action<FlurlCall> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.AfterCall(action));
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -544,13 +504,8 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void OnError(Func<FlurlCall, Task> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.OnError(action);
-            });
-        }
+        public void OnError(Func<FlurlCall, Task> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.OnError(action));
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -558,13 +513,8 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void OnError(Action<FlurlCall> action)
-        {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                client.OnError(action);
-            });
-        }
+        public void OnError(Action<FlurlCall> action) =>
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.OnError(action));
         #endregion
 
         #region Attachments Methods
@@ -580,10 +530,8 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
         /// </returns>
-        public async Task<SLAttachment> PostAttachmentAsync(string path)
-        {
-            return await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
-        }
+        public async Task<SLAttachment> PostAttachmentAsync(string path) =>
+            await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
 
         /// <summary>
         /// Uploads the provided file as an attachment.
@@ -600,10 +548,8 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
         /// </returns>
-        public async Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file)
-        {
-            return await PostAttachmentsAsync(new Dictionary<string, Stream>() { { fileName, new MemoryStream(file) } });
-        }
+        public async Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file) =>
+            await PostAttachmentsAsync(new Dictionary<string, Stream>() { { fileName, new MemoryStream(file) } });
 
         /// <summary>
         /// Uploads the provided file as an attachment.
@@ -620,10 +566,8 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
         /// </returns>
-        public async Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file)
-        {
-            return await PostAttachmentsAsync(new Dictionary<string, Stream>() { { fileName, file } });
-        }
+        public async Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file) =>
+            await PostAttachmentsAsync(new Dictionary<string, Stream>() { { fileName, file } });
 
         /// <summary>
         /// Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
@@ -637,10 +581,8 @@ namespace B1SLayer
         /// <returns>
         /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
         /// </returns>
-        public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files)
-        {
-            return await PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
-        }
+        public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files) =>
+            await PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
 
         /// <summary>
         /// Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
@@ -696,10 +638,8 @@ namespace B1SLayer
         /// <param name="path">
         /// The file path for the file to be updated including the file extension.
         /// </param>
-        public async Task PatchAttachmentAsync(int attachmentEntry, string path)
-        {
+        public async Task PatchAttachmentAsync(int attachmentEntry, string path) =>
             await PatchAttachmentAsync(attachmentEntry, Path.GetFileName(path), File.ReadAllBytes(path));
-        }
 
         /// <summary>
         /// Updates an existing attachment entry with the provided file. If the file already exists
@@ -714,10 +654,8 @@ namespace B1SLayer
         /// <param name="file">
         /// The file to be updated.
         /// </param>
-        public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file)
-        {
+        public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file) =>
             await PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream>() { { fileName, new MemoryStream(file) } });
-        }
 
         /// <summary>
         /// Updates an existing attachment entry with the provided file. If the file already exists
@@ -732,10 +670,8 @@ namespace B1SLayer
         /// <param name="file">
         /// The file to be updated.
         /// </param>
-        public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file)
-        {
+        public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file) =>
             await PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream>() { { fileName, file } });
-        }
 
         /// <summary>
         /// Updates an existing attachment entry with the provided files. If the file already exists
@@ -747,10 +683,8 @@ namespace B1SLayer
         /// <param name="files">
         /// A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
         /// </param>
-        public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files)
-        {
+        public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files) =>
             await PatchAttachmentsAsync(attachmentEntry, files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
-        }
 
         /// <summary>
         /// Updates an existing attachment entry with the provided files. If the file already exists
@@ -807,10 +741,8 @@ namespace B1SLayer
         /// <returns>
         /// The downloaded attachment file as a <see cref="Stream"/>.
         /// </returns>
-        public async Task<Stream> GetAttachmentAsStreamAsync(int attachmentEntry, string fileName = null)
-        {
-            return new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName));
-        }
+        public async Task<Stream> GetAttachmentAsStreamAsync(int attachmentEntry, string fileName = null) =>
+            new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName));
 
         /// <summary>
         /// Downloads the specified attachment file as a <see cref="byte"/> array. By default, the first attachment
