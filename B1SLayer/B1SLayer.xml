@@ -58,11 +58,6 @@
             Gets information about the latest Login request.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.#cctor">
-            <summary>
-            Set the default settings to Flurl.Http.
-            </summary>
-        </member>
         <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLConnection"/> class.
@@ -248,6 +243,56 @@
             <summary>
             Performs the ping request with the provided path segment.
             </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.BeforeCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+            <summary>
+            Sets a <see cref="T:System.Func`2"/> delegate that is called before every Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            Response-related properties will be null in BeforeCall.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLConnection.BeforeCall(System.Action{Flurl.Http.FlurlCall})">
+            <summary>
+            Sets a <see cref="T:System.Action`1"/> delegate that is called before every Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            Response-related properties will be null in BeforeCall.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLConnection.AfterCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+            <summary>
+            Sets a <see cref="T:System.Func`2"/> delegate that is called after every Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLConnection.AfterCall(System.Action{Flurl.Http.FlurlCall})">
+            <summary>
+            Sets a <see cref="T:System.Action`1"/> delegate that is called after every Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLConnection.OnError(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+            <summary>
+            Sets a <see cref="T:System.Func`2"/> delegate that is called after every unsuccessful Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLConnection.OnError(System.Action{Flurl.Http.FlurlCall})">
+            <summary>
+            Sets a <see cref="T:System.Action`1"/> delegate that is called after every unsuccessful Service Layer request.
+            </summary>
+            <remarks>
+            The <see cref="T:Flurl.Http.FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+            </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String)">
             <summary>

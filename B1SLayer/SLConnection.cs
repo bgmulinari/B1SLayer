@@ -25,7 +25,7 @@ namespace B1SLayer
         #region Fields
         private DateTime _lastRequest = DateTime.MinValue;
         private SLLoginResponse _loginResponse;
-        private SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly HttpStatusCode[] _returnCodesToRetry = new[]
         {
             HttpStatusCode.Unauthorized,
@@ -91,23 +91,6 @@ namespace B1SLayer
 
         #region Constructors
         /// <summary>
-        /// Set the default settings to Flurl.Http.
-        /// </summary>
-        static SLConnection()
-        {
-            FlurlHttp.Configure(settings =>
-            {
-                // Disable SSL certificate verification
-                settings.HttpClientFactory = new CustomHttpClientFactory();
-                // Ignore null values in JSON
-                settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
-                {
-                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                });
-            });
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="SLConnection"/> class.
         /// Only one instance per company/user should be used in the application.
         /// </summary>
@@ -149,6 +132,17 @@ namespace B1SLayer
             Language = language;
             NumberOfAttempts = numberOfAttempts;
             LoginResponse = new SLLoginResponse();
+
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                // Disable SSL certificate verification
+                client.Settings.HttpClientFactory = new CustomHttpClientFactory();
+                // Ignore null values in JSON
+                client.Settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
+                {
+                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                });
+            });
         }
 
         /// <summary>
@@ -364,12 +358,10 @@ namespace B1SLayer
             if (NumberOfAttempts < 1)
                 throw new ArgumentException("The number of attempts can not be lower than 1.");
 
-            int retryCount = NumberOfAttempts;
-            var exceptions = new List<Exception>();
-
+            List<Exception> exceptions = null;
             await LoginInternalAsync();
 
-            while (true)
+            for (int i = 0; i < NumberOfAttempts; i++)
             {
                 try
                 {
@@ -378,9 +370,11 @@ namespace B1SLayer
                 }
                 catch (FlurlHttpException ex)
                 {
+                    if (exceptions == null) exceptions = new List<Exception>();
+
                     try
                     {
-                        if (ex.Call.HttpResponseMessage == null) 
+                        if (ex.Call.HttpResponseMessage == null)
                             throw;
 
                         var response = await ex.GetResponseJsonAsync<SLResponseError>();
@@ -406,13 +400,6 @@ namespace B1SLayer
                 catch (Exception)
                 {
                     throw;
-                }
-
-                retryCount--;
-
-                if (retryCount <= 0)
-                {
-                    break;
                 }
 
                 await Task.Delay(200);
@@ -489,6 +476,94 @@ namespace B1SLayer
                 catch { throw ex; }
             }
             catch (Exception) { throw; }
+        }
+        #endregion
+
+        #region Call Event Handlers
+        /// <summary>
+        /// Sets a <see cref="Func{T, TResult}"/> delegate that is called before every Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// Response-related properties will be null in BeforeCall.
+        /// </remarks>
+        public void BeforeCall(Func<FlurlCall, Task> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.BeforeCall(action);
+            });
+        }
+
+        /// <summary>
+        /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// Response-related properties will be null in BeforeCall.
+        /// </remarks>
+        public void BeforeCall(Action<FlurlCall> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.BeforeCall(action);
+            });
+        }
+
+        /// <summary>
+        /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// </remarks>
+        public void AfterCall(Func<FlurlCall, Task> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.AfterCall(action);
+            });
+        }
+
+        /// <summary>
+        /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// </remarks>
+        public void AfterCall(Action<FlurlCall> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.AfterCall(action);
+            });
+        }
+
+        /// <summary>
+        /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// </remarks>
+        public void OnError(Func<FlurlCall, Task> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.OnError(action);
+            });
+        }
+
+        /// <summary>
+        /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
+        /// </summary>
+        /// <remarks>
+        /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
+        /// </remarks>
+        public void OnError(Action<FlurlCall> action)
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                client.OnError(action);
+            });
         }
         #endregion
 
