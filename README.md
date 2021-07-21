@@ -25,8 +25,8 @@ var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB
 // The FlurlCall object provides various details about the request and the response.
 serviceLayer.AfterCall(async call =>
 {
-    Console.WriteLine($"Request URL: {call.HttpRequestMessage.Method} {call.HttpRequestMessage.RequestUri}");
-    Console.WriteLine($"Request body: {call.RequestBody}");
+    Console.WriteLine($"Request: {call.HttpRequestMessage.Method} {call.HttpRequestMessage.RequestUri}");
+    Console.WriteLine($"body sent: {call.RequestBody}");
     Console.WriteLine($"Response: {call.HttpResponseMessage?.StatusCode}");
     Console.WriteLine(await call.HttpResponseMessage?.Content?.ReadAsStringAsync());
     Console.WriteLine($"Call duration: {call.Duration.Value.TotalSeconds} seconds");
