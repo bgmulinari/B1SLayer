@@ -21,6 +21,17 @@ Bellow a couple examples of what's possible (but not limited to) with B1SLayer:
  */
 var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
 
+// Request monitoring/logging available through the methods BeforeCall, AfterCall and OnError.
+// The FlurlCall object provides various details about the request and the response.
+serviceLayer.AfterCall(async call =>
+{
+    Console.WriteLine($"Request URL: {call.HttpRequestMessage.Method} {call.HttpRequestMessage.RequestUri}");
+    Console.WriteLine($"Request body: {call.RequestBody}");
+    Console.WriteLine($"Response: {call.HttpResponseMessage?.StatusCode}");
+    Console.WriteLine(await call.HttpResponseMessage?.Content?.ReadAsStringAsync());
+    Console.WriteLine($"Call duration: {call.Duration.Value.TotalSeconds} seconds");
+});
+
 // Performs a GET on /Orders(823) and deserializes the result in a custom model class
 var order = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
 
