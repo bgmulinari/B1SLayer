@@ -26,7 +26,7 @@ var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB
 serviceLayer.AfterCall(async call =>
 {
     Console.WriteLine($"Request: {call.HttpRequestMessage.Method} {call.HttpRequestMessage.RequestUri}");
-    Console.WriteLine($"body sent: {call.RequestBody}");
+    Console.WriteLine($"Body sent: {call.RequestBody}");
     Console.WriteLine($"Response: {call.HttpResponseMessage?.StatusCode}");
     Console.WriteLine(await call.HttpResponseMessage?.Content?.ReadAsStringAsync());
     Console.WriteLine($"Call duration: {call.Duration.Value.TotalSeconds} seconds");
