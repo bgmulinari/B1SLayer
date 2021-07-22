@@ -14,9 +14,8 @@ B1SLayer aims to provide:
 Bellow a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
-/* The connection object. All requests and the session managament are handled by this object and therefore 
- * only one instance per company/user should be used, initialized only once at the application startup.
- * Ideally this would be a static object to be used across the entire application.
+/* The connection object. All Service Layer requests and the session management are handled by this object
+ * and therefore only one instance per company/user should be used across the entire application.
  * There's no need to manually Login! The session is managed automatically and renewed whenever necessary.
  */
 var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
