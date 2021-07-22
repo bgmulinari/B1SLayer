@@ -168,6 +168,38 @@ namespace B1SLayer
         /// <summary>
         /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
         /// </summary>
+        /// <param name="data">
+        /// The JSON string to be sent as the request body.
+        /// </param>
+        /// <typeparam name="T">
+        /// The object type for the result to be deserialized into.
+        /// </typeparam>
+        /// <param name="unwrapCollection">
+        /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+        /// </param>
+        public async Task<T> PostStringAsync<T>(string data, bool unwrapCollection = true)
+        {
+            return await _slConnection.ExecuteRequest(async () =>
+            {
+                string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostStringAsync(data).ReceiveString();
+                var jObject = JObject.Parse(stringResult);
+
+                if (unwrapCollection)
+                {
+                    // Checks if the result is a collection by selecting the "value" token
+                    var valueCollection = jObject.SelectToken("value");
+                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
+                }
+                else
+                {
+                    return jObject.ToObject<T>();
+                }
+            });
+        }
+
+        /// <summary>
+        /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
+        /// </summary>
         /// <typeparam name="T">
         /// The object type for the result to be deserialized into.
         /// </typeparam>
@@ -211,6 +243,20 @@ namespace B1SLayer
         /// <summary>
         /// Performs a POST request with the provided parameters.
         /// </summary>
+        /// <param name="data">
+        /// The JSON string to be sent as the request body.
+        /// </param>
+        public async Task PostStringAsync(string data)
+        {
+            await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PostStringAsync(data);
+            });
+        }
+
+        /// <summary>
+        /// Performs a POST request with the provided parameters.
+        /// </summary>
         public async Task PostAsync()
         {
             await _slConnection.ExecuteRequest(async () =>
@@ -230,6 +276,20 @@ namespace B1SLayer
             await _slConnection.ExecuteRequest(async () =>
             {
                 return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchJsonAsync(data);
+            });
+        }
+
+        /// <summary>
+        /// Performs a PATCH request with the provided parameters.
+        /// </summary>
+        /// <param name="data">
+        /// The JSON string to be sent as the request body.
+        /// </param>
+        public async Task PatchStringAsync(string data)
+        {
+            await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchStringAsync(data);
             });
         }
 
@@ -292,6 +352,20 @@ namespace B1SLayer
             await _slConnection.ExecuteRequest(async () =>
             {
                 return await FlurlRequest.WithCookies(_slConnection.Cookies).PutJsonAsync(data);
+            });
+        }
+
+        /// <summary>
+        /// Performs a PUT request with the provided parameters.
+        /// </summary>
+        /// <param name="data">
+        /// The JSON string to be sent as the request body.
+        /// </param>
+        public async Task PutStringAsync(string data)
+        {
+            await _slConnection.ExecuteRequest(async () =>
+            {
+                return await FlurlRequest.WithCookies(_slConnection.Cookies).PutStringAsync(data);
             });
         }
 

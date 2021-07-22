@@ -585,6 +585,20 @@
             Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
             </param>
         </member>
+        <member name="M:B1SLayer.SLRequest.PostStringAsync``1(System.String,System.Boolean)">
+            <summary>
+            Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
+            </summary>
+            <param name="data">
+            The JSON string to be sent as the request body.
+            </param>
+            <typeparam name="T">
+            The object type for the result to be deserialized into.
+            </typeparam>
+            <param name="unwrapCollection">
+            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Boolean)">
             <summary>
             Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
@@ -604,6 +618,14 @@
             The object to be sent as the JSON body.
             </param>
         </member>
+        <member name="M:B1SLayer.SLRequest.PostStringAsync(System.String)">
+            <summary>
+            Performs a POST request with the provided parameters.
+            </summary>
+            <param name="data">
+            The JSON string to be sent as the request body.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLRequest.PostAsync">
             <summary>
             Performs a POST request with the provided parameters.
@@ -615,6 +637,14 @@
             </summary>
             <param name="data">
             The object to be sent as the JSON body.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PatchStringAsync(System.String)">
+            <summary>
+            Performs a PATCH request with the provided parameters.
+            </summary>
+            <param name="data">
+            The JSON string to be sent as the request body.
             </param>
         </member>
         <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String)">
@@ -653,6 +683,14 @@
             </summary>
             <param name="data">
             The object to be sent as the JSON body.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PutStringAsync(System.String)">
+            <summary>
+            Performs a PUT request with the provided parameters.
+            </summary>
+            <param name="data">
+            The JSON string to be sent as the request body.
             </param>
         </member>
         <member name="M:B1SLayer.SLRequest.DeleteAsync">
