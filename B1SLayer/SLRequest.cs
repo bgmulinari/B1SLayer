@@ -1,8 +1,10 @@
-﻿using Flurl;
+﻿using B1SLayer.Models;
+using Flurl;
 using Flurl.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -55,6 +57,46 @@ namespace B1SLayer
                     return jObject.ToObject<T>();
                 }
             });
+        }
+
+        /// <summary>
+        /// Performs multiple GET requests until all entities in a collection are obtained.
+        /// </summary>
+        /// <remarks>
+        /// This can be very slow depending on the total amount of entities in the company database.
+        /// </remarks>
+        /// <typeparam name="T">
+        /// The object type for the result to be deserialized into.
+        /// </typeparam>
+        /// <param name="pageSize">
+        /// The number of entities to be retrieved per request. The default amount is 20.
+        /// </param>
+        /// <returns>
+        /// An <see cref="IList{T}"/> containing all the entities in the given collection.
+        /// </returns>
+        public async Task<IList<T>> GetAllAsync<T>(int pageSize = 20)
+        {
+            var allResultsList = new List<T>();
+            int skip = 0;
+
+            do
+            {
+                await _slConnection.ExecuteRequest(async () =>
+                {
+                    var currentResult = await FlurlRequest
+                        .WithCookies(_slConnection.Cookies)
+                        .WithHeader("B1S-PageSize", pageSize)
+                        .SetQueryParam("$skip", skip)
+                        .GetJsonAsync<SLCollectionRoot<T>>();
+
+                    allResultsList.AddRange(currentResult.Value);
+                    skip = currentResult.NextSkip;
+                    return 0;
+                });
+            }
+            while (skip > 0);
+
+            return allResultsList;
         }
 
         /// <summary>
