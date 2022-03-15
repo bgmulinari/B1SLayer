@@ -6,7 +6,7 @@ namespace B1SLayer.Models
 {
     public class SLCollectionRoot<T>
     {
-        private readonly Regex _SkipRegex = new Regex(@"skip=(\d+)&?");
+        private readonly Regex _skipRegex = new Regex(@"skip=(\d+)&?");
 
         [JsonProperty("value")]
         public IList<T> Value { get; set; }
@@ -17,6 +17,6 @@ namespace B1SLayer.Models
         [JsonProperty("@odata.nextLink")]
         private string ODataNextLinkAlt { set { ODataNextLink = value; } }
 
-        public int NextSkip => string.IsNullOrEmpty(ODataNextLink) ? 0 : int.Parse(_SkipRegex.Match(ODataNextLink).Groups[1].Value);
+        public int NextSkip => string.IsNullOrEmpty(ODataNextLink) ? 0 : int.Parse(_skipRegex.Match(ODataNextLink).Groups[1].Value);
     }
 }

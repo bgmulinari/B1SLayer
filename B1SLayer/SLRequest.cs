@@ -68,13 +68,10 @@ namespace B1SLayer
         /// <typeparam name="T">
         /// The object type for the result to be deserialized into.
         /// </typeparam>
-        /// <param name="pageSize">
-        /// The number of entities to be retrieved per request. The default amount is 20.
-        /// </param>
         /// <returns>
         /// An <see cref="IList{T}"/> containing all the entities in the given collection.
         /// </returns>
-        public async Task<IList<T>> GetAllAsync<T>(int pageSize = 20)
+        public async Task<IList<T>> GetAllAsync<T>()
         {
             var allResultsList = new List<T>();
             int skip = 0;
@@ -85,7 +82,6 @@ namespace B1SLayer
                 {
                     var currentResult = await FlurlRequest
                         .WithCookies(_slConnection.Cookies)
-                        .WithHeader("B1S-PageSize", pageSize)
                         .SetQueryParam("$skip", skip)
                         .GetJsonAsync<SLCollectionRoot<T>>();
 
