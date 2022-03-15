@@ -44,6 +44,10 @@ var bpList = await serviceLayer.Request("BusinessPartners")
     .WithCaseInsensitive()
     .GetAsync<List<MyBusinessPartnerModel>>();
 
+// Performs multiple GET requests on /Items until all entities in the database are obtained
+// The result is an IList of your custom model class
+var allItemsList = await serviceLayer.Request("Items").Select("ItemCode").GetAllAsync<MyItemModel>();
+
 // Performs a POST on /Orders with the provided object as the JSON body, 
 // creating a new order and deserializing the created order in a custom model class
 var createdOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNewOrderObject);
