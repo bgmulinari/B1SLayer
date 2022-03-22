@@ -62,22 +62,18 @@ await serviceLayer.Request("ItemImages", "A00001").PatchWithFileAsync(@"C:\ItemI
 var attachmentEntry = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
 
 // Batch requests! Performs multiple operations in SAP in a single HTTP request
-var batchRequests = new SLBatchRequest[]
-{
-    new SLBatchRequest(HttpMethod.Post, // HTTP method
-        "BusinessPartners", // resource
-        new { CardCode = "C00001", CardName = "I'm a new BP" } // object to be sent as the JSON body
-    ),
-    new SLBatchRequest(HttpMethod.Patch, 
-        "BusinessPartners('C00001')", 
-        new { CardName = "This is my updated name" }
-    ),  
-    new SLBatchRequest(HttpMethod.Delete, 
-        "BusinessPartners('C00001')"
-    )
-};
+var req1 = new SLBatchRequest(
+    HttpMethod.Post, // HTTP method
+    "BusinessPartners", // resource
+    new { CardCode = "C00001", CardName = "I'm a new BP" }); // object to be sent as the JSON body
 
-HttpResponseMessage[] batchResult = await serviceLayer.PostBatchAsync(batchRequests);
+var req2 = new SLBatchRequest(HttpMethod.Patch,
+    "BusinessPartners('C00001')",
+    new { CardName = "This is my updated name" });
+
+var req3 = new SLBatchRequest(HttpMethod.Delete, "BusinessPartners('C00001')");
+
+HttpResponseMessage[] batchResult = await serviceLayer.PostBatchAsync(req1, req2, req3);
 
 // Performs a POST on /Logout, ending the current session
 await serviceLayer.LogoutAsync();
