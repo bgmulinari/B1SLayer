@@ -775,7 +775,25 @@ namespace B1SLayer
 
         #region Batch Request Methods
         /// <summary>
-        /// Performs a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest"/> collection. 
+        /// Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest"/> instances.
+        /// All requests are sent in a single change set.
+        /// </summary>
+        /// <remarks>
+        /// See section 'Batch Operations' in the Service Layer User Manual for more details.
+        /// </remarks>
+        /// <param name="requests">
+        /// <see cref="SLBatchRequest"/> instances to be sent in the batch.
+        /// </param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> array containg the response messages of the batch request. 
+        /// </returns>
+        public async Task<HttpResponseMessage[]> PostBatchAsync(params SLBatchRequest[] requests)
+        {
+            return await PostBatchAsync(requests, true);
+        }
+
+        /// <summary>
+        /// Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest"/> collection. 
         /// </summary>
         /// <remarks>
         /// See section 'Batch Operations' in the Service Layer User Manual for more details.
@@ -873,11 +891,12 @@ namespace B1SLayer
                 if (batchRequest.Data != null)
                     request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
 
-                if (batchRequest.ContentID.HasValue)
-                    request.Content.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
-
                 var innerContent = new HttpMessageContent(request);
                 innerContent.Headers.Add("content-transfer-encoding", "binary");
+
+                if (batchRequest.ContentID.HasValue)
+                    innerContent.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
+
                 multipartContent.Add(innerContent);
             }
 
@@ -895,11 +914,12 @@ namespace B1SLayer
             if (batchRequest.Data != null)
                 request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
 
-            if (batchRequest.ContentID.HasValue)
-                request.Content.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
-
             var innerContent = new HttpMessageContent(request);
             innerContent.Headers.Add("content-transfer-encoding", "binary");
+
+            if (batchRequest.ContentID.HasValue)
+                innerContent.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
+
             multipartContent.Add(innerContent);
 
             return multipartContent;
