@@ -9,6 +9,61 @@
             Represents a single request to be sent in a batch to the Service Layer.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLBatchRequest.HttpMethod">
+            <summary>
+            Gets or sets the HTTP method to be used for this request.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLBatchRequest.Resource">
+            <summary>
+            Gets or sets the Service Layer resource to be requested.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLBatchRequest.Data">
+            <summary>
+            Gets or sets the object to be sent as the JSON body.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLBatchRequest.ContentID">
+            <summary>
+            Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+            This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLBatchRequest.Encoding">
+            <summary>
+            Gets or sets the <see cref="T:System.Text.Encoding"/> to be used for this request. UTF8 will be used by default.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLBatchRequest.JsonSerializerSettings">
+            <summary>
+            Gets or sets the <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> to be used for this request.
+            By default it is configured so the <see cref="P:Newtonsoft.Json.JsonSerializerSettings.NullValueHandling"/> is set to <see cref="F:Newtonsoft.Json.NullValueHandling.Ignore"/>.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequest.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequest.#ctor(System.Net.Http.HttpMethod,System.String,System.Object,System.Nullable{System.Int32})">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.
+            </summary>
+            <param name="httpMethod">
+            The HTTP method to be used for this request.
+            </param>
+            <param name="resource">
+            The Service Layer resource to be requested.
+            </param>
+            <param name="data">
+            The object to be sent as the JSON body.
+            </param>
+            <param name="contentID">
+            Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+            This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
+            </param>
+        </member>
         <member name="T:B1SLayer.SLConnection">
             <summary>
             Represents a connection to the Service Layer.
@@ -468,9 +523,24 @@
             The downloaded attachment file as a <see cref="T:System.Byte"/> array.
             </returns>
         </member>
+        <member name="M:B1SLayer.SLConnection.PostBatchAsync(B1SLayer.SLBatchRequest[])">
+            <summary>
+            Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest"/> instances.
+            All requests are sent in a single change set.
+            </summary>
+            <remarks>
+            See section 'Batch Operations' in the Service Layer User Manual for more details.
+            </remarks>
+            <param name="requests">
+            <see cref="T:B1SLayer.SLBatchRequest"/> instances to be sent in the batch.
+            </param>
+            <returns>
+            An <see cref="T:System.Net.Http.HttpResponseMessage"/> array containg the response messages of the batch request. 
+            </returns>
+        </member>
         <member name="M:B1SLayer.SLConnection.PostBatchAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean)">
             <summary>
-            Performs a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest"/> collection. 
+            Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest"/> collection. 
             </summary>
             <remarks>
             See section 'Batch Operations' in the Service Layer User Manual for more details.
@@ -533,6 +603,20 @@
             <param name="unwrapCollection">
             Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
             </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.GetAllAsync``1">
+            <summary>
+            Performs multiple GET requests until all entities in a collection are obtained.
+            </summary>
+            <remarks>
+            This can be very slow depending on the total amount of entities in the company database.
+            </remarks>
+            <typeparam name="T">
+            The object type for the result to be deserialized into.
+            </typeparam>
+            <returns>
+            An <see cref="T:System.Collections.Generic.IList`1"/> containing all the entities in the given collection.
+            </returns>
         </member>
         <member name="M:B1SLayer.SLRequest.GetAsync">
             <summary>
