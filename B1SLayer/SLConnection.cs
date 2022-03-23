@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -826,6 +827,7 @@ namespace B1SLayer
                     throw new ArgumentException("No requests to be sent.");
                 }
 
+                var responseList = new List<HttpResponseMessage>();
                 var response = singleChangeSet
                     ? await ServiceLayerRoot
                         .AppendPathSegment("$batch")
@@ -848,8 +850,21 @@ namespace B1SLayer
                             }
                         });
 
-                var responseList = new List<HttpResponseMessage>();
-                var multipart = await response.ResponseMessage.Content.ReadAsMultipartAsync();
+                // Workaround for reading multipart response when using OData v4
+                var contentString = await response.ResponseMessage.Content.ReadAsStringAsync();
+                contentString = contentString.Replace("}\n--", "}\r\n--");
+                MultipartMemoryStreamProvider multipart = null;
+
+                using (var responseMs = new MemoryStream(Encoding.UTF8.GetBytes(contentString ?? string.Empty)))
+                using (var streamContent = new StreamContent(responseMs))
+                {
+                    foreach (var header in response.ResponseMessage.Content.Headers)
+                    {
+                        streamContent.Headers.Add(header.Key, header.Value);
+                    }
+
+                    multipart = await streamContent.ReadAsMultipartAsync();
+                }
 
                 foreach (HttpContent httpContent in multipart.Contents)
                 {
