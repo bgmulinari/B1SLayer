@@ -26,6 +26,8 @@ namespace B1SLayer
         #region Fields
         private DateTime _lastRequest = DateTime.MinValue;
         private SLLoginResponse _loginResponse;
+        private readonly Func<string, string> _getServiceLayerConnectionContext;
+        private readonly int _ssoSessionTimeout;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly HttpStatusCode[] _returnCodesToRetry = new[]
         {
@@ -62,6 +64,10 @@ namespace B1SLayer
         /// Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
         /// </summary>
         public int NumberOfAttempts { get; set; }
+        /// <summary>
+        /// Gets whether this <see cref="SLConnection"/> instance is using Single Sign-On (SSO) authentication.
+        /// </summary>
+        public bool IsUsingSingleSignOn { get; private set; }
         /// <summary>
         /// A container that keeps the session cookies returned by the Login request. 
         /// These cookies are sent in every request and overwritten whenever a new Login is performed.
@@ -129,16 +135,7 @@ namespace B1SLayer
             NumberOfAttempts = numberOfAttempts;
             LoginResponse = new SLLoginResponse();
 
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
-            {
-                // Disable SSL certificate verification
-                client.Settings.HttpClientFactory = new CustomHttpClientFactory();
-                // Ignore null values in JSON
-                client.Settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
-                {
-                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                });
-            });
+            ConfigureFlurlClient();
         }
 
         /// <summary>
@@ -209,6 +206,73 @@ namespace B1SLayer
         /// </param>
         public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language)
             : this(new Uri(serviceLayerRoot), companyDB, userName, password, language) { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SLConnection"/> class using Single Sign-On (SSO) authentication.
+        /// </summary>
+        /// <param name="serviceLayerRoot">
+        /// The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+        /// </param>
+        /// <param name="getServiceLayerConnectionContext">
+        /// The reference for the UI API method responsible for obtaining the connection context
+        /// (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
+        /// </param>
+        /// <param name="sessionTimeout">
+        /// The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+        /// specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+        /// </param>
+        /// <param name="numberOfAttempts">
+        /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+        /// </param>
+        public SLConnection(Uri serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext, int sessionTimeout = 30, int numberOfAttempts = 3)
+        {
+            ServiceLayerRoot = serviceLayerRoot;
+            NumberOfAttempts = numberOfAttempts;
+            LoginResponse = new SLLoginResponse();
+            IsUsingSingleSignOn = true;
+            _getServiceLayerConnectionContext = getServiceLayerConnectionContext;
+            _ssoSessionTimeout = sessionTimeout;
+
+            ConfigureFlurlClient();
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SLConnection"/> class using Single Sign-On (SSO) authentication.
+        /// </summary>
+        /// <param name="serviceLayerRoot">
+        /// The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+        /// </param>
+        /// <param name="getServiceLayerConnectionContext">
+        /// The reference for the UI API method responsible for obtaining the connection context
+        /// (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
+        /// </param>
+        /// <param name="sessionTimeout">
+        /// The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+        /// specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+        /// </param>
+        /// <param name="numberOfAttempts">
+        /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+        /// </param>
+        public SLConnection(string serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext, int sessionTimeout = 30, int numberOfAttempts = 3)
+            : this(new Uri(serviceLayerRoot), getServiceLayerConnectionContext, sessionTimeout, numberOfAttempts) { }
+        #endregion
+
+        #region Configuration Methods
+        private void ConfigureFlurlClient()
+        {
+            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            {
+                // Disable SSL certificate verification
+                client.Settings.HttpClientFactory = new CustomHttpClientFactory();
+                // Ignore null values in JSON
+                client.Settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
+                {
+                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                });
+            });
+        }
         #endregion
 
         #region Authentication Methods
@@ -249,15 +313,27 @@ namespace B1SLayer
                 if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout)
                     return expectReturn ? LoginResponse : null;
 
-                var loginResponse = await ServiceLayerRoot
-                    .AppendPathSegment("Login")
-                    .WithCookies(out var cookieJar)
-                    .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
-                    .ReceiveJson<SLLoginResponse>();
+                if (!IsUsingSingleSignOn)
+                {
+                    var loginResponse = await ServiceLayerRoot
+                        .AppendPathSegment("Login")
+                        .WithCookies(out var cookieJar)
+                        .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
+                        .ReceiveJson<SLLoginResponse>();
 
-                Cookies = cookieJar;
-                _loginResponse = loginResponse;
-                _loginResponse.LastLogin = DateTime.Now;
+                    Cookies = cookieJar;
+                    _loginResponse = loginResponse;
+                    _loginResponse.LastLogin = DateTime.Now;
+                }
+                else
+                {
+                    // Obtains session context from UI API method
+                    string connectionContext = _getServiceLayerConnectionContext(ServiceLayerRoot.ToString());
+                    Cookies = CreateCookieJarFromConnectionContext(connectionContext);
+                    _loginResponse.LastLogin = DateTime.Now;
+                    _loginResponse.SessionTimeout = _ssoSessionTimeout;
+                    _loginResponse.SessionId = Cookies.FirstOrDefault(x => x.Name.Equals("B1SESSION", StringComparison.OrdinalIgnoreCase))?.Value;
+                }
 
                 return expectReturn ? LoginResponse : null;
             }
@@ -275,6 +351,39 @@ namespace B1SLayer
             {
                 _semaphoreSlim.Release();
             }
+        }
+
+        /// <summary>
+        /// Creates a <see cref="CookieJar"/> instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
+        /// </summary>
+        /// <param name="connectionContext">
+        /// The connection context string obtained from UI API.
+        /// </param>
+        /// <returns>
+        /// A <see cref="CookieJar"/> instance containing session cookies obtained after a successful authentication.
+        /// </returns>
+        private CookieJar CreateCookieJarFromConnectionContext(string connectionContext)
+        {
+            var cookieJar = new CookieJar();
+            var cookies = connectionContext.Replace(',', ';').Split(';').Where(x => !string.IsNullOrEmpty(x) && x.Contains('=') && !x.Contains("path"));
+
+            foreach (var cookie in cookies)
+            {
+                var cookieKeyValue = cookie.Split('=');
+
+                if (cookieKeyValue.Length != 2) continue;
+
+                if (cookieKeyValue[0].Equals("B1SESSION", StringComparison.OrdinalIgnoreCase) || cookieKeyValue[0].Equals("CompanyDB", StringComparison.OrdinalIgnoreCase))
+                {
+                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { HttpOnly = true });
+                }
+                else if (cookieKeyValue[0].Equals("ROUTEID", StringComparison.OrdinalIgnoreCase))
+                {
+                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { Path = "/b1s" });
+                }
+            }
+
+            return cookieJar;
         }
 
         /// <summary>
