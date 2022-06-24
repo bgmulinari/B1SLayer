@@ -375,11 +375,11 @@ namespace B1SLayer
 
                 if (cookieKeyValue[0].Equals("B1SESSION", StringComparison.OrdinalIgnoreCase) || cookieKeyValue[0].Equals("CompanyDB", StringComparison.OrdinalIgnoreCase))
                 {
-                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { HttpOnly = true });
+                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { HttpOnly = true, Secure = true });
                 }
                 else if (cookieKeyValue[0].Equals("ROUTEID", StringComparison.OrdinalIgnoreCase))
                 {
-                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { Path = "/b1s" });
+                    cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { Path = "/", Secure = true });
                 }
             }
 
