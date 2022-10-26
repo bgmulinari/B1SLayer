@@ -1012,6 +1012,9 @@ namespace B1SLayer
             {
                 var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
 
+                if (batchRequest.HttpVersion != null)
+                    request.Version = batchRequest.HttpVersion;
+
                 if (batchRequest.Data != null)
                     request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
 
@@ -1034,6 +1037,9 @@ namespace B1SLayer
         {
             var multipartContent = new MultipartContent("mixed", boundary);
             var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
+
+            if (batchRequest.HttpVersion != null)
+                request.Version = batchRequest.HttpVersion;
 
             if (batchRequest.Data != null)
                 request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
