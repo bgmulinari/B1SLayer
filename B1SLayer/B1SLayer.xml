@@ -41,6 +41,11 @@
             By default it is configured so the <see cref="P:Newtonsoft.Json.JsonSerializerSettings.NullValueHandling"/> is set to <see cref="F:Newtonsoft.Json.NullValueHandling.Ignore"/>.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLBatchRequest.HttpVersion">
+            <summary>
+            Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLBatchRequest.#ctor">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.

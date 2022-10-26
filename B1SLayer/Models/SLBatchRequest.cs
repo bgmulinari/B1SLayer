@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Net.Http;
 using System.Text;
 
@@ -35,6 +36,10 @@ namespace B1SLayer
         /// By default it is configured so the <see cref="JsonSerializerSettings.NullValueHandling"/> is set to <see cref="NullValueHandling.Ignore"/>.
         /// </summary>
         public JsonSerializerSettings JsonSerializerSettings { get; set; } = new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore };
+        /// <summary>
+        /// Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
+        /// </summary>
+        public Version HttpVersion { get; set; } = new Version(1, 1);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.
