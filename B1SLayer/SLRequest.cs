@@ -281,7 +281,7 @@ namespace B1SLayer
         /// <summary>
         /// Performs a POST request without parameters and returns the result in a <see cref="string"/>.
         /// </summary>
-        public async Task<string> PostStringAsync()
+        public async Task<string> PostReceiveStringAsync()
         {
             return await _slConnection.ExecuteRequest(async () =>
             {
