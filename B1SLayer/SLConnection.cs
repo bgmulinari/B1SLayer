@@ -1015,6 +1015,9 @@ namespace B1SLayer
                 if (batchRequest.HttpVersion != null)
                     request.Version = batchRequest.HttpVersion;
 
+                foreach (var header in batchRequest.Headers)
+                    request.Headers.Add(header.Key, header.Value);
+
                 if (batchRequest.Data != null)
                     request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
 
@@ -1040,6 +1043,9 @@ namespace B1SLayer
 
             if (batchRequest.HttpVersion != null)
                 request.Version = batchRequest.HttpVersion;
+
+            foreach (var header in batchRequest.Headers)
+                request.Headers.Add(header.Key, header.Value);
 
             if (batchRequest.Data != null)
                 request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");

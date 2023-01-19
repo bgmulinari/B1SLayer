@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace B1SLayer
@@ -40,6 +41,10 @@ namespace B1SLayer
         /// Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
         /// </summary>
         public Version HttpVersion { get; set; } = new Version(1, 1);
+        /// <summary>
+        /// The HTTP headers to be sent in this request.
+        /// </summary>
+        internal HttpRequestHeaders Headers { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.
@@ -68,6 +73,11 @@ namespace B1SLayer
             Resource = resource;
             Data = data;
             ContentID = contentID;
+
+            using (var message = new HttpRequestMessage())
+            {
+                Headers = message.Headers;
+            }
         }
     }
 }
