@@ -44,6 +44,11 @@ var bpList = await serviceLayer.Request("BusinessPartners")
     .WithCaseInsensitive()
     .GetAsync<List<MyBusinessPartnerModel>>();
 
+// Performs a GET on /AlternateCatNum specifying the record through a composite primary key
+// The result is deserialized in a dynamic object
+var altCatNum = await serviceLayer
+    .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')").GetAsync();
+
 // Performs multiple GET requests on /Items until all entities in the database are obtained
 // The result is an IList of your custom model class
 var allItemsList = await serviceLayer.Request("Items").Select("ItemCode").GetAllAsync<MyItemModel>();
