@@ -26,6 +26,7 @@ namespace B1SLayer
         #region Fields
         private DateTime _lastRequest = DateTime.MinValue;
         private SLLoginResponse _loginResponse;
+        private TimeSpan _batchRequestTimeout = TimeSpan.FromSeconds(300);
         private readonly Func<string, string> _getServiceLayerConnectionContext;
         private readonly int _ssoSessionTimeout;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
@@ -64,6 +65,21 @@ namespace B1SLayer
         /// Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
         /// </summary>
         public int NumberOfAttempts { get; set; }
+        /// <summary>
+        /// Gets or sets the timespan to wait before a batch request times out. The default value is 5 minutes (300 seconds).
+        /// </summary>
+        public TimeSpan BatchRequestTimeout
+        {
+            get => _batchRequestTimeout;
+            set
+            {
+                if (value != Timeout.InfiniteTimeSpan && (value <= TimeSpan.Zero || value > TimeSpan.FromMilliseconds(int.MaxValue)))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value));
+                }
+                _batchRequestTimeout = value;
+            }
+        }
         /// <summary>
         /// Gets whether this <see cref="SLConnection"/> instance is using Single Sign-On (SSO) authentication.
         /// </summary>
@@ -941,6 +957,7 @@ namespace B1SLayer
                     ? await ServiceLayerRoot
                         .AppendPathSegment("$batch")
                         .WithCookies(Cookies)
+                        .WithTimeout(BatchRequestTimeout)
                         .PostMultipartAsync(mp =>
                         {
                             mp.Headers.ContentType.MediaType = "multipart/mixed";
@@ -949,6 +966,7 @@ namespace B1SLayer
                     : await ServiceLayerRoot
                         .AppendPathSegment("$batch")
                         .WithCookies(Cookies)
+                        .WithTimeout(BatchRequestTimeout)
                         .PostMultipartAsync(mp =>
                         {
                             mp.Headers.ContentType.MediaType = "multipart/mixed";
