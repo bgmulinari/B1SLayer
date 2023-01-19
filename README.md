@@ -65,7 +65,8 @@ var attachmentEntry = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.p
 var req1 = new SLBatchRequest(
     HttpMethod.Post, // HTTP method
     "BusinessPartners", // resource
-    new { CardCode = "C00001", CardName = "I'm a new BP" }); // object to be sent as the JSON body
+    new { CardCode = "C00001", CardName = "I'm a new BP" }) // object to be sent as the JSON body
+    .WithReturnNoContent(); // Adds the header "Prefer: return-no-content" to the request
 
 var req2 = new SLBatchRequest(HttpMethod.Patch,
     "BusinessPartners('C00001')",
