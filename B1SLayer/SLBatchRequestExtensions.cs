@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace B1SLayer.Models
+namespace B1SLayer
 {
     public static class SLBatchRequestExtensions
     {
