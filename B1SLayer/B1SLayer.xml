@@ -21,7 +21,7 @@
         </member>
         <member name="P:B1SLayer.SLBatchRequest.Data">
             <summary>
-            Gets or sets the object to be sent as the JSON body.
+            Gets or sets the JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
             </summary>
         </member>
         <member name="P:B1SLayer.SLBatchRequest.ContentID">
@@ -46,6 +46,11 @@
             Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLBatchRequest.Headers">
+            <summary>
+            The HTTP headers to be sent in this request.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLBatchRequest.#ctor">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest"/> class, which represents the details of a request to be sent in a batch.
@@ -62,11 +67,44 @@
             The Service Layer resource to be requested.
             </param>
             <param name="data">
-            The object to be sent as the JSON body.
+            The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
             </param>
             <param name="contentID">
             Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
             This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequestExtensions.WithCaseInsensitive(B1SLayer.SLBatchRequest)">
+            <summary>
+            Enables a case-insensitive query.
+            </summary>
+            <remarks>
+            This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequestExtensions.WithReplaceCollectionsOnPatch(B1SLayer.SLBatchRequest)">
+            <summary>
+            Allows a PATCH request to remove items in a collection.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequestExtensions.WithReturnNoContent(B1SLayer.SLBatchRequest)">
+            <summary>
+            Configures a POST request to not return the created entity.
+            This is suitable for better performance in demanding scenarios where the return content is not needed.
+            </summary>
+            <remarks>
+            On success, <see cref="F:System.Net.HttpStatusCode.NoContent"/> is returned, instead of <see cref="F:System.Net.HttpStatusCode.Created"/>.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequestExtensions.WithHeader(B1SLayer.SLBatchRequest,System.String,System.String)">
+            <summary>
+            Adds a custom request header to be sent.
+            </summary>
+            <param name="name">
+            The name of the header.
+            </param>
+            <param name="value">
+            The value of the header.
             </param>
         </member>
         <member name="T:B1SLayer.SLConnection">
@@ -105,6 +143,16 @@
         <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
             <summary>
             Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
+            <summary>
+            Gets or sets the timespan to wait before a batch request times out. The default value is 5 minutes (300 seconds).
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.IsUsingSingleSignOn">
+            <summary>
+            Gets whether this <see cref="T:B1SLayer.SLConnection"/> instance is using Single Sign-On (SSO) authentication.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.Cookies">
@@ -210,6 +258,46 @@
             A GET request to the UserLanguages resource will return all available languages and their respective codes.
             </param>
         </member>
+        <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.Func{System.String,System.String},System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLConnection"/> class using Single Sign-On (SSO) authentication.
+            </summary>
+            <param name="serviceLayerRoot">
+            The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+            </param>
+            <param name="getServiceLayerConnectionContext">
+            The reference for the UI API method responsible for obtaining the connection context
+            (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
+            </param>
+            <param name="sessionTimeout">
+            The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+            specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+            </param>
+            <param name="numberOfAttempts">
+            The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+            If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.Func{System.String,System.String},System.Int32,System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLConnection"/> class using Single Sign-On (SSO) authentication.
+            </summary>
+            <param name="serviceLayerRoot">
+            The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+            </param>
+            <param name="getServiceLayerConnectionContext">
+            The reference for the UI API method responsible for obtaining the connection context
+            (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
+            </param>
+            <param name="sessionTimeout">
+            The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+            specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+            </param>
+            <param name="numberOfAttempts">
+            The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+            If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLConnection.LoginAsync(System.Boolean)">
             <summary>
             If the current session is expired or non-existent, performs a POST Login request with the provided information.
@@ -234,6 +322,17 @@
             <param name="expectReturn">
             Wheter the login information should be returned.
             </param>
+        </member>
+        <member name="M:B1SLayer.SLConnection.CreateCookieJarFromConnectionContext(System.String)">
+            <summary>
+            Creates a <see cref="T:Flurl.Http.CookieJar"/> instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
+            </summary>
+            <param name="connectionContext">
+            The connection context string obtained from UI API.
+            </param>
+            <returns>
+            A <see cref="T:Flurl.Http.CookieJar"/> instance containing session cookies obtained after a successful authentication.
+            </returns>
         </member>
         <member name="M:B1SLayer.SLConnection.LogoutAsync">
             <summary>
@@ -569,6 +668,11 @@
             Builds the multipart content for a batch request using multiple change sets.
             </summary>
         </member>
+        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContent(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
+            <summary>
+            Builds the <see cref="T:System.Net.Http.HttpRequestMessage"/> from a given <see cref="T:B1SLayer.SLBatchRequest"/> and adds it to the <see cref="T:System.Net.Http.MultipartContent"/> instance.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLConnection.ExceptionEqualityComparer">
             <summary>
             Used to aggregate exceptions that occur on request retries. 
@@ -706,6 +810,11 @@
             <param name="data">
             The object to be sent as the JSON body.
             </param>
+        </member>
+        <member name="M:B1SLayer.SLRequest.PostReceiveStringAsync">
+            <summary>
+            Performs a POST request without parameters and returns the result in a <see cref="T:System.String"/>.
+            </summary>
         </member>
         <member name="M:B1SLayer.SLRequest.PostStringAsync(System.String)">
             <summary>
