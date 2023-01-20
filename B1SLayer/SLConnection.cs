@@ -1028,24 +1028,7 @@ namespace B1SLayer
 
             foreach (var batchRequest in requests)
             {
-                var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
-
-                if (batchRequest.HttpVersion != null)
-                    request.Version = batchRequest.HttpVersion;
-
-                foreach (var header in batchRequest.Headers)
-                    request.Headers.Add(header.Key, header.Value);
-
-                if (batchRequest.Data != null)
-                    request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
-
-                var innerContent = new HttpMessageContent(request);
-                innerContent.Headers.Add("content-transfer-encoding", "binary");
-
-                if (batchRequest.ContentID.HasValue)
-                    innerContent.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
-
-                multipartContent.Add(innerContent);
+                BuildRequestForMultipartContent(multipartContent, batchRequest);
             }
 
             return multipartContent;
@@ -1057,6 +1040,15 @@ namespace B1SLayer
         private MultipartContent BuildMixedMultipartContent(SLBatchRequest batchRequest, string boundary)
         {
             var multipartContent = new MultipartContent("mixed", boundary);
+            BuildRequestForMultipartContent(multipartContent, batchRequest);
+            return multipartContent;
+        }
+
+        /// <summary>
+        /// Builds the <see cref="HttpRequestMessage"/> from a given <see cref="SLBatchRequest"/> and adds it to the <see cref="MultipartContent"/> instance.
+        /// </summary>
+        private void BuildRequestForMultipartContent(MultipartContent multipartContent, SLBatchRequest batchRequest)
+        {
             var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
 
             if (batchRequest.HttpVersion != null)
@@ -1066,7 +1058,9 @@ namespace B1SLayer
                 request.Headers.Add(header.Key, header.Value);
 
             if (batchRequest.Data != null)
-                request.Content = new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
+                request.Content = batchRequest.Data is string dataString
+                    ? new StringContent(dataString, batchRequest.Encoding, "application/json")
+                    : new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
 
             var innerContent = new HttpMessageContent(request);
             innerContent.Headers.Add("content-transfer-encoding", "binary");
@@ -1075,8 +1069,6 @@ namespace B1SLayer
                 innerContent.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
 
             multipartContent.Add(innerContent);
-
-            return multipartContent;
         }
         #endregion
 

@@ -20,7 +20,7 @@ namespace B1SLayer
         /// </summary>
         public string Resource { get; set; }
         /// <summary>
-        /// Gets or sets the object to be sent as the JSON body.
+        /// Gets or sets the JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
         /// </summary>
         public object Data { get; set; }
         /// <summary>
@@ -61,7 +61,7 @@ namespace B1SLayer
         /// The Service Layer resource to be requested.
         /// </param>
         /// <param name="data">
-        /// The object to be sent as the JSON body.
+        /// The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
         /// </param>
         /// <param name="contentID">
         /// Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
