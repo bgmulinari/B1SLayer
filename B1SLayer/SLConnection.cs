@@ -331,7 +331,7 @@ namespace B1SLayer
         /// </param>
         public SLRequest Request(string resource, object id) =>
             new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(id is string ? $"{resource}('{id}')" : $"{resource}({id})")));
-
+         
         /// <summary>
         /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a call to a custom view (View Service Endpoint) that was exposed before manually. 
         /// </summary>
