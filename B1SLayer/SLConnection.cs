@@ -333,6 +333,17 @@ namespace B1SLayer
             new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(id is string ? $"{resource}('{id}')" : $"{resource}({id})")));
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a call to a custom view (View Service Endpoint) that was exposed before manually. 
+        /// </summary>
+        /// <remarks>
+        /// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
+        /// </remarks>
+        /// <param name="viewName">
+        /// The name of the view to be requested.
+        /// </param>
+        public SLRequest RequestView(string viewName) => new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment($"view.svc/{viewName}")));
+
+        /// <summary>
         /// Calls the Login method to ensure a valid session and then executes the provided request.
         /// If the request is unsuccessfull with any return code present in <see cref="_returnCodesToRetry"/>, 
         /// it will be retried for <see cref="NumberOfAttempts"/> number of times.
