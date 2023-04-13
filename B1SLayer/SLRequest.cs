@@ -60,6 +60,37 @@ namespace B1SLayer
         }
 
         /// <summary>
+        /// Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+        /// </summary>
+        /// <typeparam name="T">
+        /// The object type for the result to be deserialized into.
+        /// </typeparam>
+        /// <param name="unwrapCollection">
+        /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+        /// </param>
+        public async Task<(T Result, int Count)> GetWithInlineCountAsync<T>(bool unwrapCollection = true)
+        {
+            return await _slConnection.ExecuteRequest(async () =>
+            {
+                string stringResult = await FlurlRequest.SetQueryParam("$inlinecount", "allpages").WithCookies(_slConnection.Cookies).GetStringAsync();
+                var jObject = JObject.Parse(stringResult);
+                var inlineCountToken = jObject.GetValue("odata.count") ?? jObject.GetValue("@odata.count");
+                int inlineCount = inlineCountToken == null ? 0 : int.Parse(inlineCountToken.ToString());
+
+                if (unwrapCollection)
+                {
+                    // Checks if the result is a collection by selecting the "value" token
+                    var valueCollection = jObject.SelectToken("value");
+                    return valueCollection == null ? (jObject.ToObject<T>(), inlineCount) : (valueCollection.ToObject<T>(), inlineCount);
+                }
+                else
+                {
+                    return (jObject.ToObject<T>(), inlineCount);
+                }
+            });
+        }
+
+        /// <summary>
         /// Performs multiple GET requests until all entities in a collection are obtained.
         /// </summary>
         /// <remarks>
