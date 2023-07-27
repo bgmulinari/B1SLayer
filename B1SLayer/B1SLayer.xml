@@ -726,7 +726,7 @@
         </member>
         <member name="M:B1SLayer.SLRequest.GetAllAsync``1">
             <summary>
-            Performs multiple GET requests until all entities in a collection are obtained.
+            Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
             </summary>
             <remarks>
             This can be very slow depending on the total amount of entities in the company database.
@@ -789,20 +789,6 @@
             Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
             </param>
         </member>
-        <member name="M:B1SLayer.SLRequest.PostWithInlineCountAsync``1(System.Object,System.Boolean)">
-            <summary>
-            Performs a POST request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
-            </summary>
-            <param name="data">
-            The object to be sent as the JSON body.
-            </param>
-            <typeparam name="T">
-            The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
         <member name="M:B1SLayer.SLRequest.PostStringAsync``1(System.String,System.Boolean)">
             <summary>
             Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
@@ -820,17 +806,6 @@
         <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Boolean)">
             <summary>
             Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type"/>.
-            </summary>
-            <typeparam name="T">
-            The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-            Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostWithInlineCountAsync``1(System.Boolean)">
-            <summary>
-            Performs a POST request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
             </summary>
             <typeparam name="T">
             The object type for the result to be deserialized into.
