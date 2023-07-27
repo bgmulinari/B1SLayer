@@ -326,7 +326,8 @@ namespace B1SLayer
                     _lastRequest = default;
 
                 // Session still valid, no need to login again
-                if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout)
+                // Subtract 1 minute from the session timeout as a grace period to avoid requests with an invalid session
+                if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout - 1)
                     return expectReturn ? LoginResponse : null;
 
                 if (!IsUsingSingleSignOn)
