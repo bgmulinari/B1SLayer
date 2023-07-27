@@ -91,7 +91,7 @@ namespace B1SLayer
         }
 
         /// <summary>
-        /// Performs multiple GET requests until all entities in a collection are obtained.
+        /// Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
         /// </summary>
         /// <remarks>
         /// This can be very slow depending on the total amount of entities in the company database.

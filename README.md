@@ -16,6 +16,7 @@ Firstly I highly recommend reading [my blog post on SAP Community](https://blogs
 ````c#
 /* The connection object. All Service Layer requests and the session management are handled by this object
  * and therefore only one instance per company/user should be used across the entire application.
+ * If you want to connect to multiple databases or use different users, you will need multiple instances.
  * There's no need to manually Login! The session is managed automatically and renewed whenever necessary.
  */
 var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
@@ -50,7 +51,7 @@ var altCatNum = await serviceLayer
     .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')").GetAsync();
 
 // Performs multiple GET requests on /Items until all entities in the database are obtained
-// The result is an IList of your custom model class
+// The result is an IList of your custom model class (unwrapped from the 'value' array)
 var allItemsList = await serviceLayer.Request("Items").Select("ItemCode").GetAllAsync<MyItemModel>();
 
 // Performs a POST on /Orders with the provided object as the JSON body, 
