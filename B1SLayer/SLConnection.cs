@@ -466,6 +466,7 @@ namespace B1SLayer
         internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action)
         {
             _lastRequest = DateTime.Now;
+            bool loginReattempted = false;
 
             if (NumberOfAttempts < 1)
                 throw new ArgumentException("The number of attempts can not be lower than 1.");
@@ -473,8 +474,10 @@ namespace B1SLayer
             List<Exception> exceptions = null;
             await LoginInternalAsync();
 
-            for (int i = 0; i < NumberOfAttempts; i++)
+            for (int i = 0; i < NumberOfAttempts || loginReattempted; i++)
             {
+                loginReattempted = false;
+
                 try
                 {
                     var result = await action();
@@ -506,7 +509,11 @@ namespace B1SLayer
                     // Forces a new login request in case the response is 401 Unauthorized
                     if (ex.Call.HttpResponseMessage?.StatusCode == HttpStatusCode.Unauthorized)
                     {
+                        if (i >= NumberOfAttempts)
+                            break;
+
                         await LoginInternalAsync(true);
+                        loginReattempted = true;
                     }
                 }
                 catch (Exception)
