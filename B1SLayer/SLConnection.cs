@@ -325,9 +325,8 @@ namespace B1SLayer
                 if (forceLogin)
                     _lastRequest = default;
 
-                // Session still valid, no need to login again
-                // Subtract 1 minute from the session timeout as a grace period to avoid requests with an invalid session
-                if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout - 1)
+                // Check whether the current session is valid
+                if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout)
                     return expectReturn ? LoginResponse : null;
 
                 if (!IsUsingSingleSignOn)
@@ -465,14 +464,15 @@ namespace B1SLayer
         /// </summary>
         internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action)
         {
-            _lastRequest = DateTime.Now;
             bool loginReattempted = false;
+            List<Exception> exceptions = null;
 
             if (NumberOfAttempts < 1)
                 throw new ArgumentException("The number of attempts can not be lower than 1.");
 
-            List<Exception> exceptions = null;
             await LoginInternalAsync();
+
+            _lastRequest = DateTime.Now;
 
             for (int i = 0; i < NumberOfAttempts || loginReattempted; i++)
             {
