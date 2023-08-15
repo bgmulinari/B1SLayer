@@ -2,6 +2,9 @@
 
 namespace B1SLayer
 {
+    /// <summary>
+    /// Extension methods definitions for <see cref="SLBatchRequest"/>.
+    /// </summary>
     public static class SLBatchRequestExtensions
     {
         /// <summary>
@@ -41,6 +44,9 @@ namespace B1SLayer
         /// <summary>
         /// Adds a custom request header to be sent.
         /// </summary>
+        /// <param name="batchRequest">
+        /// The current request.
+        /// </param>
         /// <param name="name">
         /// The name of the header.
         /// </param>

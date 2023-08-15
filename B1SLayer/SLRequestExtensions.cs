@@ -1,11 +1,14 @@
 ﻿using Flurl.Http;
-using Flurl.Http.Configuration;
-using Newtonsoft.Json;
 using System;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace B1SLayer
 {
+    /// <summary>
+    /// Extension methods definitions for <see cref="SLRequest"/>.
+    /// </summary>
     public static class SLRequestExtensions
     {
         /// <summary>
@@ -88,6 +91,9 @@ namespace B1SLayer
         /// <summary>
         /// Sets the page size when paging is applied for a query. The default value is 20.
         /// </summary>
+        /// <param name="request">
+        /// The current request.
+        /// </param>
         /// <param name="pageSize">
         /// The page size to be defined for this request.
         /// </param>
@@ -134,6 +140,9 @@ namespace B1SLayer
         /// <summary>
         /// Adds a custom request header to be sent.
         /// </summary>
+        /// <param name="request">
+        /// The current request.
+        /// </param>
         /// <param name="name">
         /// The name of the header.
         /// </param>
@@ -152,6 +161,9 @@ namespace B1SLayer
         /// <remarks>
         /// By default, every reponse with an unsuccessful <see cref="HttpStatusCode"/> (non-2XX) will result in a throw.
         /// </remarks>
+        /// <param name="request">
+        /// The current request.
+        /// </param>
         /// <param name="statusCodes">
         /// The <see cref="HttpStatusCode"/> to be allowed.
         /// </param>
@@ -174,16 +186,15 @@ namespace B1SLayer
         }
 
         /// <summary>
-        /// Configures the JSON serializer to include null values (<see cref="NullValueHandling.Include"/>) for this request.
-        /// The default value is <see cref="NullValueHandling.Ignore"/>.
+        /// Configures the JSON serializer to include null values for this request.
         /// </summary>
         public static SLRequest IncludeNullValues(this SLRequest request)
         {
             request.FlurlRequest.ConfigureRequest(settings =>
             {
-                settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
+                settings.JsonSerializer = new SystemTextJsonSerializer(new JsonSerializerOptions
                 {
-                    NullValueHandling = NullValueHandling.Include
+                    DefaultIgnoreCondition = JsonIgnoreCondition.Never
                 });
             });
 
@@ -191,13 +202,13 @@ namespace B1SLayer
         }
 
         /// <summary>
-        /// Sets a custom <see cref="JsonSerializerSettings"/> to be used for this request.
+        /// Sets a custom <see cref="JsonSerializerOptions"/> to be used for this request.
         /// </summary>
-        public static SLRequest WithJsonSerializerSettings(this SLRequest request, JsonSerializerSettings jsonSerializerSettings)
+        public static SLRequest WithJsonSerializerOptions(this SLRequest request, JsonSerializerOptions jsonSerializerOptions)
         {
             request.FlurlRequest.ConfigureRequest(settings =>
             {
-                settings.JsonSerializer = new NewtonsoftJsonSerializer(jsonSerializerSettings);
+                settings.JsonSerializer = new SystemTextJsonSerializer(jsonSerializerOptions);
             });
 
             return request;
@@ -206,6 +217,9 @@ namespace B1SLayer
         /// <summary>
         /// Configures a custom timeout value for this request. The default timeout is 100 seconds.
         /// </summary>
+        /// <param name="request">
+        /// The current request.
+        /// </param>
         /// <param name="timeout">
         /// A <see cref="TimeSpan"/> representing the timeout value to be configured.
         /// </param>
@@ -218,6 +232,9 @@ namespace B1SLayer
         /// <summary>
         /// Configures a custom timeout value for this request. The default timeout is 100 seconds.
         /// </summary>
+        /// <param name="request">
+        /// The current request.
+        /// </param>
         /// <param name="timeout">
         /// An <see cref="int"/> representing the timeout in seconds to be configured.
         /// </param>

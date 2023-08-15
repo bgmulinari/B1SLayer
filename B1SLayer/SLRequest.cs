@@ -1,13 +1,13 @@
 ﻿using B1SLayer.Models;
 using Flurl;
 using Flurl.Http;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace B1SLayer
@@ -27,7 +27,7 @@ namespace B1SLayer
         internal SLRequest(SLConnection connection, IFlurlRequest flurlRequest)
         {
             _slConnection = connection;
-            this.FlurlRequest = flurlRequest;
+            FlurlRequest = flurlRequest;
         }
 
         /// <summary>
@@ -44,18 +44,13 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
-                var jObject = JObject.Parse(stringResult);
+                using var jsonDoc = JsonDocument.Parse(stringResult);
 
-                if (unwrapCollection)
-                {
-                    // Checks if the result is a collection by selecting the "value" token
-                    var valueCollection = jObject.SelectToken("value");
-                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
-                }
-                else
-                {
-                    return jObject.ToObject<T>();
-                }
+                string jsonToDeserialize = (unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection))
+                    ? valueCollection.GetRawText()
+                    : jsonDoc.RootElement.GetRawText();
+
+                return JsonSerializer.Deserialize<T>(jsonToDeserialize);
             });
         }
 
@@ -73,20 +68,18 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.SetQueryParam("$inlinecount", "allpages").WithCookies(_slConnection.Cookies).GetStringAsync();
-                var jObject = JObject.Parse(stringResult);
-                var inlineCountToken = jObject.GetValue("odata.count") ?? jObject.GetValue("@odata.count");
-                int inlineCount = inlineCountToken == null ? 0 : int.Parse(inlineCountToken.ToString());
+                using var jsonDoc = JsonDocument.Parse(stringResult);
 
-                if (unwrapCollection)
-                {
-                    // Checks if the result is a collection by selecting the "value" token
-                    var valueCollection = jObject.SelectToken("value");
-                    return valueCollection == null ? (jObject.ToObject<T>(), inlineCount) : (valueCollection.ToObject<T>(), inlineCount);
-                }
-                else
-                {
-                    return (jObject.ToObject<T>(), inlineCount);
-                }
+                int inlineCount =
+                    jsonDoc.RootElement.TryGetProperty("odata.count", out JsonElement inlineCountElement1) ? int.Parse(inlineCountElement1.GetString()) :
+                    jsonDoc.RootElement.TryGetProperty("@odata.count", out JsonElement inlineCountElement2) ? int.Parse(inlineCountElement2.GetString()) : 0;
+
+                string jsonToDeserialize =
+                    unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
+                    jsonDoc.RootElement.GetRawText();
+
+                T result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
+                return (result, inlineCount);
             });
         }
 
@@ -127,17 +120,6 @@ namespace B1SLayer
         }
 
         /// <summary>
-        /// Performs a GET request with the provided parameters and returns the result in a dynamic object.
-        /// </summary>
-        public async Task<dynamic> GetAsync()
-        {
-            return await _slConnection.ExecuteRequest(async () =>
-            {
-                return await FlurlRequest.WithCookies(_slConnection.Cookies).GetJsonAsync();
-            });
-        }
-
-        /// <summary>
         /// Performs a GET request with the provided parameters and returns the result in a <see cref="string"/>.
         /// </summary>
         public async Task<string> GetStringAsync()
@@ -154,16 +136,18 @@ namespace B1SLayer
         /// <param name="anonymousTypeObject">
         /// The anonymous type object.
         /// </param>
-        /// <param name="jsonSerializerSettings">
-        /// The <see cref="JsonSerializerSettings"/> used to deserialize the object. If this is null, 
-        /// default serialization settings will be used.
+        /// <param name="jsonSerializerOptions">
+        /// The <see cref="JsonSerializerOptions"/> used to deserialize the object.
         /// </param>
-        public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerSettings jsonSerializerSettings = null)
+        public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
         {
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
-                return JsonConvert.DeserializeAnonymousType(stringResult, anonymousTypeObject, jsonSerializerSettings);
+                return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions ?? new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                });
             });
         }
 
@@ -219,18 +203,10 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostJsonAsync(data).ReceiveString();
-                var jObject = JObject.Parse(stringResult);
-
-                if (unwrapCollection)
-                {
-                    // Checks if the result is a collection by selecting the "value" token
-                    var valueCollection = jObject.SelectToken("value");
-                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
-                }
-                else
-                {
-                    return jObject.ToObject<T>();
-                }
+                using var jsonDoc = JsonDocument.Parse(stringResult);
+                bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
+                string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+                return JsonSerializer.Deserialize<T>(jsonToDeserialize);
             });
         }
 
@@ -251,18 +227,10 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostStringAsync(data).ReceiveString();
-                var jObject = JObject.Parse(stringResult);
-
-                if (unwrapCollection)
-                {
-                    // Checks if the result is a collection by selecting the "value" token
-                    var valueCollection = jObject.SelectToken("value");
-                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
-                }
-                else
-                {
-                    return jObject.ToObject<T>();
-                }
+                using var jsonDoc = JsonDocument.Parse(stringResult);
+                bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
+                string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+                return JsonSerializer.Deserialize<T>(jsonToDeserialize);
             });
         }
 
@@ -280,18 +248,10 @@ namespace B1SLayer
             return await _slConnection.ExecuteRequest(async () =>
             {
                 string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveString();
-                var jObject = JObject.Parse(stringResult);
-
-                if (unwrapCollection)
-                {
-                    // Checks if the result is a collection by selecting the "value" token
-                    var valueCollection = jObject.SelectToken("value");
-                    return valueCollection == null ? jObject.ToObject<T>() : valueCollection.ToObject<T>();
-                }
-                else
-                {
-                    return jObject.ToObject<T>();
-                }
+                using var jsonDoc = JsonDocument.Parse(stringResult);
+                bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
+                string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+                return JsonSerializer.Deserialize<T>(jsonToDeserialize);
             });
         }
 

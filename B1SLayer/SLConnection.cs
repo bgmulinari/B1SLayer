@@ -1,7 +1,6 @@
 ﻿using Flurl;
 using Flurl.Http;
 using Flurl.Http.Configuration;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +9,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -283,9 +284,9 @@ namespace B1SLayer
                 // Disable SSL certificate verification
                 client.Settings.HttpClientFactory = new CustomHttpClientFactory();
                 // Ignore null values in JSON
-                client.Settings.JsonSerializer = new NewtonsoftJsonSerializer(new JsonSerializerSettings
+                client.Settings.JsonSerializer = new SystemTextJsonSerializer(new JsonSerializerOptions
                 {
-                    NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                 });
             });
         }
@@ -990,16 +991,15 @@ namespace B1SLayer
                 contentString = contentString.Replace("}\n--", "}\r\n--");
                 MultipartMemoryStreamProvider multipart = null;
 
-                using (var responseMs = new MemoryStream(Encoding.UTF8.GetBytes(contentString ?? string.Empty)))
-                using (var streamContent = new StreamContent(responseMs))
-                {
-                    foreach (var header in response.ResponseMessage.Content.Headers)
-                    {
-                        streamContent.Headers.Add(header.Key, header.Value);
-                    }
+                using var responseMs = new MemoryStream(Encoding.UTF8.GetBytes(contentString ?? string.Empty));
+                using var streamContent = new StreamContent(responseMs);
 
-                    multipart = await streamContent.ReadAsMultipartAsync();
+                foreach (var header in response.ResponseMessage.Content.Headers)
+                {
+                    streamContent.Headers.Add(header.Key, header.Value);
                 }
+
+                multipart = await streamContent.ReadAsMultipartAsync();
 
                 foreach (HttpContent httpContent in multipart.Contents)
                 {
@@ -1068,7 +1068,7 @@ namespace B1SLayer
             if (batchRequest.Data != null)
                 request.Content = batchRequest.Data is string dataString
                     ? new StringContent(dataString, batchRequest.Encoding, "application/json")
-                    : new StringContent(JsonConvert.SerializeObject(batchRequest.Data, batchRequest.JsonSerializerSettings), batchRequest.Encoding, "application/json");
+                    : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions), batchRequest.Encoding, "application/json");
 
             var innerContent = new HttpMessageContent(request);
             innerContent.Headers.Add("content-transfer-encoding", "binary");

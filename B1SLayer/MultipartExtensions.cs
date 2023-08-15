@@ -9,11 +9,11 @@ namespace B1SLayer
 {
     internal static class MultipartExtensions
     {
-        internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, CancellationToken cancellationToken = default(CancellationToken))
+        internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, HttpCompletionOption httpCompletionOption = default, CancellationToken cancellationToken = default)
         {
             var cmc = new CapturedMultipartContent(request.Settings);
             buildContent(cmc);
-            return request.SendAsync(new HttpMethod("PATCH"), cmc, cancellationToken);
+            return request.SendAsync(new HttpMethod("PATCH"), cmc, httpCompletionOption, cancellationToken);
         }
     }
 }
