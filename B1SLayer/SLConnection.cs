@@ -337,6 +337,22 @@ namespace B1SLayer
                         .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
                         .ReceiveJson<SLLoginResponse>();
 
+                    //if cookie is not set, in case of Maui iOS, manually create a cookie from the sessionId and base url
+                    if (!cookieJar.Any())
+                    {
+                        var b1SessionValue = loginResponse.SessionId ?? "";
+                        var url = ServiceLayerRoot.AbsoluteUri ?? "";
+
+                        // Add B1SESSION cookie
+                        cookieJar.AddOrReplace(new FlurlCookie("B1SESSION", b1SessionValue, url)
+                        {
+                            HttpOnly = true,
+                            Secure = true,
+                            SameSite = SameSite.None
+                        });
+
+                    }
+
                     Cookies = cookieJar;
                     _loginResponse = loginResponse;
                     _loginResponse.LastLogin = DateTime.Now;
