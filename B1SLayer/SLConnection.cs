@@ -1,6 +1,5 @@
 ﻿using Flurl;
 using Flurl.Http;
-using Flurl.Http.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -279,16 +278,29 @@ namespace B1SLayer
         #region Configuration Methods
         private void ConfigureFlurlClient()
         {
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client =>
+            FlurlHttp.UseClientCachingStrategy(request =>
             {
-                // Disable SSL certificate verification
-                client.Settings.HttpClientFactory = new CustomHttpClientFactory();
-                // Ignore null values in JSON
-                client.Settings.JsonSerializer = new SystemTextJsonSerializer(new JsonSerializerOptions
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-                });
+                string name = FlurlHttp.BuildClientNameByHost(request);
+                name += $"|{ServiceLayerRoot.Segments.Last()}|{CompanyDB}|{UserName}";
+                return name;
             });
+
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath())
+                .ConfigureHttpClient(httpClient =>
+                {
+                    httpClient.DefaultRequestHeaders.ExpectContinue = false;
+                })
+                .ConfigureInnerHandler(handler =>
+                {
+                    handler.ServerCertificateCustomValidationCallback = (a, b, c, d) => true;
+                })
+                .WithSettings(settings =>
+                {
+                    settings.JsonSerializer = new SystemTextJsonSerializer(new JsonSerializerOptions
+                    {
+                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                    });
+                });
         }
         #endregion
 
@@ -603,7 +615,7 @@ namespace B1SLayer
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
         public void BeforeCall(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.BeforeCall(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).BeforeCall(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
@@ -613,7 +625,7 @@ namespace B1SLayer
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
         public void BeforeCall(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.BeforeCall(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).BeforeCall(action);
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
@@ -622,7 +634,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
         public void AfterCall(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.AfterCall(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).AfterCall(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
@@ -631,7 +643,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
         public void AfterCall(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.AfterCall(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).AfterCall(action);
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -640,7 +652,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
         public void OnError(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.OnError(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).OnError(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -649,7 +661,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
         public void OnError(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClient(ServiceLayerRoot.RemovePath(), client => client.OnError(action));
+            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).OnError(action);
         #endregion
 
         #region Attachments Methods
@@ -1107,26 +1119,6 @@ namespace B1SLayer
             public int GetHashCode(Exception e)
             {
                 return (e.GetType().Name + e.Message).GetHashCode();
-            }
-        }
-
-        /// <summary>
-        /// Custom HttpClientFactory implementation for Service Layer.
-        /// </summary>
-        private class CustomHttpClientFactory : DefaultHttpClientFactory
-        {
-            public override HttpMessageHandler CreateMessageHandler()
-            {
-                var handler = (HttpClientHandler)base.CreateMessageHandler();
-                handler.ServerCertificateCustomValidationCallback = (a, b, c, d) => true;
-                return handler;
-            }
-
-            public override HttpClient CreateHttpClient(HttpMessageHandler handler)
-            {
-                var httpClient = base.CreateHttpClient(handler);
-                httpClient.DefaultRequestHeaders.ExpectContinue = false;
-                return httpClient;
             }
         }
         #endregion

@@ -2,7 +2,6 @@ using B1SLayer.Models;
 using B1SLayer.Test.Models;
 using Flurl;
 using Flurl.Http.Testing;
-using System.Text.Json;
 
 namespace B1SLayer.Test
 {
@@ -10,7 +9,7 @@ namespace B1SLayer.Test
     {
         [Theory]
         [MemberData(nameof(SLConnections))]
-        public async void RequestParameters_AreApplied(SLConnection slConnection)
+        public async Task RequestParameters_AreApplied(SLConnection slConnection)
         {
             HttpTest.RespondWith("{}");
 
@@ -50,7 +49,7 @@ namespace B1SLayer.Test
 
         [Theory]
         [MemberData(nameof(SLConnections))]
-        public async void LoginAsync_IsPerformedAutomatically(SLConnection slConnection)
+        public async Task LoginAsync_IsPerformedAutomatically(SLConnection slConnection)
         {
             await slConnection.Request("Orders").GetStringAsync(); // random request
 
@@ -63,15 +62,15 @@ namespace B1SLayer.Test
 
         [Theory]
         [MemberData(nameof(SLConnections))]
-        public async void GetAsync_ReturnsCorrectData(SLConnection slConnection)
+        public async Task GetAsync_ReturnsCorrectData(SLConnection slConnection)
         {
             var expectedData = new List<MarketingDocument>
             {
-                new MarketingDocument { DocEntry = 1, CardCode = "C20001" },
-                new MarketingDocument { DocEntry = 2, CardCode = "C20002" }
+                new() { DocEntry = 1, CardCode = "C20001" },
+                new() { DocEntry = 2, CardCode = "C20002" }
             };
 
-            HttpTest.RespondWith(JsonSerializer.Serialize(new SLCollectionRoot<MarketingDocument> { Value = expectedData }));
+            HttpTest.RespondWithJson(new SLCollectionRoot<MarketingDocument> { Value = expectedData });
 
             var result = await slConnection
                 .Request("Orders")
@@ -88,30 +87,30 @@ namespace B1SLayer.Test
 
         [Theory]
         [MemberData(nameof(SLConnections))]
-        public async void GetAllAsync_ReturnsCorrectData(SLConnection slConnection)
+        public async Task GetAllAsync_ReturnsCorrectData(SLConnection slConnection)
         {
             var page1 = new SLCollectionRoot<MarketingDocument>
             {
-                Value = new List<MarketingDocument>
-                {
-                    new MarketingDocument { DocEntry = 1, CardCode = "C20001" },
-                    new MarketingDocument { DocEntry = 2, CardCode = "C20002" }
-                },
+                Value =
+                [
+                    new() { DocEntry = 1, CardCode = "C20001" },
+                    new() { DocEntry = 2, CardCode = "C20002" }
+                ],
                 ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=2"
             };
 
             var page2 = new SLCollectionRoot<MarketingDocument>
             {
-                Value = new List<MarketingDocument>
-                {
-                    new MarketingDocument { DocEntry = 3, CardCode = "C20003" },
-                    new MarketingDocument { DocEntry = 4, CardCode = "C20004" }
-                },
+                Value =
+                [
+                    new() { DocEntry = 3, CardCode = "C20003" },
+                    new() { DocEntry = 4, CardCode = "C20004" }
+                ],
                 ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=4"
             };
 
-            HttpTest.RespondWith(JsonSerializer.Serialize(page1));
-            HttpTest.RespondWith(JsonSerializer.Serialize(page2));
+            HttpTest.RespondWithJson(page1);
+            HttpTest.RespondWithJson(page2);
             HttpTest.RespondWith("{\"value\":[]}");
 
             var orderList = await slConnection.Request("Orders").WithPageSize(2).GetAllAsync<MarketingDocument>();

@@ -1,5 +1,6 @@
 ﻿using Flurl.Http;
 using System;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -169,7 +170,7 @@ namespace B1SLayer
         /// </param>
         public static SLRequest AllowHttpStatus(this SLRequest request, params HttpStatusCode[] statusCodes)
         {
-            request.FlurlRequest.AllowHttpStatus(statusCodes);
+            request.FlurlRequest.AllowHttpStatus(statusCodes.Select(x => (int)x).ToArray());
             return request;
         }
 
@@ -190,7 +191,7 @@ namespace B1SLayer
         /// </summary>
         public static SLRequest IncludeNullValues(this SLRequest request)
         {
-            request.FlurlRequest.ConfigureRequest(settings =>
+            request.FlurlRequest.WithSettings(settings =>
             {
                 settings.JsonSerializer = new SystemTextJsonSerializer(new JsonSerializerOptions
                 {
@@ -206,7 +207,7 @@ namespace B1SLayer
         /// </summary>
         public static SLRequest WithJsonSerializerOptions(this SLRequest request, JsonSerializerOptions jsonSerializerOptions)
         {
-            request.FlurlRequest.ConfigureRequest(settings =>
+            request.FlurlRequest.WithSettings(settings =>
             {
                 settings.JsonSerializer = new SystemTextJsonSerializer(jsonSerializerOptions);
             });

@@ -1,7 +1,4 @@
-﻿using Flurl.Http.Configuration;
-using Flurl.Http.Content;
-using Flurl.Http.Testing;
-using System.Text.Json;
+﻿using Flurl.Http.Testing;
 
 namespace B1SLayer.Test
 {
@@ -16,11 +13,8 @@ namespace B1SLayer.Test
         {
             HttpTest = new HttpTest();
 
-            // custom classes as a workaround for testing multipart requests
-            HttpTest.Settings.HttpClientFactory = new CustomHttpClientFactory(new CustomDelegatingHandler(HttpTest.Settings.HttpClientFactory.CreateMessageHandler()));
-
             // standard Login response
-            HttpTest.ForCallsTo("*/b1s/v*/Login").RespondWith(JsonSerializer.Serialize(LoginResponse));
+            HttpTest.ForCallsTo("*/b1s/v*/Login").RespondWithJson(LoginResponse);
         }
 
         public static IEnumerable<object[]> SLConnections()
@@ -32,28 +26,6 @@ namespace B1SLayer.Test
         public void Dispose()
         {
             HttpTest.Dispose();
-        }
-
-        private class CustomDelegatingHandler : DelegatingHandler
-        {
-            public CustomDelegatingHandler(HttpMessageHandler innerHandler) => this.InnerHandler = innerHandler;
-
-            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            {
-                var stringContent = request.Content is CapturedMultipartContent ? await request.Content.ReadAsStringAsync() : null;
-                var result = await base.SendAsync(request, cancellationToken);
-                request.Content = stringContent != null ? new CapturedStringContent(stringContent) : request.Content;
-                return result;
-            }
-        }
-
-        private class CustomHttpClientFactory : DefaultHttpClientFactory
-        {
-            private readonly CustomDelegatingHandler _interceptor;
-
-            public CustomHttpClientFactory(CustomDelegatingHandler interceptor) => _interceptor = interceptor;
-
-            public override HttpMessageHandler CreateMessageHandler() => _interceptor;
         }
     }
 }

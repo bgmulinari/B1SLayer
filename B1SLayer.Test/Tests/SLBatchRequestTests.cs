@@ -13,15 +13,15 @@ namespace B1SLayer.Test
             v1Response = "\r\n--batchresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: multipart/mixed; boundary=changesetresponse_00000000-0000-0000-0000-000000000000\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nContent-ID: 1\r\nDataServiceVersion: 3.0\r\nLocation: https://127.0.0.1:50000/b1s/v1/BusinessPartners('C00001')\r\nPreference-Applied: return-no-content\r\n\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nContent-ID: 2\r\nDataServiceVersion: 3.0\r\n\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 204 No Content\r\nContent-ID: 3\r\nDataServiceVersion: 3.0\r\n\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000--\r\n\r\n--batchresponse_00000000-0000-0000-0000-000000000000--\r\n",
             v2Response = "--batchresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: multipart/mixed; boundary=changesetresponse_00000000-0000-0000-0000-000000000000\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\nContent-ID: 1\r\n\r\nHTTP/1.1 204 No Content\r\nLocation: https://127.0.0.1:50000/b1s/v2/BusinessPartners('C00001')\r\nOData-Version: 4.0\r\nPreference-Applied: return-no-content\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\nContent-ID: 2\r\n\r\nHTTP/1.1 204 No Content\r\nOData-Version: 4.0\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\nContent-ID: 3\r\n\r\nHTTP/1.1 204 No Content\r\nOData-Version: 4.0\r\n\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000--\r\n--batchresponse_00000000-0000-0000-0000-000000000000--\r\n";
 
-        private static readonly SLBatchRequest[] _requests = new[]
-        {
+        private static readonly SLBatchRequest[] _requests =
+        [
             new SLBatchRequest(HttpMethod.Post, "BusinessPartners", new { CardCode = "C00001", CardName = "I am a new BP" }, 1).WithReturnNoContent(),
             new SLBatchRequest(HttpMethod.Patch, "BusinessPartners('C00001')", new { CardName = "This is my updated name" }, 2),
             new SLBatchRequest(HttpMethod.Delete, "BusinessPartners('C00001')", contentID: 3)
-        };
+        ];
 
         [Fact]
-        public async void PostBatchAsyncV1_ReturnsCorrectData()
+        public async Task PostBatchAsyncV1_ReturnsCorrectData()
         {
             HttpTest.RespondWith(
                 body: v1Response,
@@ -32,7 +32,7 @@ namespace B1SLayer.Test
 
             HttpTest.ShouldHaveCalled(SLConnectionV1.ServiceLayerRoot.AppendPathSegment("$batch"))
                 .WithVerb(HttpMethod.Post)
-                .With(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.RequestBody))
+                .WithRequestMultipart(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.Content))
                 .Times(1);
 
             Assert.Equal(3, batchResult.Length);
@@ -42,7 +42,7 @@ namespace B1SLayer.Test
         }
 
         [Fact]
-        public async void PostBatchAsyncV2_ReturnsCorrectData()
+        public async Task PostBatchAsyncV2_ReturnsCorrectData()
         {
             HttpTest.RespondWith(
                 body: v2Response,
@@ -53,7 +53,7 @@ namespace B1SLayer.Test
 
             HttpTest.ShouldHaveCalled(SLConnectionV2.ServiceLayerRoot.AppendPathSegment("$batch"))
                 .WithVerb(HttpMethod.Post)
-                .With(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.RequestBody))
+                .WithRequestMultipart(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.Content))
                 .Times(1);
 
             Assert.Equal(3, batchResult.Length);
