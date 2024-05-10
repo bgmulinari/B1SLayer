@@ -12,7 +12,7 @@ B1SLayer aims to provide:
 
 ## How to use it
 
-Firstly I highly recommend reading [my blog post on SAP Community](https://blogs.sap.com/2022/05/23/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer-with-.net/) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
+Firstly I highly recommend reading [my blog post on SAP Community](https://community.sap.com/t5/enterprise-resource-planning-blogs-by-members/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer/ba-p/13526121) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
 /* The connection object. All Service Layer requests and the session management are handled by this object
@@ -47,9 +47,9 @@ var bpList = await serviceLayer.Request("BusinessPartners")
     .GetAsync<List<MyBusinessPartnerModel>>();
 
 // Performs a GET on /AlternateCatNum specifying the record through a composite primary key
-// The result is deserialized in a dynamic object
 var altCatNum = await serviceLayer
-    .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')").GetAsync();
+    .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')")
+    .GetAsync<MyAltCatModel>();
 
 // Performs multiple GET requests on /Items until all entities in the database are obtained
 // The result is an IList of your custom model class (unwrapped from the 'value' array)
