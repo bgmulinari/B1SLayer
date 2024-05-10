@@ -1,5 +1,6 @@
 ﻿using Flurl;
 using Flurl.Http;
+using Flurl.Http.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -41,6 +42,10 @@ namespace B1SLayer
         #endregion
 
         #region Properties
+        /// <summary>
+        /// Gets the <see cref="IFlurlClient"/> responsible for the requests to Service Layer.
+        /// </summary>
+        public IFlurlClient Client { get; private set; }
         /// <summary>
         /// Gets the Service Layer root URI.
         /// </summary>
@@ -150,8 +155,7 @@ namespace B1SLayer
             Language = language;
             NumberOfAttempts = numberOfAttempts;
             LoginResponse = new SLLoginResponse();
-
-            ConfigureFlurlClient();
+            Client = BuildFlurlClient();
         }
 
         /// <summary>
@@ -249,8 +253,7 @@ namespace B1SLayer
             IsUsingSingleSignOn = true;
             _getServiceLayerConnectionContext = getServiceLayerConnectionContext;
             _ssoSessionTimeout = sessionTimeout;
-
-            ConfigureFlurlClient();
+            Client = BuildFlurlClient();
         }
 
         /// <summary>
@@ -276,16 +279,9 @@ namespace B1SLayer
         #endregion
 
         #region Configuration Methods
-        private void ConfigureFlurlClient()
+        private IFlurlClient BuildFlurlClient()
         {
-            FlurlHttp.UseClientCachingStrategy(request =>
-            {
-                string name = FlurlHttp.BuildClientNameByHost(request);
-                name += $"|{ServiceLayerRoot.Segments.Last()}|{CompanyDB}|{UserName}";
-                return name;
-            });
-
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath())
+            return new FlurlClientBuilder(ServiceLayerRoot.ToString())
                 .ConfigureHttpClient(httpClient =>
                 {
                     httpClient.DefaultRequestHeaders.ExpectContinue = false;
@@ -300,7 +296,8 @@ namespace B1SLayer
                     {
                         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                     });
-                });
+                })
+                .Build();
         }
         #endregion
 
@@ -344,8 +341,8 @@ namespace B1SLayer
 
                 if (!IsUsingSingleSignOn)
                 {
-                    var loginResponse = await ServiceLayerRoot
-                        .AppendPathSegment("Login")
+                    var loginResponse = await Client
+                        .Request("Login")
                         .WithCookies(out var cookieJar)
                         .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
                         .ReceiveJson<SLLoginResponse>();
@@ -424,7 +421,7 @@ namespace B1SLayer
 
             try
             {
-                await ServiceLayerRoot.AppendPathSegment("Logout").WithCookies(Cookies).PostAsync();
+                await Client.Request("Logout").WithCookies(Cookies).PostAsync();
                 _loginResponse = new SLLoginResponse();
                 _lastRequest = default;
                 Cookies = null;
@@ -453,7 +450,7 @@ namespace B1SLayer
         /// The resource name to be requested.
         /// </param>
         public SLRequest Request(string resource) =>
-            new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(resource)));
+            new SLRequest(this, Client.Request(resource));
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
@@ -468,7 +465,7 @@ namespace B1SLayer
         /// The entity ID to be requested.
         /// </param>
         public SLRequest Request(string resource, object id) =>
-            new SLRequest(this, new FlurlRequest(ServiceLayerRoot.AppendPathSegment(id is string ? $"{resource}('{id}')" : $"{resource}({id})")));
+            new SLRequest(this, Client.Request(id is string ? $"{resource}('{id}')" : $"{resource}({id})"));
 
         /// <summary>
         /// Calls the Login method to ensure a valid session and then executes the provided request.
@@ -498,7 +495,7 @@ namespace B1SLayer
                 }
                 catch (FlurlHttpException ex)
                 {
-                    if (exceptions == null) exceptions = new List<Exception>();
+                    exceptions ??= new List<Exception>();
 
                     try
                     {
@@ -614,8 +611,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
-        public void BeforeCall(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).BeforeCall(action);
+        public void BeforeCall(Func<FlurlCall, Task> action) => Client.BeforeCall(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
@@ -624,8 +620,7 @@ namespace B1SLayer
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// Response-related properties will be null in BeforeCall.
         /// </remarks>
-        public void BeforeCall(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).BeforeCall(action);
+        public void BeforeCall(Action<FlurlCall> action) => Client.BeforeCall(action);
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
@@ -633,8 +628,7 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void AfterCall(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).AfterCall(action);
+        public void AfterCall(Func<FlurlCall, Task> action) => Client.AfterCall(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
@@ -642,8 +636,7 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void AfterCall(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).AfterCall(action);
+        public void AfterCall(Action<FlurlCall> action) => Client.AfterCall(action);
 
         /// <summary>
         /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -651,8 +644,7 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void OnError(Func<FlurlCall, Task> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).OnError(action);
+        public void OnError(Func<FlurlCall, Task> action) => Client.OnError(action);
 
         /// <summary>
         /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -660,8 +652,7 @@ namespace B1SLayer
         /// <remarks>
         /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
         /// </remarks>
-        public void OnError(Action<FlurlCall> action) =>
-            FlurlHttp.ConfigureClientForUrl(ServiceLayerRoot.RemovePath()).OnError(action);
+        public void OnError(Action<FlurlCall> action) => Client.OnError(action);
         #endregion
 
         #region Attachments Methods
@@ -752,8 +743,8 @@ namespace B1SLayer
                     throw new ArgumentException("No files to be sent.");
                 }
 
-                var result = await ServiceLayerRoot
-                    .AppendPathSegment("Attachments2")
+                var result = await Client
+                    .Request("Attachments2")
                     .WithCookies(Cookies)
                     .PostMultipartAsync(mp =>
                     {
@@ -852,8 +843,8 @@ namespace B1SLayer
                     throw new ArgumentException("No files to be sent.");
                 }
 
-                var result = await ServiceLayerRoot
-                    .AppendPathSegment($"Attachments2({attachmentEntry})")
+                var result = await Client
+                    .Request($"Attachments2({attachmentEntry})")
                     .WithCookies(Cookies)
                     .PatchMultipartAsync(mp =>
                     {
@@ -909,8 +900,8 @@ namespace B1SLayer
         {
             return await ExecuteRequest(async () =>
             {
-                var file = await ServiceLayerRoot
-                    .AppendPathSegment($"Attachments2({attachmentEntry})/$value")
+                var file = await Client
+                    .Request($"Attachments2({attachmentEntry})/$value")
                     .SetQueryParam("filename", !string.IsNullOrEmpty(fileName) ? $"'{fileName}'" : null)
                     .WithCookies(Cookies)
                     .GetBytesAsync();
@@ -975,8 +966,8 @@ namespace B1SLayer
 
                 var responseList = new List<HttpResponseMessage>();
                 var response = singleChangeSet
-                    ? await ServiceLayerRoot
-                        .AppendPathSegment("$batch")
+                    ? await Client
+                        .Request("$batch")
                         .WithCookies(Cookies)
                         .WithTimeout(BatchRequestTimeout)
                         .PostMultipartAsync(mp =>
@@ -984,8 +975,8 @@ namespace B1SLayer
                             mp.Headers.ContentType.MediaType = "multipart/mixed";
                             mp.Add(BuildMixedMultipartContent(requests));
                         })
-                    : await ServiceLayerRoot
-                        .AppendPathSegment("$batch")
+                    : await Client
+                        .Request("$batch")
                         .WithCookies(Cookies)
                         .WithTimeout(BatchRequestTimeout)
                         .PostMultipartAsync(mp =>
