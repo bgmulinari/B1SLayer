@@ -31,14 +31,6 @@ namespace B1SLayer
         private readonly Func<string, string> _getServiceLayerConnectionContext;
         private readonly int _ssoSessionTimeout;
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
-        private readonly HttpStatusCode[] _returnCodesToRetry = new[]
-        {
-            HttpStatusCode.Unauthorized,
-            HttpStatusCode.InternalServerError,
-            HttpStatusCode.BadGateway,
-            HttpStatusCode.ServiceUnavailable,
-            HttpStatusCode.GatewayTimeout
-        };
         #endregion
 
         #region Properties
@@ -67,7 +59,7 @@ namespace B1SLayer
         /// </summary>
         public int? Language { get; private set; }
         /// <summary>
-        /// Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        /// Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP status code contained in <see cref="HttpStatusCodesToRetry"/>.
         /// </summary>
         public int NumberOfAttempts { get; set; }
         /// <summary>
@@ -110,6 +102,20 @@ namespace B1SLayer
 
             private set => _loginResponse = value;
         }
+        /// <summary>
+        /// Gets a list of <see cref="HttpStatusCode"/> to be checked before retrying an unsuccessful request.
+        /// </summary>
+        /// <remarks>
+        /// The number of attempts is defined by <see cref="NumberOfAttempts"/>.
+        /// </remarks>
+        public IList<HttpStatusCode> HttpStatusCodesToRetry { get; } = new List<HttpStatusCode>()
+        {
+            HttpStatusCode.Unauthorized,
+            HttpStatusCode.InternalServerError,
+            HttpStatusCode.BadGateway,
+            HttpStatusCode.ServiceUnavailable,
+            HttpStatusCode.GatewayTimeout
+        };
         #endregion
 
         #region Constructors
@@ -471,7 +477,7 @@ namespace B1SLayer
 
         /// <summary>
         /// Calls the Login method to ensure a valid session and then executes the provided request.
-        /// If the request is unsuccessfull with any return code present in <see cref="_returnCodesToRetry"/>, 
+        /// If the request is unsuccessfull with any return code present in <see cref="HttpStatusCodesToRetry"/>, 
         /// it will be retried for <see cref="NumberOfAttempts"/> number of times.
         /// </summary>
         internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action)
@@ -513,7 +519,7 @@ namespace B1SLayer
                     }
 
                     // Whether the request should be retried
-                    if (!_returnCodesToRetry.Any(x => x == ex.Call.HttpResponseMessage?.StatusCode))
+                    if (!HttpStatusCodesToRetry.Any(x => x == ex.Call.HttpResponseMessage?.StatusCode))
                     {
                         break;
                     }
