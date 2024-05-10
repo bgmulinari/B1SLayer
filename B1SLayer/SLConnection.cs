@@ -361,6 +361,7 @@ namespace B1SLayer
                     var response = await ex.GetResponseJsonAsync<SLResponseError>();
                     throw new SLException(response.Error.Message.Value, response.Error, ex);
                 }
+                catch (SLException slEx) { throw slEx; }
                 catch { throw ex; }
             }
             finally
@@ -424,6 +425,7 @@ namespace B1SLayer
                     var response = await ex.GetResponseJsonAsync<SLResponseError>();
                     throw new SLException(response.Error.Message.Value, response.Error, ex);
                 }
+                catch (SLException slEx) { throw slEx; }
                 catch { throw ex; }
             }
         }
