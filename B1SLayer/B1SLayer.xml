@@ -299,6 +299,11 @@
             Only one instance per company/user should be used in the application.
             </remarks>
         </member>
+        <member name="P:B1SLayer.SLConnection.Client">
+            <summary>
+            Gets the <see cref="T:Flurl.Http.IFlurlClient"/> responsible for the requests to Service Layer.
+            </summary>
+        </member>
         <member name="P:B1SLayer.SLConnection.ServiceLayerRoot">
             <summary>
             Gets the Service Layer root URI.
@@ -326,7 +331,7 @@
         </member>
         <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
             <summary>
-            Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+            Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
@@ -349,6 +354,14 @@
             <summary>
             Gets information about the latest Login request.
             </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.HttpStatusCodesToRetry">
+            <summary>
+            Gets a list of <see cref="T:System.Net.HttpStatusCode"/> to be checked before retrying an unsuccessful request.
+            </summary>
+            <remarks>
+            The number of attempts is defined by <see cref="P:B1SLayer.SLConnection.NumberOfAttempts"/>.
+            </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
             <summary>
@@ -551,7 +564,7 @@
         <member name="M:B1SLayer.SLConnection.ExecuteRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
             <summary>
             Calls the Login method to ensure a valid session and then executes the provided request.
-            If the request is unsuccessfull with any return code present in <see cref="F:B1SLayer.SLConnection._returnCodesToRetry"/>, 
+            If the request is unsuccessfull with any return code present in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>, 
             it will be retried for <see cref="P:B1SLayer.SLConnection.NumberOfAttempts"/> number of times.
             </summary>
         </member>
@@ -867,11 +880,6 @@
             to find exceptions that are duplicates by type and message so we can
             only return one of them.
             </remarks>
-        </member>
-        <member name="T:B1SLayer.SLConnection.CustomHttpClientFactory">
-            <summary>
-            Custom HttpClientFactory implementation for Service Layer.
-            </summary>
         </member>
         <member name="T:B1SLayer.SLException">
             <summary>
