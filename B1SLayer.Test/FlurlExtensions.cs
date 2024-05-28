@@ -7,7 +7,11 @@ namespace B1SLayer.Test
     {
         public static HttpCallAssertion WithRequestMultipart(this HttpCallAssertion assertion, Func<CapturedStringContent, bool> predicate)
         {
-            return assertion.With(x => predicate(new CapturedStringContent(x.HttpRequestMessage.Content.ReadAsStringAsync().Result)), "CapturedMultipartContent body");
+            return assertion.With(x =>
+            {
+                string content = x.HttpRequestMessage.Content.ReadAsStringAsync().Result;
+                return predicate(new CapturedStringContent(content, "CapturedMultipartContent body"));
+            });
         }
     }
 }

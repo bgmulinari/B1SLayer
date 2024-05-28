@@ -954,17 +954,6 @@ namespace B1SLayer
         /// </returns>
         public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
         {
-            // Adds required "msgtype" parameter to the HttpContent in order for the ReadAsHttpResponseMessageAsync method to work as expected
-            void AddMsgTypeToHttpContent(HttpContent httpContent)
-            {
-                if (httpContent.Headers.ContentType.MediaType.Equals("application/http", StringComparison.OrdinalIgnoreCase)
-                    && !httpContent.Headers.ContentType.Parameters.Any(p => p.Name.Equals("msgtype", StringComparison.OrdinalIgnoreCase)
-                    && p.Value.Equals("response", StringComparison.OrdinalIgnoreCase)))
-                {
-                    httpContent.Headers.ContentType.Parameters.Add(new NameValueHeaderValue("msgtype", "response"));
-                }
-            }
-
             return await ExecuteRequest(async () =>
             {
                 if (requests == null || requests.Count() == 0)
@@ -972,7 +961,6 @@ namespace B1SLayer
                     throw new ArgumentException("No requests to be sent.");
                 }
 
-                var responseList = new List<HttpResponseMessage>();
                 var response = singleChangeSet
                     ? await Client
                         .Request("$batch")
@@ -997,42 +985,7 @@ namespace B1SLayer
                             }
                         });
 
-                // Workaround for reading multipart response when using OData v4
-                var contentString = await response.ResponseMessage.Content.ReadAsStringAsync();
-                contentString = contentString.Replace("}\n--", "}\r\n--");
-                MultipartMemoryStreamProvider multipart = null;
-
-                using var responseMs = new MemoryStream(Encoding.UTF8.GetBytes(contentString ?? string.Empty));
-                using var streamContent = new StreamContent(responseMs);
-
-                foreach (var header in response.ResponseMessage.Content.Headers)
-                {
-                    streamContent.Headers.Add(header.Key, header.Value);
-                }
-
-                multipart = await streamContent.ReadAsMultipartAsync();
-
-                foreach (HttpContent httpContent in multipart.Contents)
-                {
-                    if (httpContent.Headers.ContentType.MediaType.Equals("application/http", StringComparison.OrdinalIgnoreCase))
-                    {
-                        AddMsgTypeToHttpContent(httpContent);
-                        var innerResponse = await httpContent.ReadAsHttpResponseMessageAsync();
-                        responseList.Add(innerResponse);
-                    }
-                    else if (httpContent.Headers.ContentType.MediaType.Equals("multipart/mixed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var innerMultipart = await httpContent.ReadAsMultipartAsync();
-
-                        foreach (HttpContent innerHttpContent in innerMultipart.Contents)
-                        {
-                            AddMsgTypeToHttpContent(innerHttpContent);
-                            var innerResponse = await innerHttpContent.ReadAsHttpResponseMessageAsync();
-                            responseList.Add(innerResponse);
-                        }
-                    }
-                }
-
+                var responseList = await MultipartHelper.ParseMultipartResponseAsync(response.ResponseMessage);
                 return responseList.ToArray();
             });
         }
@@ -1080,8 +1033,8 @@ namespace B1SLayer
                 request.Content = batchRequest.Data is string dataString
                     ? new StringContent(dataString, batchRequest.Encoding, "application/json")
                     : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions), batchRequest.Encoding, "application/json");
-
-            var innerContent = new HttpMessageContent(request);
+            
+            var innerContent = MultipartHelper.CreateHttpContent(request);
             innerContent.Headers.Add("content-transfer-encoding", "binary");
 
             if (batchRequest.ContentID.HasValue)
