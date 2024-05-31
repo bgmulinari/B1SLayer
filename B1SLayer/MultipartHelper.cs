@@ -1,177 +1,112 @@
-﻿using System;
+﻿using Flurl.Http;
+using Flurl.Http.Content;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
-namespace B1SLayer;
-
-internal static class MultipartHelper
+namespace B1SLayer
 {
-    internal static async Task<List<HttpResponseMessage>> ParseMultipartResponseAsync(HttpResponseMessage response)
+    /// <summary>
+    /// Provides helper methods for handling multipart HTTP responses and creating HTTP content.
+    /// </summary>
+    internal static class MultipartHelper
     {
-        var responseMessages = new List<HttpResponseMessage>();
-
-        var boundary = GetBoundary(response.Content.Headers.ContentType);
-        using var contentStream = await response.Content.ReadAsStreamAsync();
-        using var reader = new StreamReader(contentStream);
-
-        await ProcessMultipartAsync(reader, boundary, responseMessages);
-
-        return responseMessages;
-    }
-
-    private static string GetBoundary(MediaTypeHeaderValue contentType)
-    {
-        var boundary = contentType.Parameters.SingleOrDefault(p => p.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase))?.Value;
-        if (string.IsNullOrWhiteSpace(boundary))
+        /// <summary>
+        /// Reads a multipart HTTP response and parses it into an array of <see cref="HttpResponseMessage"/> objects.
+        /// </summary>
+        /// <param name="response">The HTTP response containing the multipart content.</param>
+        /// <returns>An array of <see cref="HttpResponseMessage"/> objects representing the individual parts of the multipart response.</returns>
+        public static async Task<HttpResponseMessage[]> ReadMultipartResponseAsync(HttpResponseMessage response)
         {
-            throw new InvalidOperationException("Missing boundary in multipart content");
-        }
-        return boundary.Trim('"');
-    }
+            var innerResponses = new List<HttpResponseMessage>();
+            var content = await response.Content.ReadAsStringAsync();
+            var parts = content.Split(new[] { "HTTP/" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
 
-    private static async Task ProcessMultipartAsync(TextReader reader, string boundary, List<HttpResponseMessage> responseMessages)
-    {
-        var partContent = new StringBuilder();
-        var isPartReading = false;
-
-        await foreach (var line in ReadLinesAsync(reader))
-        {
-            if (line.StartsWith("--" + boundary))
+            foreach (var part in parts)
             {
-                if (isPartReading)
+                var requestData = part.Split(new[] { "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+                requestData = requestData.Where(x => !x.StartsWith("--") && !x.StartsWith("\r\n")).ToArray();
+                var headers = requestData[0].Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
+                var httpResponse = new HttpResponseMessage();
+                httpResponse.Version = new Version(part.Substring(0, 3));
+                httpResponse.StatusCode = (HttpStatusCode)int.Parse(part.Substring(4, 3));
+
+                if (requestData.Length > 1)
                 {
-                    await ProcessPartAsync(new StringReader(partContent.ToString()), responseMessages);
-                    partContent.Clear();
+                    httpResponse.Content = new StringContent(requestData[1]);
+                    httpResponse.Content.Headers.Remove("Content-Type");
                 }
-                isPartReading = true;
-            }
-            else if (isPartReading)
-            {
-                partContent.AppendLine(line);
-            }
-        }
 
-        if (isPartReading && partContent.Length > 0)
-        {
-            await ProcessPartAsync(new StringReader(partContent.ToString()), responseMessages);
-        }
-    }
-
-    private static async Task ProcessPartAsync(TextReader reader, List<HttpResponseMessage> responseMessages)
-    {
-        var headers = new List<string>();
-        bool isFirstLine = true;
-        bool isHttpResponse = false;
-        string boundary = null;
-        HttpResponseMessage response = null;
-
-        await foreach (var line in ReadLinesAsync(reader))
-        {
-            if (isFirstLine)
-            {
-                if (line.StartsWith("HTTP"))
+                foreach (var header in headers)
                 {
-                    isHttpResponse = true;
-                    response = new HttpResponseMessage
+                    var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
+
+                    if (!httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
                     {
-                        StatusCode = (HttpStatusCode)int.Parse(line.Split(' ')[1])
-                    };
-                    isFirstLine = false;
-                    continue;
-                }
-                else if (line.StartsWith("Content-Type: multipart/mixed"))
-                {
-                    boundary = line.Split(';')
-                                   .SingleOrDefault(p => p.Trim().StartsWith("boundary="))?
-                                   .Split('=')[1]?.Trim('"');
-                    if (!string.IsNullOrEmpty(boundary))
-                    {
-                        await ProcessMultipartAsync(reader, boundary, responseMessages);
-                        return;
+                        httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
                     }
                 }
+
+                innerResponses.Add(httpResponse);
             }
 
-            if (isHttpResponse)
-            {
-                if (string.IsNullOrEmpty(line))
-                {
-                    break;
-                }
-                headers.Add(line);
-            }
+            return innerResponses.ToArray();
         }
 
-        if (isHttpResponse && response != null)
+        /// <summary>
+        /// Creates an HTTP content from the provided HTTP request message.
+        /// </summary>
+        /// <param name="request">The HTTP request message.</param>
+        /// <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
+        internal static async Task<HttpContent> CreateHttpContentAsync(HttpRequestMessage request)
         {
-            foreach (var header in headers)
-            {
-                var headerParts = header.Split([':'], 2);
-                if (headerParts.Length == 2)
-                {
-                    if (headerParts[0].StartsWith("HTTP"))
-                    {
-                        response.StatusCode = (HttpStatusCode)int.Parse(headerParts[0].Split(' ')[1]);
-                    }
-                    else
-                    {
-                        response.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1].Trim());
-                    }
-                }
-            }
-            response.Content = new StringContent((await reader.ReadToEndAsync()).TrimEnd());
-            responseMessages.Add(response);
-        }
-    }
+            var memoryStream = new MemoryStream();
+            using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, leaveOpen: true);
+            writer.WriteLine($"{request.Method} {request.RequestUri.PathAndQuery} HTTP/{request.Version}");
+            writer.WriteLine($"Host: {request.RequestUri.Host}:{request.RequestUri.Port}");
 
-    private static async IAsyncEnumerable<string> ReadLinesAsync(TextReader reader)
-    {
-        string line;
-        while ((line = await reader.ReadLineAsync()) != null)
-        {
-            yield return line;
-        }
-    }
-
-    internal static HttpContent CreateHttpContent(HttpRequestMessage request)
-    {
-        var memoryStream = new MemoryStream();
-        var writer = new StreamWriter(memoryStream);
-
-        writer.WriteLine($"{request.Method} {request.RequestUri} HTTP/{request.Version}");
-
-        foreach (var header in request.Headers)
-        {
-            writer.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
-        }
-
-        if (request.Content != null)
-        {
-            foreach (var header in request.Content.Headers)
+            foreach (var header in request.Headers)
             {
                 writer.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
             }
 
-            writer.WriteLine();
-            writer.Flush();
-            request.Content.CopyToAsync(memoryStream).Wait();
+            if (request.Content != null)
+            {
+                foreach (var header in request.Content.Headers)
+                {
+                    writer.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
+                }
+                writer.WriteLine();
+                writer.Flush();
+                memoryStream.Position = memoryStream.Length;
+                await request.Content.CopyToAsync(memoryStream);
+            }
+            else
+            {
+                writer.WriteLine();
+                writer.Flush();
+            }
+
+            memoryStream.Position = 0;
+            var streamContent = new StreamContent(memoryStream);
+            streamContent.Headers.Add("Content-Type", "application/http; msgtype=request");
+            return streamContent;
         }
-        else
+
+        /// <summary>
+        /// Flurl extension method to provide a PATCH method for multipart requests.
+        /// </summary>
+        internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, HttpCompletionOption httpCompletionOption = default, CancellationToken cancellationToken = default)
         {
-            writer.WriteLine();
-            writer.Flush();
+            var cmc = new CapturedMultipartContent(request.Settings);
+            buildContent(cmc);
+            return request.SendAsync(new HttpMethod("PATCH"), cmc, httpCompletionOption, cancellationToken);
         }
-
-        memoryStream.Position = 0;
-        var streamContent = new StreamContent(memoryStream);
-        streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/http");
-
-        return streamContent;
     }
 }

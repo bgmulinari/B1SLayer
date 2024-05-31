@@ -7,8 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -966,41 +964,41 @@ namespace B1SLayer
                         .Request("$batch")
                         .WithCookies(Cookies)
                         .WithTimeout(BatchRequestTimeout)
-                        .PostMultipartAsync(mp =>
+                        .PostMultipartAsync(async mp =>
                         {
                             mp.Headers.ContentType.MediaType = "multipart/mixed";
-                            mp.Add(BuildMixedMultipartContent(requests));
+                            mp.Add(await BuildMixedMultipartContentAsync(requests));
                         })
                     : await Client
                         .Request("$batch")
                         .WithCookies(Cookies)
                         .WithTimeout(BatchRequestTimeout)
-                        .PostMultipartAsync(mp =>
+                        .PostMultipartAsync(async mp =>
                         {
                             mp.Headers.ContentType.MediaType = "multipart/mixed";
                             foreach (var request in requests)
                             {
                                 string boundary = "changeset_" + Guid.NewGuid();
-                                mp.Add(BuildMixedMultipartContent(request, boundary));
+                                mp.Add(await BuildMixedMultipartContentAsync(request, boundary));
                             }
                         });
 
-                var responseList = await MultipartHelper.ParseMultipartResponseAsync(response.ResponseMessage);
-                return responseList.ToArray();
+                var responses = await MultipartHelper.ReadMultipartResponseAsync(response.ResponseMessage);
+                return responses;
             });
         }
 
         /// <summary>
         /// Builds the multipart content for a batch request using a single change set.
         /// </summary>
-        private MultipartContent BuildMixedMultipartContent(IEnumerable<SLBatchRequest> requests)
+        private async Task<MultipartContent> BuildMixedMultipartContentAsync(IEnumerable<SLBatchRequest> requests)
         {
             string boundary = "changeset_" + Guid.NewGuid();
             var multipartContent = new MultipartContent("mixed", boundary);
 
             foreach (var batchRequest in requests)
             {
-                BuildRequestForMultipartContent(multipartContent, batchRequest);
+                await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
             }
 
             return multipartContent;
@@ -1009,17 +1007,17 @@ namespace B1SLayer
         /// <summary>
         /// Builds the multipart content for a batch request using multiple change sets.
         /// </summary>
-        private MultipartContent BuildMixedMultipartContent(SLBatchRequest batchRequest, string boundary)
+        private async Task<MultipartContent> BuildMixedMultipartContentAsync(SLBatchRequest batchRequest, string boundary)
         {
             var multipartContent = new MultipartContent("mixed", boundary);
-            BuildRequestForMultipartContent(multipartContent, batchRequest);
+            await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
             return multipartContent;
         }
 
         /// <summary>
         /// Builds the <see cref="HttpRequestMessage"/> from a given <see cref="SLBatchRequest"/> and adds it to the <see cref="MultipartContent"/> instance.
         /// </summary>
-        private void BuildRequestForMultipartContent(MultipartContent multipartContent, SLBatchRequest batchRequest)
+        private async Task BuildRequestForMultipartContentAsync(MultipartContent multipartContent, SLBatchRequest batchRequest)
         {
             var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
 
@@ -1034,7 +1032,7 @@ namespace B1SLayer
                     ? new StringContent(dataString, batchRequest.Encoding, "application/json")
                     : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions), batchRequest.Encoding, "application/json");
             
-            var innerContent = MultipartHelper.CreateHttpContent(request);
+            var innerContent = await MultipartHelper.CreateHttpContentAsync(request);
             innerContent.Headers.Add("content-transfer-encoding", "binary");
 
             if (batchRequest.ContentID.HasValue)
