@@ -353,14 +353,14 @@ public class SLConnection
 
                 Cookies = cookieJar;
                 _loginResponse = loginResponse;
-                _loginResponse.LastLogin = DateTime.Now;
+                _loginResponse.LastLogin = _lastRequest = DateTime.Now;
             }
             else
             {
                 // Obtains session context from UI API method
                 string connectionContext = _getServiceLayerConnectionContext(ServiceLayerRoot.ToString());
                 Cookies = CreateCookieJarFromConnectionContext(connectionContext);
-                _loginResponse.LastLogin = DateTime.Now;
+                _loginResponse.LastLogin = _lastRequest = DateTime.Now;
                 _loginResponse.SessionTimeout = _ssoSessionTimeout;
                 _loginResponse.SessionId = Cookies.FirstOrDefault(x => x.Name.Equals("B1SESSION", StringComparison.OrdinalIgnoreCase))?.Value;
             }
