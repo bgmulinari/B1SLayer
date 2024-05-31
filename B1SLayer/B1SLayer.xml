@@ -250,6 +250,30 @@
             Gets or sets the message text of a Service Layer error.
             </summary>
         </member>
+        <member name="T:B1SLayer.MultipartHelper">
+            <summary>
+            Provides helper methods for handling multipart HTTP responses and creating HTTP content.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.ReadMultipartResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Reads a multipart HTTP response and parses it into an array of <see cref="T:System.Net.Http.HttpResponseMessage"/> objects.
+            </summary>
+            <param name="response">The HTTP response containing the multipart content.</param>
+            <returns>An array of <see cref="T:System.Net.Http.HttpResponseMessage"/> objects representing the individual parts of the multipart response.</returns>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.CreateHttpContentAsync(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Creates an HTTP content from the provided HTTP request message.
+            </summary>
+            <param name="request">The HTTP request message.</param>
+            <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.PatchMultipartAsync(Flurl.Http.IFlurlRequest,System.Action{Flurl.Http.Content.CapturedMultipartContent},System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
+            <summary>
+            Flurl extension method to provide a PATCH method for multipart requests.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLBatchRequestExtensions">
             <summary>
             Extension methods definitions for <see cref="T:B1SLayer.SLBatchRequest"/>.
@@ -855,17 +879,17 @@
             An <see cref="T:System.Net.Http.HttpResponseMessage"/> array containg the response messages of the batch request. 
             </returns>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContent(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest})">
+        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest})">
             <summary>
             Builds the multipart content for a batch request using a single change set.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContent(B1SLayer.SLBatchRequest,System.String)">
+        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(B1SLayer.SLBatchRequest,System.String)">
             <summary>
             Builds the multipart content for a batch request using multiple change sets.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContent(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
+        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContentAsync(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
             <summary>
             Builds the <see cref="T:System.Net.Http.HttpRequestMessage"/> from a given <see cref="T:B1SLayer.SLBatchRequest"/> and adds it to the <see cref="T:System.Net.Http.MultipartContent"/> instance.
             </summary>
