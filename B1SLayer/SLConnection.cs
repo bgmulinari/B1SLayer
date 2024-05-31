@@ -617,7 +617,7 @@ public class SLConnection
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// Response-related properties will be null in BeforeCall.
     /// </remarks>
-    public void BeforeCall(Func<FlurlCall, Task> action) => Client.BeforeCall(action);
+    public SLConnection BeforeCall(Func<FlurlCall, Task> action) { Client.BeforeCall(action); return this; }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
@@ -626,7 +626,7 @@ public class SLConnection
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// Response-related properties will be null in BeforeCall.
     /// </remarks>
-    public void BeforeCall(Action<FlurlCall> action) => Client.BeforeCall(action);
+    public SLConnection BeforeCall(Action<FlurlCall> action) { Client.BeforeCall(action); return this; }
 
     /// <summary>
     /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
@@ -634,7 +634,7 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public void AfterCall(Func<FlurlCall, Task> action) => Client.AfterCall(action);
+    public SLConnection AfterCall(Func<FlurlCall, Task> action) { Client.AfterCall(action); return this; }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
@@ -642,7 +642,7 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public void AfterCall(Action<FlurlCall> action) => Client.AfterCall(action);
+    public SLConnection AfterCall(Action<FlurlCall> action) { Client.AfterCall(action); return this; }
 
     /// <summary>
     /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -650,7 +650,7 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public void OnError(Func<FlurlCall, Task> action) => Client.OnError(action);
+    public SLConnection OnError(Func<FlurlCall, Task> action) { Client.OnError(action); return this; }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -658,7 +658,7 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public void OnError(Action<FlurlCall> action) => Client.OnError(action);
+    public SLConnection OnError(Action<FlurlCall> action) { Client.OnError(action); return this; }
     #endregion
 
     #region Attachments Methods
@@ -675,7 +675,7 @@ public class SLConnection
     /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
     /// </returns>
     public async Task<SLAttachment> PostAttachmentAsync(string path) =>
-        await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+            await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
 
     /// <summary>
     /// Uploads the provided file as an attachment.
@@ -1031,7 +1031,7 @@ public class SLConnection
             request.Content = batchRequest.Data is string dataString
                 ? new StringContent(dataString, batchRequest.Encoding, "application/json")
                 : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions), batchRequest.Encoding, "application/json");
-        
+
         var innerContent = await MultipartHelper.CreateHttpContentAsync(request);
         innerContent.Headers.Add("content-transfer-encoding", "binary");
 
