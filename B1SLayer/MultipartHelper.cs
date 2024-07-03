@@ -30,7 +30,7 @@ internal static class MultipartHelper
 
         foreach (var part in parts)
         {
-            var requestData = part.Split(new[] { "\r\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var requestData = part.Split(new[] { "\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             requestData = requestData.Where(x => !x.StartsWith("--") && !x.StartsWith("\r\n")).ToArray();
             var headers = requestData[0].Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
             var httpResponse = new HttpResponseMessage();
