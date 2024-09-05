@@ -4,6 +4,56 @@
         <name>B1SLayer</name>
     </assembly>
     <members>
+        <member name="T:B1SLayer.SLAttachment">
+            <summary>
+            Represents the details of an attachment entry.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachment.AbsoluteEntry">
+            <summary>
+            Gets or sets the ID of the attachment entry.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachment.Lines">
+            <summary>
+            Gets or sets the lines of the attachment entry.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLAttachmentLines">
+            <summary>
+            Represents the details of an attachment line.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.SourcePath">
+            <summary>
+            Gets or sets the source path of the file.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.FileName">
+            <summary>
+            Gets or sets the file name.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.FileExtension">
+            <summary>
+            Gets or sets the file extension.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.AttachmentDate">
+            <summary>
+            Gets or sets the attachment date.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.UserID">
+            <summary>
+            Gets or sets the user ID.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAttachmentLines.Override">
+            <summary>
+            Gets or sets the override indication.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLBatchRequest">
             <summary>
             Represents a single request to be sent in a batch to the Service Layer.
@@ -35,10 +85,10 @@
             Gets or sets the <see cref="T:System.Text.Encoding"/> to be used for this request. UTF8 will be used by default.
             </summary>
         </member>
-        <member name="P:B1SLayer.SLBatchRequest.JsonSerializerSettings">
+        <member name="P:B1SLayer.SLBatchRequest.JsonSerializerOptions">
             <summary>
-            Gets or sets the <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> to be used for this request.
-            By default it is configured so the <see cref="P:Newtonsoft.Json.JsonSerializerSettings.NullValueHandling"/> is set to <see cref="F:Newtonsoft.Json.NullValueHandling.Ignore"/>.
+            Gets or sets the <see cref="T:System.Text.Json.JsonSerializerOptions"/> to be used for this request.
+            By default it is configured so the <see cref="P:System.Text.Json.JsonSerializerOptions.DefaultIgnoreCondition"/> is set to <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull"/>.
             </summary>
         </member>
         <member name="P:B1SLayer.SLBatchRequest.HttpVersion">
@@ -74,6 +124,161 @@
             This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
             </param>
         </member>
+        <member name="T:B1SLayer.Models.SLCollectionRoot`1">
+            <summary>
+            Represents the structure of a Service Layer collection.
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="P:B1SLayer.Models.SLCollectionRoot`1.Value">
+            <summary>
+            Gets or sets the list that represents the JSON array containing the entities of the collection.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLink">
+            <summary>
+            Gets or sets the string that represents the link to the next page.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLinkJson">
+            <summary>
+            Gets or sets the string that represents the link to the next page.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.Models.SLCollectionRoot`1.NextSkip">
+            <summary>
+            Gets the skip number to obtain the entities of the next page.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLLoginResponse">
+            <summary>
+            Represents the response details of a login request.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLLoginResponse.SessionId">
+            <summary>
+            Gets or sets the session ID of the session.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLLoginResponse.Version">
+            <summary>
+            Gets or sets the SBO version.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLLoginResponse.SessionTimeout">
+            <summary>
+            Gets or sets the session timeout.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLLoginResponse.LastLogin">
+            <summary>
+            Gets or sets the <see cref="T:System.DateTime"/> of the last login.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLPingResponse">
+            <summary>
+            Represents the response of a ping request.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.Message">
+            <summary>
+            Gets or sets the message of a ping response.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.Sender">
+            <summary>
+            Gets or sets the sender of a ping response.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.Timestamp">
+            <summary>
+            Gets or sets the timestamp of a ping response.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.DateTime">
+            <summary>
+            Gets the corresponding <see cref="T:System.DateTime"/> of a ping response based on the <see cref="P:B1SLayer.SLPingResponse.Timestamp"/>.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.IsSuccessStatusCode">
+            <summary>
+            Whether the ping response was successful.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLPingResponse.StatusCode">
+            <summary>
+            Gets the <see cref="T:System.Net.HttpStatusCode"/> of a ping response.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLResponseError">
+            <summary>
+            The root object that represents a Service Layer error.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLResponseError.Error">
+            <summary>
+            Gets or sets the details of a Service Layer error.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLErrorDetails">
+            <summary>
+            Represents the details of a Service Layer error.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLErrorDetails.Code">
+            <summary>
+            Gets or sets the error code of a Service Layer error.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLErrorDetails.Message">
+            <summary>
+            Gets or sets the error message of a Service Layer error.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLErrorMessage">
+            <summary>
+            Represents the message of a Service Layer error.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLErrorMessage.Lang">
+            <summary>
+            Gets or sets the message language of a Service Layer error.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLErrorMessage.Value">
+            <summary>
+            Gets or sets the message text of a Service Layer error.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.MultipartHelper">
+            <summary>
+            Provides helper methods for handling multipart HTTP responses and creating HTTP content.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.ReadMultipartResponseAsync(System.Net.Http.HttpResponseMessage)">
+            <summary>
+            Reads a multipart HTTP response and parses it into an array of <see cref="T:System.Net.Http.HttpResponseMessage"/> objects.
+            </summary>
+            <param name="response">The HTTP response containing the multipart content.</param>
+            <returns>An array of <see cref="T:System.Net.Http.HttpResponseMessage"/> objects representing the individual parts of the multipart response.</returns>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.CreateHttpContentAsync(System.Net.Http.HttpRequestMessage)">
+            <summary>
+            Creates an HTTP content from the provided HTTP request message.
+            </summary>
+            <param name="request">The HTTP request message.</param>
+            <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
+        </member>
+        <member name="M:B1SLayer.MultipartHelper.PatchMultipartAsync(Flurl.Http.IFlurlRequest,System.Action{Flurl.Http.Content.CapturedMultipartContent},System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
+            <summary>
+            Flurl extension method to provide a PATCH method for multipart requests.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLBatchRequestExtensions">
+            <summary>
+            Extension methods definitions for <see cref="T:B1SLayer.SLBatchRequest"/>.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLBatchRequestExtensions.WithCaseInsensitive(B1SLayer.SLBatchRequest)">
             <summary>
             Enables a case-insensitive query.
@@ -100,6 +305,9 @@
             <summary>
             Adds a custom request header to be sent.
             </summary>
+            <param name="batchRequest">
+            The current request.
+            </param>
             <param name="name">
             The name of the header.
             </param>
@@ -114,6 +322,11 @@
             <remarks>
             Only one instance per company/user should be used in the application.
             </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnection.Client">
+            <summary>
+            Gets the <see cref="T:Flurl.Http.IFlurlClient"/> responsible for the requests to Service Layer.
+            </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.ServiceLayerRoot">
             <summary>
@@ -142,7 +355,7 @@
         </member>
         <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
             <summary>
-            Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+            Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
@@ -165,6 +378,14 @@
             <summary>
             Gets information about the latest Login request.
             </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.HttpStatusCodesToRetry">
+            <summary>
+            Gets a list of <see cref="T:System.Net.HttpStatusCode"/> to be checked before retrying an unsuccessful request.
+            </summary>
+            <remarks>
+            The number of attempts is defined by <see cref="P:B1SLayer.SLConnection.NumberOfAttempts"/>.
+            </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
             <summary>
@@ -367,7 +588,7 @@
         <member name="M:B1SLayer.SLConnection.ExecuteRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
             <summary>
             Calls the Login method to ensure a valid session and then executes the provided request.
-            If the request is unsuccessfull with any return code present in <see cref="F:B1SLayer.SLConnection._returnCodesToRetry"/>, 
+            If the request is unsuccessfull with any return code present in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>, 
             it will be retried for <see cref="P:B1SLayer.SLConnection.NumberOfAttempts"/> number of times.
             </summary>
         </member>
@@ -658,17 +879,17 @@
             An <see cref="T:System.Net.Http.HttpResponseMessage"/> array containg the response messages of the batch request. 
             </returns>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContent(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest})">
+        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest})">
             <summary>
             Builds the multipart content for a batch request using a single change set.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContent(B1SLayer.SLBatchRequest,System.String)">
+        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(B1SLayer.SLBatchRequest,System.String)">
             <summary>
             Builds the multipart content for a batch request using multiple change sets.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContent(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
+        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContentAsync(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
             <summary>
             Builds the <see cref="T:System.Net.Http.HttpRequestMessage"/> from a given <see cref="T:B1SLayer.SLBatchRequest"/> and adds it to the <see cref="T:System.Net.Http.MultipartContent"/> instance.
             </summary>
@@ -684,14 +905,14 @@
             only return one of them.
             </remarks>
         </member>
-        <member name="T:B1SLayer.SLConnection.CustomHttpClientFactory">
-            <summary>
-            Custom HttpClientFactory implementation for Service Layer.
-            </summary>
-        </member>
         <member name="T:B1SLayer.SLException">
             <summary>
             Represents a Service Layer exception.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLException.ErrorDetails">
+            <summary>
+            Gets or sets the error details of a Service Layer exception.
             </summary>
         </member>
         <member name="T:B1SLayer.SLRequest">
@@ -738,26 +959,20 @@
             An <see cref="T:System.Collections.Generic.IList`1"/> containing all the entities in the given collection.
             </returns>
         </member>
-        <member name="M:B1SLayer.SLRequest.GetAsync">
-            <summary>
-            Performs a GET request with the provided parameters and returns the result in a dynamic object.
-            </summary>
-        </member>
         <member name="M:B1SLayer.SLRequest.GetStringAsync">
             <summary>
             Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.String"/>.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,Newtonsoft.Json.JsonSerializerSettings)">
+        <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,System.Text.Json.JsonSerializerOptions)">
             <summary>
             Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
             </summary>
             <param name="anonymousTypeObject">
             The anonymous type object.
             </param>
-            <param name="jsonSerializerSettings">
-            The <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> used to deserialize the object. If this is null, 
-            default serialization settings will be used.
+            <param name="jsonSerializerOptions">
+            The <see cref="T:System.Text.Json.JsonSerializerOptions"/> used to deserialize the object.
             </param>
         </member>
         <member name="M:B1SLayer.SLRequest.GetBytesAsync">
@@ -907,6 +1122,11 @@
             Performs a DELETE request with the provided parameters.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLRequestExtensions">
+            <summary>
+            Extension methods definitions for <see cref="T:B1SLayer.SLRequest"/>.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLRequestExtensions.Filter(B1SLayer.SLRequest,System.String)">
             <summary>
             Sets the clause to be used to filter records.
@@ -956,6 +1176,9 @@
             <summary>
             Sets the page size when paging is applied for a query. The default value is 20.
             </summary>
+            <param name="request">
+            The current request.
+            </param>
             <param name="pageSize">
             The page size to be defined for this request.
             </param>
@@ -986,6 +1209,9 @@
             <summary>
             Adds a custom request header to be sent.
             </summary>
+            <param name="request">
+            The current request.
+            </param>
             <param name="name">
             The name of the header.
             </param>
@@ -1000,6 +1226,9 @@
             <remarks>
             By default, every reponse with an unsuccessful <see cref="T:System.Net.HttpStatusCode"/> (non-2XX) will result in a throw.
             </remarks>
+            <param name="request">
+            The current request.
+            </param>
             <param name="statusCodes">
             The <see cref="T:System.Net.HttpStatusCode"/> to be allowed.
             </param>
@@ -1014,19 +1243,21 @@
         </member>
         <member name="M:B1SLayer.SLRequestExtensions.IncludeNullValues(B1SLayer.SLRequest)">
             <summary>
-            Configures the JSON serializer to include null values (<see cref="F:Newtonsoft.Json.NullValueHandling.Include"/>) for this request.
-            The default value is <see cref="F:Newtonsoft.Json.NullValueHandling.Ignore"/>.
+            Configures the JSON serializer to include null values for this request.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithJsonSerializerSettings(B1SLayer.SLRequest,Newtonsoft.Json.JsonSerializerSettings)">
+        <member name="M:B1SLayer.SLRequestExtensions.WithJsonSerializerOptions(B1SLayer.SLRequest,System.Text.Json.JsonSerializerOptions)">
             <summary>
-            Sets a custom <see cref="T:Newtonsoft.Json.JsonSerializerSettings"/> to be used for this request.
+            Sets a custom <see cref="T:System.Text.Json.JsonSerializerOptions"/> to be used for this request.
             </summary>
         </member>
         <member name="M:B1SLayer.SLRequestExtensions.WithTimeout(B1SLayer.SLRequest,System.TimeSpan)">
             <summary>
             Configures a custom timeout value for this request. The default timeout is 100 seconds.
             </summary>
+            <param name="request">
+            The current request.
+            </param>
             <param name="timeout">
             A <see cref="T:System.TimeSpan"/> representing the timeout value to be configured.
             </param>
@@ -1035,6 +1266,9 @@
             <summary>
             Configures a custom timeout value for this request. The default timeout is 100 seconds.
             </summary>
+            <param name="request">
+            The current request.
+            </param>
             <param name="timeout">
             An <see cref="T:System.Int32"/> representing the timeout in seconds to be configured.
             </param>

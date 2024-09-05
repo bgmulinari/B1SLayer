@@ -12,7 +12,7 @@ B1SLayer aims to provide:
 
 ## How to use it
 
-Firstly I highly recommend reading [my blog post on SAP Community](https://blogs.sap.com/2022/05/23/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer-with-.net/) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
+Firstly I highly recommend reading [my blog post on SAP Community](https://community.sap.com/t5/enterprise-resource-planning-blogs-by-members/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer/ba-p/13526121) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
 /* The connection object. All Service Layer requests and the session management are handled by this object
@@ -21,17 +21,6 @@ Firstly I highly recommend reading [my blog post on SAP Community](https://blogs
  * There's no need to manually Login! The session is managed automatically and renewed whenever necessary.
  */
 var serviceLayer = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
-
-// Request monitoring/logging available through the methods BeforeCall, AfterCall and OnError.
-// The FlurlCall object provides various details about the request and the response.
-serviceLayer.AfterCall(async call =>
-{
-    Console.WriteLine($"Request: {call.HttpRequestMessage.Method} {call.HttpRequestMessage.RequestUri}");
-    Console.WriteLine($"Body sent: {call.RequestBody}");
-    Console.WriteLine($"Response: {call.HttpResponseMessage?.StatusCode}");
-    Console.WriteLine(await call.HttpResponseMessage?.Content?.ReadAsStringAsync());
-    Console.WriteLine($"Call duration: {call.Duration.Value.TotalSeconds} seconds");
-});
 
 // Performs a GET on /Orders(823) and deserializes the result in a custom model class
 var order = await serviceLayer.Request("Orders", 823).GetAsync<MyOrderModel>();
@@ -47,25 +36,27 @@ var bpList = await serviceLayer.Request("BusinessPartners")
     .GetAsync<List<MyBusinessPartnerModel>>();
 
 // Performs a GET on /AlternateCatNum specifying the record through a composite primary key
-// The result is deserialized in a dynamic object
 var altCatNum = await serviceLayer
-    .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')").GetAsync();
+    .Request("AlternateCatNum(ItemCode='A00001',CardCode='C00001',Substitute='BP01')")
+    .GetAsync<MyAltCatModel>();
 
 // Performs multiple GET requests on /Items until all entities in the database are obtained
 // The result is an IList of your custom model class (unwrapped from the 'value' array)
-var allItemsList = await serviceLayer.Request("Items").Select("ItemCode").GetAllAsync<MyItemModel>();
+var allItemsList = await serviceLayer.Request("Items").GetAllAsync<MyItemModel>();
 
 // Performs a POST on /Orders with the provided object as the JSON body, 
 // creating a new order and deserializing the created order in a custom model class
 var createdOrder = await serviceLayer.Request("Orders").PostAsync<MyOrderModel>(myNewOrderObject);
 
 // Performs a PATCH on /BusinessPartners('C00001'), updating the CardName of the Business Partner
-await serviceLayer.Request("BusinessPartners", "C00001").PatchAsync(new { CardName = "Updated BP name" });
+await serviceLayer.Request("BusinessPartners", "C00001")
+    .PatchAsync(new { CardName = "Updated BP name" });
 
 // Performs a PATCH on /ItemImages('A00001'), adding or updating the item image
-await serviceLayer.Request("ItemImages", "A00001").PatchWithFileAsync(@"C:\ItemImages\A00001.jpg");
+await serviceLayer.Request("ItemImages", "A00001")
+    .PatchWithFileAsync(@"C:\ItemImages\A00001.jpg");
 
-// Performs a POST on /Attachments2 with the provided file as the attachment (other overloads available)
+// Performs a POST on /Attachments2 with the provided file as the attachment
 var attachmentEntry = await serviceLayer.PostAttachmentAsync(@"C:\files\myfile.pdf");
 
 // Batch requests! Performs multiple operations in SAP in a single HTTP request
