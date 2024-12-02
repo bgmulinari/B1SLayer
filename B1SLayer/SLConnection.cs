@@ -347,16 +347,18 @@ public class SLConnection
     #region Session Management Methods
 
     /// <summary>
-    /// If the current session is expired or non-existent, performs a POST Login request with the provided information.
-    /// Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
+    /// Performs a POST Login request with the provided information, regardless of the current session state.
     /// </summary>
+    /// <remarks>
+    /// Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
+    /// </remarks>
     public async Task<SLLoginResponse> LoginAsync() => await ExecuteLoginAsync(true);
 
     /// <summary>
     /// Performs the POST Login request to the Service Layer.
     /// </summary>
     /// <param name="expectReturn">
-    /// Wheter the login information should be returned.
+    /// Whether the login information should be returned.
     /// </param>
     private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false)
     {
