@@ -4,6 +4,16 @@
         <name>B1SLayer</name>
     </assembly>
     <members>
+        <member name="T:B1SLayer.B1SLayerSettings">
+            <summary>
+            A static object for configuring B1SLayer.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.B1SLayerSettings.DistributedCache">
+            <summary>
+            Gets or sets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache"/> implementation to be used for session management. By default, an in-memory implementation is used.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLAttachment">
             <summary>
             Represents the details of an attachment entry.
@@ -328,6 +338,16 @@
             Gets the <see cref="T:Flurl.Http.IFlurlClient"/> responsible for the requests to Service Layer.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLConnection.DistributedCache">
+            <summary>
+            Gets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache"/> implementation to be used for session management. By default, an in-memory implementation is used.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.SessionCacheKey">
+            <summary>
+            Gets or sets cache key to be used for the session cache.
+            </summary>
+        </member>
         <member name="P:B1SLayer.SLConnection.ServiceLayerRoot">
             <summary>
             Gets the Service Layer root URI.
@@ -355,7 +375,7 @@
         </member>
         <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
             <summary>
-            Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>.
+            Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry"/>.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
@@ -366,12 +386,6 @@
         <member name="P:B1SLayer.SLConnection.IsUsingSingleSignOn">
             <summary>
             Gets whether this <see cref="T:B1SLayer.SLConnection"/> instance is using Single Sign-On (SSO) authentication.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.Cookies">
-            <summary>
-            A container that keeps the session cookies returned by the Login request. 
-            These cookies are sent in every request and overwritten whenever a new Login is performed.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.LoginResponse">
@@ -519,30 +533,44 @@
             If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.LoginAsync(System.Boolean)">
+        <member name="M:B1SLayer.SLConnection.LoginAsync">
             <summary>
             If the current session is expired or non-existent, performs a POST Login request with the provided information.
             Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
             </summary>
-            <param name="forceLogin">
-            Whether the login request should be forced even if the current session has not expired.
-            </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.LoginInternalAsync(System.Boolean)">
-            <summary>
-            Internal login method where a return is not needed.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.ExecuteLoginAsync(System.Boolean,System.Boolean)">
+        <member name="M:B1SLayer.SLConnection.ExecuteLoginAsync(System.Boolean)">
             <summary>
             Performs the POST Login request to the Service Layer.
             </summary>
-            <param name="forceLogin">
-            Whether the login request should be forced even if the current session has not expired.
-            </param>
             <param name="expectReturn">
             Wheter the login information should be returned.
             </param>
+        </member>
+        <member name="M:B1SLayer.SLConnection.GetSessionCookiesAsync">
+            <summary>
+            Obtains the current session cookies from the distribued cache.
+            A login is performed if no valid cookies are retrieved from cache.
+            </summary>
+            <returns>
+            The current session cookies to be used in each request.
+            </returns>
+        </member>
+        <member name="M:B1SLayer.SLConnection.SetSessionCookiesAsync(Flurl.Http.CookieJar,System.TimeSpan)">
+            <summary>
+            Sets the given session cookies to the distributed cache.
+            </summary>
+            <param name="cookies">
+            The cookies to be set to the distributed cache.
+            </param>
+            <param name="slidingExpiration">
+            The sliding expiration time for the session cache.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLConnection.InvalidateSessionCacheAsync">
+            <summary>
+            Removes the current active session from the distributed cache.
+            </summary>
         </member>
         <member name="M:B1SLayer.SLConnection.CreateCookieJarFromConnectionContext(System.String)">
             <summary>
