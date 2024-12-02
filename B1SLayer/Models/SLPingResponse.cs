@@ -25,6 +25,7 @@ public class SLPingResponse
     /// Gets or sets the timestamp of a ping response.
     /// </summary>
     [JsonPropertyName("timestamp")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public decimal Timestamp { get; set; }
 
     /// <summary>

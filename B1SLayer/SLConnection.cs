@@ -583,14 +583,12 @@ public class SLConnection
     {
         try
         {
-            var response = await ServiceLayerRoot
-                .RemovePath()
-                .AppendPathSegment(path)
-                .GetAsync();
-
-            var pingResponse = await response.GetJsonAsync<SLPingResponse>();
-            pingResponse.IsSuccessStatusCode = response.ResponseMessage.IsSuccessStatusCode;
-            pingResponse.StatusCode = response.ResponseMessage.StatusCode;
+            var pingRequest = Client.Request();
+            pingRequest.Url = pingRequest.Url.RemovePath().AppendPathSegment(path);
+            var flurlResponse = await pingRequest.GetAsync();
+            var pingResponse = await flurlResponse.GetJsonAsync<SLPingResponse>();
+            pingResponse.IsSuccessStatusCode = flurlResponse.ResponseMessage.IsSuccessStatusCode;
+            pingResponse.StatusCode = flurlResponse.ResponseMessage.StatusCode;
             return pingResponse;
         }
         catch (FlurlHttpException ex)
