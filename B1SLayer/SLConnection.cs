@@ -1,6 +1,7 @@
 ﻿using Flurl;
 using Flurl.Http;
 using Flurl.Http.Configuration;
+using Microsoft.Extensions.Caching.Distributed;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -23,43 +24,62 @@ namespace B1SLayer;
 public class SLConnection
 {
     #region Fields
-    private DateTime _lastRequest = DateTime.MinValue;
+
     private SLLoginResponse _loginResponse;
     private TimeSpan _batchRequestTimeout = TimeSpan.FromSeconds(300);
     private readonly Func<string, string> _getServiceLayerConnectionContext;
     private readonly int _ssoSessionTimeout;
-    private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+
     #endregion
 
     #region Properties
+
     /// <summary>
     /// Gets the <see cref="IFlurlClient"/> responsible for the requests to Service Layer.
     /// </summary>
     public IFlurlClient Client { get; private set; }
+
+    /// <summary>
+    /// Gets the <see cref="IDistributedCache"/> implementation to be used for session management. By default, an in-memory implementation is used.
+    /// </summary>
+    public IDistributedCache DistributedCache { get; private set; } = B1SLayerSettings.DistributedCache;
+
+    /// <summary>
+    /// Gets or sets cache key to be used for the session cache.
+    /// </summary>
+    public string SessionCacheKey { get; set; }
+
     /// <summary>
     /// Gets the Service Layer root URI.
     /// </summary>
     public Uri ServiceLayerRoot { get; private set; }
+
     /// <summary>
     /// Gets the Company database (schema) to connect to.
     /// </summary>
     public string CompanyDB { get; private set; }
+
     /// <summary>
     /// Gets the username to be used for the Service Layer authentication.
     /// </summary>
     public string UserName { get; private set; }
+
     /// <summary>
     /// Gets the password for the provided username.
     /// </summary>
     public string Password { get; private set; }
+
     /// <summary>
     /// Gets the Service Layer language code provided.
     /// </summary>
     public int? Language { get; private set; }
+
     /// <summary>
-    /// Gets or sets the number of attempts for each unsuccessfull request in case of an HTTP status code contained in <see cref="HttpStatusCodesToRetry"/>.
+    /// Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in <see cref="HttpStatusCodesToRetry"/>.
     /// </summary>
     public int NumberOfAttempts { get; set; }
+
     /// <summary>
     /// Gets or sets the timespan to wait before a batch request times out. The default value is 5 minutes (300 seconds).
     /// </summary>
@@ -68,29 +88,28 @@ public class SLConnection
         get => _batchRequestTimeout;
         set
         {
-            if (value != Timeout.InfiniteTimeSpan && (value <= TimeSpan.Zero || value > TimeSpan.FromMilliseconds(int.MaxValue)))
+            if (value != Timeout.InfiniteTimeSpan &&
+                (value <= TimeSpan.Zero || value > TimeSpan.FromMilliseconds(int.MaxValue)))
             {
                 throw new ArgumentOutOfRangeException(nameof(value));
             }
+
             _batchRequestTimeout = value;
         }
     }
+
     /// <summary>
     /// Gets whether this <see cref="SLConnection"/> instance is using Single Sign-On (SSO) authentication.
     /// </summary>
     public bool IsUsingSingleSignOn { get; private set; }
-    /// <summary>
-    /// A container that keeps the session cookies returned by the Login request. 
-    /// These cookies are sent in every request and overwritten whenever a new Login is performed.
-    /// </summary>
-    internal CookieJar Cookies { get; private set; }
+
     /// <summary>
     /// Gets information about the latest Login request.
     /// </summary>
     public SLLoginResponse LoginResponse
     {
         // Returns a new object so the login control can't be manipulated externally
-        get => new SLLoginResponse()
+        get => new()
         {
             LastLogin = _loginResponse.LastLogin,
             SessionId = _loginResponse.SessionId,
@@ -100,23 +119,26 @@ public class SLConnection
 
         private set => _loginResponse = value;
     }
+
     /// <summary>
     /// Gets a list of <see cref="HttpStatusCode"/> to be checked before retrying an unsuccessful request.
     /// </summary>
     /// <remarks>
     /// The number of attempts is defined by <see cref="NumberOfAttempts"/>.
     /// </remarks>
-    public IList<HttpStatusCode> HttpStatusCodesToRetry { get; } = new List<HttpStatusCode>()
-    {
+    public IList<HttpStatusCode> HttpStatusCodesToRetry { get; } =
+    [
         HttpStatusCode.Unauthorized,
         HttpStatusCode.InternalServerError,
         HttpStatusCode.BadGateway,
         HttpStatusCode.ServiceUnavailable,
         HttpStatusCode.GatewayTimeout
-    };
+    ];
+
     #endregion
 
     #region Constructors
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SLConnection"/> class.
     /// Only one instance per company/user should be used in the application.
@@ -141,7 +163,8 @@ public class SLConnection
     /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
     /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
     /// </param>
-    public SLConnection(Uri serviceLayerRoot, string companyDB, string userName, string password, int? language = null, int numberOfAttempts = 3)
+    public SLConnection(Uri serviceLayerRoot, string companyDB, string userName, string password, int? language = null,
+        int numberOfAttempts = 3)
     {
         if (string.IsNullOrWhiteSpace(companyDB))
             throw new ArgumentException("companyDB can not be empty.");
@@ -159,6 +182,7 @@ public class SLConnection
         Language = language;
         NumberOfAttempts = numberOfAttempts;
         LoginResponse = new SLLoginResponse();
+        SessionCacheKey = $"B1SLayer:SessionCookies:{ServiceLayerRoot}:{CompanyDB}:{UserName}";
         Client = BuildFlurlClient();
     }
 
@@ -186,8 +210,11 @@ public class SLConnection
     /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
     /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
     /// </param>
-    public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language = null, int numberOfAttempts = 3)
-        : this(new Uri(serviceLayerRoot), companyDB, userName, password, language, numberOfAttempts) { }
+    public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password,
+        int? language = null, int numberOfAttempts = 3)
+        : this(new Uri(serviceLayerRoot), companyDB, userName, password, language, numberOfAttempts)
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SLConnection"/> class.
@@ -206,7 +233,9 @@ public class SLConnection
     /// The password for the provided user.
     /// </param>
     public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password)
-        : this(new Uri(serviceLayerRoot), companyDB, userName, password, null) { }
+        : this(new Uri(serviceLayerRoot), companyDB, userName, password, null)
+    {
+    }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SLConnection"/> class.
@@ -229,35 +258,8 @@ public class SLConnection
     /// A GET request to the UserLanguages resource will return all available languages and their respective codes.
     /// </param>
     public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language)
-        : this(new Uri(serviceLayerRoot), companyDB, userName, password, language) { }
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="SLConnection"/> class using Single Sign-On (SSO) authentication.
-    /// </summary>
-    /// <param name="serviceLayerRoot">
-    /// The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-    /// </param>
-    /// <param name="getServiceLayerConnectionContext">
-    /// The reference for the UI API method responsible for obtaining the connection context
-    /// (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
-    /// </param>
-    /// <param name="sessionTimeout">
-    /// The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
-    /// specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
-    /// </param>
-    /// <param name="numberOfAttempts">
-    /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
-    /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
-    /// </param>
-    public SLConnection(Uri serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext, int sessionTimeout = 30, int numberOfAttempts = 3)
+        : this(new Uri(serviceLayerRoot), companyDB, userName, password, language)
     {
-        ServiceLayerRoot = serviceLayerRoot;
-        NumberOfAttempts = numberOfAttempts;
-        LoginResponse = new SLLoginResponse();
-        IsUsingSingleSignOn = true;
-        _getServiceLayerConnectionContext = getServiceLayerConnectionContext;
-        _ssoSessionTimeout = sessionTimeout;
-        Client = BuildFlurlClient();
     }
 
     /// <summary>
@@ -278,11 +280,47 @@ public class SLConnection
     /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
     /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
     /// </param>
-    public SLConnection(string serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext, int sessionTimeout = 30, int numberOfAttempts = 3)
-        : this(new Uri(serviceLayerRoot), getServiceLayerConnectionContext, sessionTimeout, numberOfAttempts) { }
+    public SLConnection(Uri serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext,
+        int sessionTimeout = 30, int numberOfAttempts = 3)
+    {
+        ServiceLayerRoot = serviceLayerRoot;
+        NumberOfAttempts = numberOfAttempts;
+        LoginResponse = new SLLoginResponse();
+        IsUsingSingleSignOn = true;
+        SessionCacheKey = $"B1SLayer:SessionCookies:{ServiceLayerRoot}:{Guid.NewGuid()}";
+        Client = BuildFlurlClient();
+        _getServiceLayerConnectionContext = getServiceLayerConnectionContext;
+        _ssoSessionTimeout = sessionTimeout;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SLConnection"/> class using Single Sign-On (SSO) authentication.
+    /// </summary>
+    /// <param name="serviceLayerRoot">
+    /// The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+    /// </param>
+    /// <param name="getServiceLayerConnectionContext">
+    /// The reference for the UI API method responsible for obtaining the connection context
+    /// (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext). 
+    /// </param>
+    /// <param name="sessionTimeout">
+    /// The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+    /// specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+    /// </param>
+    /// <param name="numberOfAttempts">
+    /// The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+    /// If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+    /// </param>
+    public SLConnection(string serviceLayerRoot, Func<string, string> getServiceLayerConnectionContext,
+        int sessionTimeout = 30, int numberOfAttempts = 3)
+        : this(new Uri(serviceLayerRoot), getServiceLayerConnectionContext, sessionTimeout, numberOfAttempts)
+    {
+    }
+
     #endregion
 
     #region Configuration Methods
+
     private IFlurlClient BuildFlurlClient()
     {
         return new FlurlClientBuilder(ServiceLayerRoot.ToString())
@@ -303,66 +341,51 @@ public class SLConnection
             })
             .Build();
     }
+
     #endregion
 
-    #region Authentication Methods
+    #region Session Management Methods
+
     /// <summary>
     /// If the current session is expired or non-existent, performs a POST Login request with the provided information.
     /// Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
     /// </summary>
-    /// <param name="forceLogin">
-    /// Whether the login request should be forced even if the current session has not expired.
-    /// </param>
-    public async Task<SLLoginResponse> LoginAsync(bool forceLogin = false) => await ExecuteLoginAsync(forceLogin, true);
-
-    /// <summary>
-    /// Internal login method where a return is not needed.
-    /// </summary>
-    private async Task LoginInternalAsync(bool forceLogin = false) => await ExecuteLoginAsync(forceLogin, false);
+    public async Task<SLLoginResponse> LoginAsync() => await ExecuteLoginAsync(true);
 
     /// <summary>
     /// Performs the POST Login request to the Service Layer.
     /// </summary>
-    /// <param name="forceLogin">
-    /// Whether the login request should be forced even if the current session has not expired.
-    /// </param>
     /// <param name="expectReturn">
     /// Wheter the login information should be returned.
     /// </param>
-    private async Task<SLLoginResponse> ExecuteLoginAsync(bool forceLogin = false, bool expectReturn = false)
+    private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false)
     {
         // Prevents multiple login requests in a multi-threaded scenario
         await _semaphoreSlim.WaitAsync();
 
         try
         {
-            if (forceLogin)
-                _lastRequest = default;
-
-            // Check whether the current session is valid
-            if (DateTime.Now.Subtract(_lastRequest).TotalMinutes < _loginResponse.SessionTimeout)
-                return expectReturn ? LoginResponse : null;
-
             if (!IsUsingSingleSignOn)
             {
-                var loginResponse = await Client
+                _loginResponse = await Client
                     .Request("Login")
                     .WithCookies(out var cookieJar)
                     .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
                     .ReceiveJson<SLLoginResponse>();
 
-                Cookies = cookieJar;
-                _loginResponse = loginResponse;
-                _loginResponse.LastLogin = _lastRequest = DateTime.Now;
+                _loginResponse.LastLogin = DateTime.Now;
+                await SetSessionCookiesAsync(cookieJar, TimeSpan.FromMinutes(_loginResponse.SessionTimeout));
             }
             else
             {
                 // Obtains session context from UI API method
                 string connectionContext = _getServiceLayerConnectionContext(ServiceLayerRoot.ToString());
-                Cookies = CreateCookieJarFromConnectionContext(connectionContext);
-                _loginResponse.LastLogin = _lastRequest = DateTime.Now;
+                var cookies = CreateCookieJarFromConnectionContext(connectionContext);
+                await SetSessionCookiesAsync(cookies, TimeSpan.FromMinutes(_ssoSessionTimeout));
+                _loginResponse.LastLogin = DateTime.Now;
                 _loginResponse.SessionTimeout = _ssoSessionTimeout;
-                _loginResponse.SessionId = Cookies.FirstOrDefault(x => x.Name.Equals("B1SESSION", StringComparison.OrdinalIgnoreCase))?.Value;
+                _loginResponse.SessionId = cookies
+                    .FirstOrDefault(x => x.Name.Equals("B1SESSION", StringComparison.OrdinalIgnoreCase))?.Value;
             }
 
             return expectReturn ? LoginResponse : null;
@@ -375,13 +398,70 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx) { throw slEx; }
-            catch { throw ex; }
+            catch (SLException slEx)
+            {
+                throw slEx;
+            }
+            catch
+            {
+                throw ex;
+            }
         }
         finally
         {
             _semaphoreSlim.Release();
         }
+    }
+
+    /// <summary>
+    /// Obtains the current session cookies from the distribued cache.
+    /// A login is performed if no valid cookies are retrieved from cache.
+    /// </summary>
+    /// <returns>
+    /// The current session cookies to be used in each request.
+    /// </returns>
+    internal async Task<CookieJar> GetSessionCookiesAsync()
+    {
+        var cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey);
+
+        if (string.IsNullOrEmpty(cookiesString))
+        {
+            await ExecuteLoginAsync();
+            cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey);
+        }
+        else
+            await DistributedCache.RefreshAsync(SessionCacheKey);
+
+        return string.IsNullOrEmpty(cookiesString)
+            ? null
+            : CookieJar.LoadFromString(cookiesString);
+    }
+
+    /// <summary>
+    /// Sets the given session cookies to the distributed cache.
+    /// </summary>
+    /// <param name="cookies">
+    /// The cookies to be set to the distributed cache.
+    /// </param>
+    /// <param name="slidingExpiration">
+    /// The sliding expiration time for the session cache.
+    /// </param>
+    private async Task SetSessionCookiesAsync(CookieJar cookies, TimeSpan slidingExpiration)
+    {
+        var cookieString = cookies?.ToString();
+        if (!string.IsNullOrEmpty(cookieString))
+            await DistributedCache.SetStringAsync(SessionCacheKey, cookieString, new DistributedCacheEntryOptions
+            {
+                SlidingExpiration = slidingExpiration
+            });
+    }
+
+    /// <summary>
+    /// Removes the current active session from the distributed cache.
+    /// </summary>
+    public async Task InvalidateSessionCacheAsync()
+    {
+        await DistributedCache.RemoveAsync(SessionCacheKey);
     }
 
     /// <summary>
@@ -396,7 +476,8 @@ public class SLConnection
     private CookieJar CreateCookieJarFromConnectionContext(string connectionContext)
     {
         var cookieJar = new CookieJar();
-        var cookies = connectionContext.Replace(',', ';').Split(';').Where(x => !string.IsNullOrEmpty(x) && x.Contains('=') && !x.Contains("path"));
+        var cookies = connectionContext.Replace(',', ';').Split(';')
+            .Where(x => !string.IsNullOrEmpty(x) && x.Contains('=') && !x.Contains("path"));
 
         foreach (var cookie in cookies)
         {
@@ -404,13 +485,18 @@ public class SLConnection
 
             if (cookieKeyValue.Length != 2) continue;
 
-            if (cookieKeyValue[0].Equals("B1SESSION", StringComparison.OrdinalIgnoreCase) || cookieKeyValue[0].Equals("CompanyDB", StringComparison.OrdinalIgnoreCase))
+            if (cookieKeyValue[0].Equals("B1SESSION", StringComparison.OrdinalIgnoreCase) ||
+                cookieKeyValue[0].Equals("CompanyDB", StringComparison.OrdinalIgnoreCase))
             {
-                cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { HttpOnly = true, Secure = true });
+                cookieJar.AddOrReplace(
+                    new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login"))
+                    { HttpOnly = true, Secure = true });
             }
             else if (cookieKeyValue[0].Equals("ROUTEID", StringComparison.OrdinalIgnoreCase))
             {
-                cookieJar.AddOrReplace(new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login")) { Path = "/", Secure = true });
+                cookieJar.AddOrReplace(
+                    new FlurlCookie(cookieKeyValue[0], cookieKeyValue[1], ServiceLayerRoot.AppendPathSegment("Login"))
+                    { Path = "/", Secure = true });
             }
         }
 
@@ -422,14 +508,14 @@ public class SLConnection
     /// </summary>
     public async Task LogoutAsync()
     {
-        if (Cookies == null) return;
+        var currentSessionCookies = await GetSessionCookiesAsync();
+        if (currentSessionCookies == null) return;
 
         try
         {
-            await Client.Request("Logout").WithCookies(Cookies).PostAsync();
+            await Client.Request("Logout").WithCookies(currentSessionCookies).PostAsync();
+            await InvalidateSessionCacheAsync();
             _loginResponse = new SLLoginResponse();
-            _lastRequest = default;
-            Cookies = null;
         }
         catch (FlurlHttpException ex)
         {
@@ -439,13 +525,21 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx) { throw slEx; }
-            catch { throw ex; }
+            catch (SLException slEx)
+            {
+                throw slEx;
+            }
+            catch
+            {
+                throw ex;
+            }
         }
     }
+
     #endregion
 
     #region Request Methods
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
     /// </summary>
@@ -486,10 +580,6 @@ public class SLConnection
         if (NumberOfAttempts < 1)
             throw new ArgumentException("The number of attempts can not be lower than 1.");
 
-        await LoginInternalAsync();
-
-        _lastRequest = DateTime.Now;
-
         for (int i = 0; i < NumberOfAttempts || loginReattempted; i++)
         {
             loginReattempted = false;
@@ -528,7 +618,7 @@ public class SLConnection
                     if (i >= NumberOfAttempts)
                         break;
 
-                    await LoginInternalAsync(true);
+                    await ExecuteLoginAsync();
                     loginReattempted = true;
                 }
             }
@@ -601,13 +691,21 @@ public class SLConnection
                 pingResponse.StatusCode = ex.Call.HttpResponseMessage.StatusCode;
                 return pingResponse;
             }
-            catch { throw ex; }
+            catch
+            {
+                throw ex;
+            }
         }
-        catch (Exception) { throw; }
+        catch (Exception)
+        {
+            throw;
+        }
     }
+
     #endregion
 
     #region Call Event Handlers
+
     /// <summary>
     /// Sets a <see cref="Func{T, TResult}"/> delegate that is called before every Service Layer request.
     /// </summary>
@@ -615,7 +713,11 @@ public class SLConnection
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// Response-related properties will be null in BeforeCall.
     /// </remarks>
-    public SLConnection BeforeCall(Func<FlurlCall, Task> action) { Client.BeforeCall(action); return this; }
+    public SLConnection BeforeCall(Func<FlurlCall, Task> action)
+    {
+        Client.BeforeCall(action);
+        return this;
+    }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called before every Service Layer request.
@@ -624,7 +726,11 @@ public class SLConnection
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// Response-related properties will be null in BeforeCall.
     /// </remarks>
-    public SLConnection BeforeCall(Action<FlurlCall> action) { Client.BeforeCall(action); return this; }
+    public SLConnection BeforeCall(Action<FlurlCall> action)
+    {
+        Client.BeforeCall(action);
+        return this;
+    }
 
     /// <summary>
     /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every Service Layer request.
@@ -632,7 +738,11 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public SLConnection AfterCall(Func<FlurlCall, Task> action) { Client.AfterCall(action); return this; }
+    public SLConnection AfterCall(Func<FlurlCall, Task> action)
+    {
+        Client.AfterCall(action);
+        return this;
+    }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called after every Service Layer request.
@@ -640,7 +750,11 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public SLConnection AfterCall(Action<FlurlCall> action) { Client.AfterCall(action); return this; }
+    public SLConnection AfterCall(Action<FlurlCall> action)
+    {
+        Client.AfterCall(action);
+        return this;
+    }
 
     /// <summary>
     /// Sets a <see cref="Func{T, TResult}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -648,7 +762,11 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public SLConnection OnError(Func<FlurlCall, Task> action) { Client.OnError(action); return this; }
+    public SLConnection OnError(Func<FlurlCall, Task> action)
+    {
+        Client.OnError(action);
+        return this;
+    }
 
     /// <summary>
     /// Sets a <see cref="Action{T}"/> delegate that is called after every unsuccessful Service Layer request.
@@ -656,10 +774,16 @@ public class SLConnection
     /// <remarks>
     /// The <see cref="FlurlCall"/> object provides various details about the call than can be used for logging and error handling.
     /// </remarks>
-    public SLConnection OnError(Action<FlurlCall> action) { Client.OnError(action); return this; }
+    public SLConnection OnError(Action<FlurlCall> action)
+    {
+        Client.OnError(action);
+        return this;
+    }
+
     #endregion
 
     #region Attachments Methods
+
     /// <summary>
     /// Uploads the provided file as an attachment.
     /// </summary>
@@ -673,7 +797,7 @@ public class SLConnection
     /// A <see cref="SLAttachment"/> object with information about the created attachment entry.
     /// </returns>
     public async Task<SLAttachment> PostAttachmentAsync(string path) =>
-            await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+        await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
 
     /// <summary>
     /// Uploads the provided file as an attachment.
@@ -749,17 +873,19 @@ public class SLConnection
 
             var result = await Client
                 .Request("Attachments2")
-                .WithCookies(Cookies)
+                .WithCookies(await GetSessionCookiesAsync())
                 .PostMultipartAsync(mp =>
                 {
                     // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
-                    var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
+                    var boundary = mp.Headers.ContentType.Parameters.First(o =>
+                        o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
                     boundary.Value = boundary.Value.Replace("\"", string.Empty);
 
                     foreach (var file in files)
                     {
                         var content = new StreamContent(file.Value);
-                        content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{file.Key}\"");
+                        content.Headers.Add("Content-Disposition",
+                            $"form-data; name=\"files\"; filename=\"{file.Key}\"");
                         content.Headers.Add("Content-Type", "application/octet-stream");
                         mp.Add(content);
                     }
@@ -797,7 +923,8 @@ public class SLConnection
     /// The file to be updated.
     /// </param>
     public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file) =>
-        await PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream>() { { fileName, new MemoryStream(file) } });
+        await PatchAttachmentsAsync(attachmentEntry,
+            new Dictionary<string, Stream>() { { fileName, new MemoryStream(file) } });
 
     /// <summary>
     /// Updates an existing attachment entry with the provided file. If the file already exists
@@ -826,7 +953,8 @@ public class SLConnection
     /// A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
     /// </param>
     public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files) =>
-        await PatchAttachmentsAsync(attachmentEntry, files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
+        await PatchAttachmentsAsync(attachmentEntry,
+            files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
 
     /// <summary>
     /// Updates an existing attachment entry with the provided files. If the file already exists
@@ -849,17 +977,19 @@ public class SLConnection
 
             var result = await Client
                 .Request($"Attachments2({attachmentEntry})")
-                .WithCookies(Cookies)
+                .WithCookies(await GetSessionCookiesAsync())
                 .PatchMultipartAsync(mp =>
                 {
                     // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
-                    var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
+                    var boundary = mp.Headers.ContentType.Parameters.First(o =>
+                        o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
                     boundary.Value = boundary.Value.Replace("\"", string.Empty);
 
                     foreach (var file in files)
                     {
                         var content = new StreamContent(file.Value);
-                        content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{file.Key}\"");
+                        content.Headers.Add("Content-Disposition",
+                            $"form-data; name=\"files\"; filename=\"{file.Key}\"");
                         content.Headers.Add("Content-Type", "application/octet-stream");
                         mp.Add(content);
                     }
@@ -907,15 +1037,17 @@ public class SLConnection
             var file = await Client
                 .Request($"Attachments2({attachmentEntry})/$value")
                 .SetQueryParam("filename", !string.IsNullOrEmpty(fileName) ? $"'{fileName}'" : null)
-                .WithCookies(Cookies)
+                .WithCookies(await GetSessionCookiesAsync())
                 .GetBytesAsync();
 
             return file;
         });
     }
+
     #endregion
 
     #region Batch Request Methods
+
     /// <summary>
     /// Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest"/> instances.
     /// All requests are sent in a single change set.
@@ -948,7 +1080,8 @@ public class SLConnection
     /// <returns>
     /// An <see cref="HttpResponseMessage"/> array containg the response messages of the batch request. 
     /// </returns>
-    public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
+    public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests,
+        bool singleChangeSet = true)
     {
         return await ExecuteRequest(async () =>
         {
@@ -960,7 +1093,7 @@ public class SLConnection
             var response = singleChangeSet
                 ? await Client
                     .Request("$batch")
-                    .WithCookies(Cookies)
+                    .WithCookies(await GetSessionCookiesAsync())
                     .WithTimeout(BatchRequestTimeout)
                     .PostMultipartAsync(async mp =>
                     {
@@ -969,7 +1102,7 @@ public class SLConnection
                     })
                 : await Client
                     .Request("$batch")
-                    .WithCookies(Cookies)
+                    .WithCookies(await GetSessionCookiesAsync())
                     .WithTimeout(BatchRequestTimeout)
                     .PostMultipartAsync(async mp =>
                     {
@@ -1015,9 +1148,11 @@ public class SLConnection
     /// <summary>
     /// Builds the <see cref="HttpRequestMessage"/> from a given <see cref="SLBatchRequest"/> and adds it to the <see cref="MultipartContent"/> instance.
     /// </summary>
-    private async Task BuildRequestForMultipartContentAsync(MultipartContent multipartContent, SLBatchRequest batchRequest)
+    private async Task BuildRequestForMultipartContentAsync(MultipartContent multipartContent,
+        SLBatchRequest batchRequest)
     {
-        var request = new HttpRequestMessage(batchRequest.HttpMethod, Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
+        var request = new HttpRequestMessage(batchRequest.HttpMethod,
+            Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
 
         if (batchRequest.HttpVersion != null)
             request.Version = batchRequest.HttpVersion;
@@ -1028,7 +1163,8 @@ public class SLConnection
         if (batchRequest.Data != null)
             request.Content = batchRequest.Data is string dataString
                 ? new StringContent(dataString, batchRequest.Encoding, "application/json")
-                : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions), batchRequest.Encoding, "application/json");
+                : new StringContent(JsonSerializer.Serialize(batchRequest.Data, batchRequest.JsonSerializerOptions),
+                    batchRequest.Encoding, "application/json");
 
         var innerContent = await MultipartHelper.CreateHttpContentAsync(request);
         innerContent.Headers.Add("content-transfer-encoding", "binary");
@@ -1038,9 +1174,11 @@ public class SLConnection
 
         multipartContent.Add(innerContent);
     }
+
     #endregion
 
     #region Private Classes
+
     /// <summary>
     /// Used to aggregate exceptions that occur on request retries. 
     /// </summary>
@@ -1069,5 +1207,6 @@ public class SLConnection
             return (e.GetType().Name + e.Message).GetHashCode();
         }
     }
+
     #endregion
 }

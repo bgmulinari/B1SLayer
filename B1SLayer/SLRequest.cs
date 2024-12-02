@@ -43,7 +43,9 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
+            string stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync())
+                .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
 
             string jsonToDeserialize = (unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection))
@@ -67,7 +69,10 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.SetQueryParam("$inlinecount", "allpages").WithCookies(_slConnection.Cookies).GetStringAsync();
+            string stringResult = await FlurlRequest
+                .SetQueryParam("$inlinecount", "allpages")
+                .WithCookies(await _slConnection.GetSessionCookiesAsync())
+                .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
 
             int inlineCount =
@@ -105,7 +110,7 @@ public class SLRequest
             await _slConnection.ExecuteRequest(async () =>
             {
                 var currentResult = await FlurlRequest
-                    .WithCookies(_slConnection.Cookies)
+                    .WithCookies(await _slConnection.GetSessionCookiesAsync())
                     .SetQueryParam("$skip", skip)
                     .GetJsonAsync<SLCollectionRoot<T>>();
 
@@ -126,7 +131,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
         });
     }
 
@@ -143,7 +148,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).GetStringAsync();
+            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
             return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions ?? new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -158,7 +163,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).GetBytesAsync();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetBytesAsync();
         });
     }
 
@@ -169,7 +174,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).GetStreamAsync();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStreamAsync();
         });
     }
 
@@ -180,7 +185,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string result = await FlurlRequest.WithCookies(_slConnection.Cookies).AppendPathSegment("$count").GetStringAsync();
+            string result = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).AppendPathSegment("$count").GetStringAsync();
             long.TryParse(result, out long quantity);
             return quantity;
         });
@@ -202,7 +207,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostJsonAsync(data).ReceiveString();
+            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
@@ -226,7 +231,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostStringAsync(data).ReceiveString();
+            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
@@ -247,7 +252,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveString();
+            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
@@ -265,7 +270,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PostJsonAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data);
         });
     }
 
@@ -276,7 +281,7 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync().ReceiveString();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
         });
     }
 
@@ -290,7 +295,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PostStringAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data);
         });
     }
 
@@ -301,7 +306,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PostAsync();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync();
         });
     }
 
@@ -315,7 +320,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchJsonAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchJsonAsync(data);
         });
     }
 
@@ -329,7 +334,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchStringAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchStringAsync(data);
         });
     }
 
@@ -367,7 +372,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PatchMultipartAsync(mp =>
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchMultipartAsync(mp =>
             {
                 // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
                 var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
@@ -391,7 +396,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PutJsonAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutJsonAsync(data);
         });
     }
 
@@ -405,7 +410,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).PutStringAsync(data);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutStringAsync(data);
         });
     }
 
@@ -416,7 +421,7 @@ public class SLRequest
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(_slConnection.Cookies).DeleteAsync();
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).DeleteAsync();
         });
     }
 }
