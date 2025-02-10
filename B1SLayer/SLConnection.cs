@@ -1082,41 +1082,60 @@ public class SLConnection
     /// <returns>
     /// An <see cref="HttpResponseMessage"/> array containg the response messages of the batch request. 
     /// </returns>
-    public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests,
-        bool singleChangeSet = true)
+    public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
     {
         return await ExecuteRequest(async () =>
         {
-            if (requests == null || requests.Count() == 0)
-            {
+            if (requests == null || !requests.Any())
                 throw new ArgumentException("No requests to be sent.");
-            }
 
-            var response = singleChangeSet
-                ? await Client
+            HttpResponseMessage batchResponse;
+
+            if (singleChangeSet)
+            {
+                var singleContent = await BuildMixedMultipartContentAsync(requests);
+                var flurlResponse = await Client
                     .Request("$batch")
                     .WithCookies(await GetSessionCookiesAsync())
                     .WithTimeout(BatchRequestTimeout)
-                    .PostMultipartAsync(async mp =>
+                    .PostMultipartAsync(mp =>
                     {
                         mp.Headers.ContentType.MediaType = "multipart/mixed";
-                        mp.Add(await BuildMixedMultipartContentAsync(requests));
-                    })
-                : await Client
+                        mp.Add(singleContent);
+                    });
+
+                batchResponse = flurlResponse.ResponseMessage;
+            }
+            else
+            {
+                var contents = new List<MultipartContent>();
+                foreach (var request in requests)
+                {
+                    string boundary = "changeset_" + Guid.NewGuid();
+                    var content = await BuildMixedMultipartContentAsync(request, boundary);
+                    contents.Add(content);
+                }
+
+                var flurlResponse = await Client
                     .Request("$batch")
                     .WithCookies(await GetSessionCookiesAsync())
                     .WithTimeout(BatchRequestTimeout)
-                    .PostMultipartAsync(async mp =>
+                    .PostMultipartAsync(mp =>
                     {
                         mp.Headers.ContentType.MediaType = "multipart/mixed";
-                        foreach (var request in requests)
+                        foreach (var content in contents)
                         {
-                            string boundary = "changeset_" + Guid.NewGuid();
-                            mp.Add(await BuildMixedMultipartContentAsync(request, boundary));
+                            mp.Add(content);
                         }
                     });
 
-            var responses = await MultipartHelper.ReadMultipartResponseAsync(response.ResponseMessage);
+                batchResponse = flurlResponse.ResponseMessage;
+            }
+
+            if (batchResponse?.Content is null)
+                throw new Exception("The batch request did not return a valid response.");
+
+            var responses = await MultipartHelper.ReadMultipartResponseAsync(batchResponse);
             return responses;
         });
     }
