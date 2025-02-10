@@ -31,8 +31,8 @@
 
   <ItemGroup>
     <PackageReference Include="Flurl.Http" Version="4.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.1" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="System.Text.Json" Version="6.0.11" />
   </ItemGroup>
