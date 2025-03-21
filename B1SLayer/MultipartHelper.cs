@@ -26,16 +26,21 @@ internal static class MultipartHelper
     {
         var innerResponses = new List<HttpResponseMessage>();
         var content = await response.Content.ReadAsStringAsync();
-        var parts = content.Split(new[] { "HTTP/" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
+        var parts = content.Split(["HTTP/"], StringSplitOptions.RemoveEmptyEntries).Skip(1);
 
         foreach (var part in parts)
         {
-            var requestData = part.Split(new[] { "\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            var requestData = part.Split(["\n\r\n"], StringSplitOptions.RemoveEmptyEntries);
             requestData = requestData.Where(x => !x.StartsWith("--") && !x.StartsWith("\r\n")).ToArray();
-            var headers = requestData[0].Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
+            var headers = requestData[0].Split(["\r\n"], StringSplitOptions.RemoveEmptyEntries).Skip(1);
             var httpResponse = new HttpResponseMessage();
-            httpResponse.Version = new Version(part.Substring(0, 3));
-            httpResponse.StatusCode = (HttpStatusCode)int.Parse(part.Substring(4, 3));
+            var statusLine = requestData[0].Split([" "], StringSplitOptions.RemoveEmptyEntries);
+
+            if (statusLine.Length > 1)
+            {
+                httpResponse.Version = new Version(statusLine[0]);
+                httpResponse.StatusCode = (HttpStatusCode)int.Parse(statusLine[1]);
+            }
 
             if (requestData.Length > 1)
             {
@@ -43,13 +48,21 @@ internal static class MultipartHelper
                 httpResponse.Content.Headers.Remove("Content-Type");
             }
 
+            httpResponse.Content ??= new ByteArrayContent([]);
+
             foreach (var header in headers)
             {
-                var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
+                var headerParts = header.Split([": "], StringSplitOptions.RemoveEmptyEntries);
 
-                if (!httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
+                if (headerParts.Length == 2)
                 {
-                    httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
+                    var headerName = headerParts[0].Trim('\r', '\n');
+                    var headerValue = headerParts[1].Trim('\r', '\n');
+
+                    if (headerName.StartsWith("Content-"))
+                        httpResponse.Content.Headers.TryAddWithoutValidation(headerName, headerValue);
+                    else
+                        httpResponse.Headers.TryAddWithoutValidation(headerName, headerValue);
                 }
             }
 
