@@ -601,7 +601,32 @@
             The resource name to be requested.
             </param>
         </member>
+        <member name="M:B1SLayer.SLConnection.Request``1(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLRequest"/> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection"/>. 
+            </summary>
+            <remarks>
+            The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions"/>.
+            </remarks>
+            <param name="resource">
+            The resource name to be requested.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLConnection.Request(System.String,System.Object)">
+            <summary>
+            Initializes a new instance of the <see cref="T:B1SLayer.SLRequest"/> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection"/>. 
+            </summary>
+            <remarks>
+            The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions"/>.
+            </remarks>
+            <param name="resource">
+            The resource name to be requested.
+            </param>
+            <param name="id">
+            The entity ID to be requested.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLConnection.Request``1(System.String,System.Object)">
             <summary>
             Initializes a new instance of the <see cref="T:B1SLayer.SLRequest"/> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection"/>. 
             </summary>
@@ -945,12 +970,36 @@
             Gets or sets the error details of a Service Layer exception.
             </summary>
         </member>
+        <member name="M:B1SLayer.SLExpressionParser.Parse``1(System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}})">
+            <summary>
+                Entry point to parse a predicate expression into a query string.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLExpressionParser.ExpressionCacheKey">
+            <summary>
+                Cache key for expressions that provides proper equality comparison
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLExpressionParser.ExpressionEqualityComparer">
+            <summary>
+                Compares expressions for structural equality
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLRequest">
             <summary>
             Represents a request to the Service Layer.
             </summary>
             <remarks>
             The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions"/>.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLRequest.Url">
+            <summary>
+            Gets the URL of the current Service Layer request as a string.
+            </summary>
+            <remarks>
+            This property returns the URL associated with the <see cref="T:B1SLayer.SLRequest"/> object. It can be used
+            to inspect or log the endpoint being accessed by the request.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean)">
@@ -1162,7 +1211,17 @@
             Sets the clause to be used to filter records.
             </summary>
         </member>
+        <member name="M:B1SLayer.SLRequestExtensions.Filter``1(B1SLayer.SLRequestGenericType{``0},System.Linq.Expressions.Expression{System.Func{``0,System.Boolean}})">
+            <summary>
+            Sets the clause to be used to filter records.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLRequestExtensions.Select(B1SLayer.SLRequest,System.String)">
+            <summary>
+            Sets the explicit properties that should be returned.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestExtensions.Select``1(B1SLayer.SLRequestGenericType{``0},System.Linq.Expressions.Expression{System.Func{``0,System.Object}})">
             <summary>
             Sets the explicit properties that should be returned.
             </summary>
@@ -1302,6 +1361,32 @@
             <param name="timeout">
             An <see cref="T:System.Int32"/> representing the timeout in seconds to be configured.
             </param>
+        </member>
+        <member name="T:B1SLayer.SLRequestGenericType`1">
+            <summary>
+                Represents a strongly-typed Service Layer request that enables type-safe LINQ expression support.
+            </summary>
+            <typeparam name="T">The type of the entity being requested from the Service Layer.</typeparam>
+        </member>
+        <member name="P:B1SLayer.SLRequestGenericType`1.Url">
+            <summary>
+                Gets the URL of the Service Layer request.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestGenericType`1.GetSingleAsync">
+            <summary>
+                Executes the request and returns a single entity of type T.
+            </summary>
+            <returns>A task that represents the asynchronous operation. The task result contains the requested entity.</returns>
+        </member>
+        <member name="M:B1SLayer.SLRequestGenericType`1.GetCollectionAsync">
+            <summary>
+                Executes the request and returns a collection of entities of type T.
+            </summary>
+            <returns>
+                A task that represents the asynchronous operation. The task result contains the collection of requested
+                entities.
+            </returns>
         </member>
     </members>
 </doc>

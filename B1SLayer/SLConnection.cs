@@ -400,9 +400,9 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx)
+            catch (SLException)
             {
-                throw slEx;
+                throw;
             }
             catch
             {
@@ -527,9 +527,9 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx)
+            catch (SLException)
             {
-                throw slEx;
+                throw;
             }
             catch
             {
@@ -552,7 +552,19 @@ public class SLConnection
     /// The resource name to be requested.
     /// </param>
     public SLRequest Request(string resource) =>
-        new SLRequest(this, Client.Request(resource));
+        new(this, Client.Request(resource));
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
+    /// </summary>
+    /// <remarks>
+    /// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
+    /// </remarks>
+    /// <param name="resource">
+    /// The resource name to be requested.
+    /// </param>
+    public SLRequestGenericType<T> Request<T>(string resource) =>
+        new(Request(resource));
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
@@ -567,7 +579,22 @@ public class SLConnection
     /// The entity ID to be requested.
     /// </param>
     public SLRequest Request(string resource, object id) =>
-        new SLRequest(this, Client.Request(id is string ? $"{resource}('{id}')" : $"{resource}({id})"));
+        new(this, Client.Request(id is string ? $"{resource}('{id}')" : $"{resource}({id})"));
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SLRequest"/> class that represents a request to the associated <see cref="SLConnection"/>. 
+    /// </summary>
+    /// <remarks>
+    /// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
+    /// </remarks>
+    /// <param name="resource">
+    /// The resource name to be requested.
+    /// </param>
+    /// <param name="id">
+    /// The entity ID to be requested.
+    /// </param>
+    public SLRequestGenericType<T> Request<T>(string resource, object id) =>
+        new(Request(id is string ? $"{resource}('{id}')" : $"{resource}({id})"));
 
     /// <summary>
     /// Calls the Login method to ensure a valid session and then executes the provided request.
@@ -1195,7 +1222,6 @@ public class SLConnection
 
         multipartContent.Add(innerContent);
     }
-
     #endregion
 
     #region Private Classes

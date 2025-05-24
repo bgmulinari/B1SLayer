@@ -1,6 +1,7 @@
 ﻿using Flurl.Http;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,11 +23,31 @@ public static class SLRequestExtensions
     }
 
     /// <summary>
+    /// Sets the clause to be used to filter records.
+    /// </summary>
+    public static SLRequestGenericType<T> Filter<T>(this SLRequestGenericType<T> request, Expression<Func<T, bool>> expr)
+    {
+        var filters = new SLExpressionParser().Parse(expr);
+        request.InnerRequest.FlurlRequest.SetQueryParam("$filter", filters);
+        return request;
+    }
+
+    /// <summary>
     /// Sets the explicit properties that should be returned.
     /// </summary>
     public static SLRequest Select(this SLRequest request, string select)
     {
         request.FlurlRequest.SetQueryParam("$select", select);
+        return request;
+    }
+
+    /// <summary>
+    /// Sets the explicit properties that should be returned.
+    /// </summary>
+    public static SLRequestGenericType<T> Select<T>(this SLRequestGenericType<T> request, Expression<Func<T, object>> selector)
+    {
+        var selects = new SLExpressionParser().Parse(selector);
+        request.InnerRequest.FlurlRequest.SetQueryParam("$select", selects);
         return request;
     }
 

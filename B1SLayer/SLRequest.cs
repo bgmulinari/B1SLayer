@@ -24,6 +24,15 @@ public class SLRequest
 
     internal IFlurlRequest FlurlRequest { get; }
 
+    /// <summary>
+    /// Gets the URL of the current Service Layer request as a string.
+    /// </summary>
+    /// <remarks>
+    /// This property returns the URL associated with the <see cref="SLRequest"/> object. It can be used
+    /// to inspect or log the endpoint being accessed by the request.
+    /// </remarks>
+    public string Url => FlurlRequest.Url.ToString();
+
     internal SLRequest(SLConnection connection, IFlurlRequest flurlRequest)
     {
         _slConnection = connection;
