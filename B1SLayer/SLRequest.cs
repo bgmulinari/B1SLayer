@@ -286,6 +286,20 @@ public class SLRequest
     }
 
     /// <summary>
+    /// Performs a POST request with the provided parameters and returns the result in a <see cref="string"/>.
+    /// </summary>
+    /// <param name="data">
+    /// The object to be sent as the JSON body.
+    /// </param>
+    public async Task<string> PostReceiveStringAsync(object data)
+    {
+        return await _slConnection.ExecuteRequest(async () =>
+        {
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
+        });
+    }
+
+    /// <summary>
     /// Performs a POST request with the provided parameters.
     /// </summary>
     /// <param name="data">
