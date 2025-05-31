@@ -78,10 +78,6 @@ public class SLRequest
             var inlineCount = 0;
             JsonElement? inlineCountElement = jsonDoc.RootElement.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
             inlineCountElement ??= jsonDoc.RootElement.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
-            
-            var inlineCount = 0;
-            JsonElement? inlineCountElement = jsonDoc.RootElement.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
-            inlineCountElement ??= jsonDoc.RootElement.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
 
             if (inlineCountElement is not null)
             {
