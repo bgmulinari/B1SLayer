@@ -400,9 +400,9 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx)
+            catch (SLException)
             {
-                throw slEx;
+                throw;
             }
             catch
             {
@@ -527,9 +527,9 @@ public class SLConnection
                 var response = await ex.GetResponseJsonAsync<SLResponseError>();
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
-            catch (SLException slEx)
+            catch (SLException)
             {
-                throw slEx;
+                throw;
             }
             catch
             {
