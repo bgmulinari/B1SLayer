@@ -75,9 +75,28 @@ public class SLRequest
                 .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
 
-            int inlineCount =
-                jsonDoc.RootElement.TryGetProperty("odata.count", out JsonElement inlineCountElement1) ? int.Parse(inlineCountElement1.GetString()) :
-                jsonDoc.RootElement.TryGetProperty("@odata.count", out JsonElement inlineCountElement2) ? int.Parse(inlineCountElement2.GetString()) : 0;
+            var inlineCount = 0;
+            JsonElement? inlineCountElement = jsonDoc.RootElement.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
+            inlineCountElement ??= jsonDoc.RootElement.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
+            
+            var inlineCount = 0;
+            JsonElement? inlineCountElement = jsonDoc.RootElement.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
+            inlineCountElement ??= jsonDoc.RootElement.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
+
+            if (inlineCountElement is not null)
+            {
+                switch (inlineCountElement.Value.ValueKind)
+                {
+                    case JsonValueKind.Number:
+                        inlineCount = inlineCountElement.Value.GetInt32();
+                        break;
+                    case JsonValueKind.String:
+                        inlineCount = int.TryParse(inlineCountElement.Value.GetString(), out var inlineCountElementIntValue) ? inlineCountElementIntValue : 0;
+                        break;
+                    default:
+                        throw new Exception("Inline count is not a number or string");
+                }
+            }
 
             string jsonToDeserialize =
                 unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
