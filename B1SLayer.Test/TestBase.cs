@@ -6,7 +6,7 @@ public abstract class TestBase : IDisposable
 {
     protected HttpTest HttpTest { get; private set; }
     protected static SLConnection SLConnectionV1 { get; } = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
-    protected static SLConnection SLConnectionV2 { get; } = new SLConnection("https://sapserver:50000/b1s/v2", "CompanyDB", "manager", "12345");
+    protected static SLConnection SLConnectionV2 { get; } = new SLConnection("https://10.132.10.103:50000/b1s/v2/", "BATUMI_RIVIERA_TEST", "manager", "Aa123456!");
     protected static SLLoginResponse LoginResponse { get; } = new() { SessionId = "00000000-0000-0000-0000-000000000000", Version = "1000000", SessionTimeout = 30 };
 
     public TestBase()

@@ -125,4 +125,22 @@ public class SLRequestTests : TestBase
         Assert.Equal((page2.Value[0].DocEntry, page2.Value[0].CardCode), (orderList[2].DocEntry, orderList[2].CardCode));
         Assert.Equal((page2.Value[1].DocEntry, page2.Value[1].CardCode), (orderList[3].DocEntry, orderList[3].CardCode));
     }
+
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task PostAsync_PrimitiveNumber_ReturnsCorrectValue(SLConnection slConnection)
+    {
+        // Arrange: Service‐Layer returns a bare number
+        HttpTest.RespondWith("2.92920");
+
+        // Act: call PostAsync<double?> on your SLRequest
+        var result = await slConnection
+            .Request("SBOBobService_GetCurrencyRate")
+            .PostAsync<double?>(new { Currency = "EUR", Date = "20250101" });
+
+        // Assert: we get the expected double value back
+        Assert.Equal(2.92920, result);
+    }
+
 }

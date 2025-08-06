@@ -222,13 +222,29 @@ public class SLRequest
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
+            // 1) fire the POST and grab raw JSON
+            string stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync())
+                .PostJsonAsync(data)
+                .ReceiveString();
+
             using var jsonDoc = JsonDocument.Parse(stringResult);
-            bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+            var root = jsonDoc.RootElement;
+
+            // 2) if it isn’t a JSON object, it’s a primitive—deserialize raw
+            if (root.ValueKind != JsonValueKind.Object)
+                return JsonSerializer.Deserialize<T>(root.GetRawText());
+
+            // 3) otherwise do the existing “unwrap ‘value’” logic
+            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
+            string jsonToDeserialize = (unwrapCollection && hasValueToken)
+                ? valueCollection.GetRawText()
+                : root.GetRawText();
+
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
+
 
     /// <summary>
     /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
