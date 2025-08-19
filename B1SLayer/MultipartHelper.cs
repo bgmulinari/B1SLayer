@@ -26,9 +26,21 @@ internal static class MultipartHelper
     {
         var innerResponses = new List<HttpResponseMessage>();
         var content = await response.Content.ReadAsStringAsync();
-        var parts = content.Split(new[] { "HTTP/" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
+        var parts = content.Split(new[] { "HTTP/" }, StringSplitOptions.RemoveEmptyEntries);
+         
+        var batchHeaders = new Dictionary<string, string>();
+        var batchHeaderLines = parts[0].Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+        
+        foreach (var header in batchHeaderLines)
+        {
+            var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
+            if (headerParts.Length == 2)
+            {
+                batchHeaders[headerParts[0]] = headerParts[1];
+            }
+        }
 
-        foreach (var part in parts)
+        foreach (var part in parts.Skip(1))
         {
             var requestData = part.Split(new[] { "\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             requestData = requestData.Where(x => !x.StartsWith("--") && !x.StartsWith("\r\n")).ToArray();
@@ -51,6 +63,12 @@ internal static class MultipartHelper
                 {
                     httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
                 }
+            }
+ 
+            foreach (var batchHeader in batchHeaders)
+            {
+                var mirrorHeaderName = $"X-BatchHeader-{batchHeader.Key}";
+                httpResponse.Headers.TryAddWithoutValidation(mirrorHeaderName, batchHeader.Value);
             }
 
             innerResponses.Add(httpResponse);
