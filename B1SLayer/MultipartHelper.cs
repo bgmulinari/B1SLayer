@@ -33,7 +33,10 @@ internal static class MultipartHelper
             var requestData = part.Split(new[] { "\n\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             requestData = requestData.Where(x => !x.StartsWith("--") && !x.StartsWith("\r\n")).ToArray();
             var headers = requestData[0].Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
-            var httpResponse = new HttpResponseMessage();
+            var httpResponse = new HttpResponseMessage 
+            {
+                Content = new StringContent(string.Empty)
+            };
             httpResponse.Version = new Version(part.Substring(0, 3));
             httpResponse.StatusCode = (HttpStatusCode)int.Parse(part.Substring(4, 3));
 
