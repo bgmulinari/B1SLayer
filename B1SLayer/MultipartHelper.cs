@@ -26,7 +26,7 @@ internal static class MultipartHelper
     public static async Task<HttpResponseMessage[]> ReadMultipartResponseAsync(HttpResponseMessage response)
     {
         var innerResponses = new List<HttpResponseMessage>();
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         var parts = content.Split(new[] { "HTTP/" }, StringSplitOptions.RemoveEmptyEntries).Skip(1);
 
         foreach (var part in parts)
@@ -87,7 +87,7 @@ internal static class MultipartHelper
             writer.WriteLine();
             writer.Flush();
             memoryStream.Position = memoryStream.Length;
-            await request.Content.CopyToAsync(memoryStream);
+            await request.Content.CopyToAsync(memoryStream).ConfigureAwait(false);
         }
         else
         {

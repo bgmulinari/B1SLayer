@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,13 +40,14 @@ public class SLRequest
     /// <param name="unwrapCollection">
     ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
-    public async Task<T> GetAsync<T>(bool unwrapCollection = true)
+    public Task<T> GetAsync<T>(bool unwrapCollection = true)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
             var stringResult = await FlurlRequest
-                .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                .GetStringAsync();
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetStringAsync()
+                .ConfigureAwait(false);
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
@@ -77,14 +78,15 @@ public class SLRequest
     /// <param name="unwrapCollection">
     ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
-    public async Task<(T Result, int Count)> GetWithInlineCountAsync<T>(bool unwrapCollection = true)
+    public Task<(T Result, int Count)> GetWithInlineCountAsync<T>(bool unwrapCollection = true)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
             var stringResult = await FlurlRequest
                 .SetQueryParam("$inlinecount", "allpages")
-                .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                .GetStringAsync();
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetStringAsync()
+                .ConfigureAwait(false);
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
@@ -145,16 +147,18 @@ public class SLRequest
         do
         {
             await _slConnection.ExecuteRequest(async () =>
-            {
-                var currentResult = await FlurlRequest
-                    .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                    .SetQueryParam("$skip", skip)
-                    .GetJsonAsync<SLCollectionRoot<T>>();
+                {
+                    var currentResult = await FlurlRequest
+                        .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                        .SetQueryParam("$skip", skip)
+                        .GetJsonAsync<SLCollectionRoot<T>>()
+                        .ConfigureAwait(false);
 
-                allResultsList.AddRange(currentResult.Value);
-                skip = currentResult.NextSkip;
-                return 0;
-            });
+                    allResultsList.AddRange(currentResult.Value);
+                    skip = currentResult.NextSkip;
+                    return 0;
+                })
+                .ConfigureAwait(false);
         } while (skip > 0);
 
         return allResultsList;
@@ -163,9 +167,14 @@ public class SLRequest
     /// <summary>
     ///     Performs a GET request with the provided parameters and returns the result in a <see cref="string" />.
     /// </summary>
-    public async Task<string> GetStringAsync()
+    public Task<string> GetStringAsync()
     {
-        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetStringAsync()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -177,11 +186,14 @@ public class SLRequest
     /// <param name="jsonSerializerOptions">
     ///     The <see cref="JsonSerializerOptions" /> used to deserialize the object.
     /// </param>
-    public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
+    public Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
+            var stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetStringAsync()
+                .ConfigureAwait(false);
             return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions
                                                                ?? new JsonSerializerOptions
                                                                {
@@ -193,27 +205,41 @@ public class SLRequest
     /// <summary>
     ///     Performs a GET request with the provided parameters and returns the result in a <see cref="byte" /> array.
     /// </summary>
-    public async Task<byte[]> GetBytesAsync()
+    public Task<byte[]> GetBytesAsync()
     {
-        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetBytesAsync());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetBytesAsync()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
     ///     Performs a GET request with the provided parameters and returns the result in a <see cref="Stream" />.
     /// </summary>
-    public async Task<Stream> GetStreamAsync()
+    public Task<Stream> GetStreamAsync()
     {
-        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStreamAsync());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetStreamAsync()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
     ///     Performs a GET request that returns the count of an entity collection.
     /// </summary>
-    public async Task<long> GetCountAsync()
+    public Task<long> GetCountAsync()
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            var result = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).AppendPathSegment("$count").GetStringAsync();
+            var result = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .AppendPathSegment("$count")
+                .GetStringAsync()
+                .ConfigureAwait(false);
             long.TryParse(result, out var quantity);
             return quantity;
         });
@@ -231,11 +257,15 @@ public class SLRequest
     /// <param name="unwrapCollection">
     ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
-    public async Task<T> PostAsync<T>(object data, bool unwrapCollection = true)
+    public Task<T> PostAsync<T>(object data, bool unwrapCollection = true)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
+            var stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostJsonAsync(data)
+                .ReceiveString()
+                .ConfigureAwait(false);
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
@@ -267,11 +297,15 @@ public class SLRequest
     /// <param name="unwrapCollection">
     ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
-    public async Task<T> PostStringAsync<T>(string data, bool unwrapCollection = true)
+    public Task<T> PostStringAsync<T>(string data, bool unwrapCollection = true)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
+            var stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostStringAsync(data)
+                .ReceiveString()
+                .ConfigureAwait(false);
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
@@ -300,11 +334,15 @@ public class SLRequest
     /// <param name="unwrapCollection">
     ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
-    public async Task<T> PostAsync<T>(bool unwrapCollection = true)
+    public Task<T> PostAsync<T>(bool unwrapCollection = true)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
+            var stringResult = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostAsync()
+                .ReceiveString()
+                .ConfigureAwait(false);
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
@@ -330,17 +368,28 @@ public class SLRequest
     /// <param name="data">
     ///     The object to be sent as the JSON body.
     /// </param>
-    public async Task PostAsync(object data)
+    public Task PostAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostJsonAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
     ///     Performs a POST request without parameters and returns the result in a <see cref="string" />.
     /// </summary>
-    public async Task<string> PostReceiveStringAsync()
+    public Task<string> PostReceiveStringAsync()
     {
-        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostAsync()
+                .ReceiveString()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -349,9 +398,15 @@ public class SLRequest
     /// <param name="data">
     ///     The object to be sent as the JSON body.
     /// </param>
-    public async Task<string> PostReceiveStringAsync(object data)
+    public Task<string> PostReceiveStringAsync(object data)
     {
-        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostJsonAsync(data)
+                .ReceiveString()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -360,17 +415,27 @@ public class SLRequest
     /// <param name="data">
     ///     The JSON string to be sent as the request body.
     /// </param>
-    public async Task PostStringAsync(string data)
+    public Task PostStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostStringAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
     ///     Performs a POST request with the provided parameters.
     /// </summary>
-    public async Task PostAsync()
+    public Task PostAsync()
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PostAsync()
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -379,9 +444,14 @@ public class SLRequest
     /// <param name="data">
     ///     The object to be sent as the JSON body.
     /// </param>
-    public async Task PatchAsync(object data)
+    public Task PatchAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchJsonAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PatchJsonAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -390,9 +460,14 @@ public class SLRequest
     /// <param name="data">
     ///     The JSON string to be sent as the request body.
     /// </param>
-    public async Task PatchStringAsync(string data)
+    public Task PatchStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchStringAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PatchStringAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -401,9 +476,9 @@ public class SLRequest
     /// <param name="path">
     ///     The path to the file to be sent.
     /// </param>
-    public async Task PatchWithFileAsync(string path)
+    public Task PatchWithFileAsync(string path)
     {
-        await PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+        return PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
     }
 
     /// <summary>
@@ -415,9 +490,9 @@ public class SLRequest
     /// <param name="file">
     ///     The file to be sent.
     /// </param>
-    public async Task PatchWithFileAsync(string fileName, byte[] file)
+    public Task PatchWithFileAsync(string fileName, byte[] file)
     {
-        await PatchWithFileAsync(fileName, new MemoryStream(file));
+        return PatchWithFileAsync(fileName, new MemoryStream(file));
     }
 
     /// <summary>
@@ -429,11 +504,11 @@ public class SLRequest
     /// <param name="file">
     ///     The file to be sent.
     /// </param>
-    public async Task PatchWithFileAsync(string fileName, Stream file)
+    public Task PatchWithFileAsync(string fileName, Stream file)
     {
-        await _slConnection.ExecuteRequest(async () =>
+        return _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync())
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
                 .PatchMultipartAsync(mp =>
                 {
                     // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
@@ -444,7 +519,8 @@ public class SLRequest
                     content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
                     content.Headers.Add("Content-Type", "application/octet-stream");
                     mp.Add(content);
-                });
+                })
+                .ConfigureAwait(false);
         });
     }
 
@@ -454,9 +530,14 @@ public class SLRequest
     /// <param name="data">
     ///     The object to be sent as the JSON body.
     /// </param>
-    public async Task PutAsync(object data)
+    public Task PutAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutJsonAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PutJsonAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
@@ -465,16 +546,26 @@ public class SLRequest
     /// <param name="data">
     ///     The JSON string to be sent as the request body.
     /// </param>
-    public async Task PutStringAsync(string data)
+    public Task PutStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutStringAsync(data));
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .PutStringAsync(data)
+                .ConfigureAwait(false)
+        );
     }
 
     /// <summary>
     ///     Performs a DELETE request with the provided parameters.
     /// </summary>
-    public async Task DeleteAsync()
+    public Task DeleteAsync()
     {
-        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).DeleteAsync());
+        return _slConnection.ExecuteRequest(async () =>
+            await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync().ConfigureAwait(false))
+                .DeleteAsync()
+                .ConfigureAwait(false)
+        );
     }
 }

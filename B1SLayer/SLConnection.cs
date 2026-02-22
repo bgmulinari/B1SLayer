@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -402,9 +402,9 @@ public class SLConnection
     /// <remarks>
     ///     Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
     /// </remarks>
-    public async Task<SLLoginResponse> LoginAsync()
+    public Task<SLLoginResponse> LoginAsync()
     {
-        return await ExecuteLoginAsync(true);
+        return ExecuteLoginAsync(true);
     }
 
     /// <summary>
@@ -416,7 +416,7 @@ public class SLConnection
     private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false)
     {
         // Prevents multiple login requests in a multi-threaded scenario
-        await _semaphoreSlim.WaitAsync();
+        await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
 
         try
         {
@@ -426,17 +426,18 @@ public class SLConnection
                     .Request("Login")
                     .WithCookies(out var cookieJar)
                     .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
-                    .ReceiveJson<SLLoginResponse>();
+                    .ReceiveJson<SLLoginResponse>()
+                    .ConfigureAwait(false);
 
                 _loginResponse.LastLogin = DateTime.Now;
-                await SetSessionCookiesAsync(cookieJar, TimeSpan.FromMinutes(_loginResponse.SessionTimeout));
+                await SetSessionCookiesAsync(cookieJar, TimeSpan.FromMinutes(_loginResponse.SessionTimeout)).ConfigureAwait(false);
             }
             else
             {
                 // Obtains session context from UI API method
                 var connectionContext = _getServiceLayerConnectionContext(ServiceLayerRoot.ToString());
                 var cookies = CreateCookieJarFromConnectionContext(connectionContext);
-                await SetSessionCookiesAsync(cookies, TimeSpan.FromMinutes(_ssoSessionTimeout));
+                await SetSessionCookiesAsync(cookies, TimeSpan.FromMinutes(_ssoSessionTimeout)).ConfigureAwait(false);
                 _loginResponse.LastLogin = DateTime.Now;
                 _loginResponse.SessionTimeout = _ssoSessionTimeout;
                 _loginResponse.SessionId = cookies
@@ -455,7 +456,7 @@ public class SLConnection
                     throw;
                 }
 
-                var response = await ex.GetResponseJsonAsync<SLResponseError>();
+                var response = await ex.GetResponseJsonAsync<SLResponseError>().ConfigureAwait(false);
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
             catch (SLException)
@@ -482,16 +483,16 @@ public class SLConnection
     /// </returns>
     internal async Task<CookieJar> GetSessionCookiesAsync()
     {
-        var cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey);
+        var cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey).ConfigureAwait(false);
 
         if (string.IsNullOrEmpty(cookiesString))
         {
-            await ExecuteLoginAsync();
-            cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey);
+            await ExecuteLoginAsync().ConfigureAwait(false);
+            cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey).ConfigureAwait(false);
         }
         else
         {
-            await DistributedCache.RefreshAsync(SessionCacheKey);
+            await DistributedCache.RefreshAsync(SessionCacheKey).ConfigureAwait(false);
         }
 
         return string.IsNullOrEmpty(cookiesString)
@@ -515,18 +516,19 @@ public class SLConnection
         if (!string.IsNullOrEmpty(cookieString))
         {
             await DistributedCache.SetStringAsync(SessionCacheKey, cookieString, new DistributedCacheEntryOptions
-            {
-                SlidingExpiration = slidingExpiration
-            });
+                {
+                    SlidingExpiration = slidingExpiration
+                })
+                .ConfigureAwait(false);
         }
     }
 
     /// <summary>
     ///     Removes the current active session from the distributed cache.
     /// </summary>
-    public async Task InvalidateSessionCacheAsync()
+    public Task InvalidateSessionCacheAsync()
     {
-        await DistributedCache.RemoveAsync(SessionCacheKey);
+        return DistributedCache.RemoveAsync(SessionCacheKey);
     }
 
     /// <summary>
@@ -576,7 +578,7 @@ public class SLConnection
     /// </summary>
     public async Task LogoutAsync()
     {
-        var currentSessionCookies = await GetSessionCookiesAsync();
+        var currentSessionCookies = await GetSessionCookiesAsync().ConfigureAwait(false);
 
         if (currentSessionCookies is null)
         {
@@ -585,8 +587,11 @@ public class SLConnection
 
         try
         {
-            await Client.Request("Logout").WithCookies(currentSessionCookies).PostAsync();
-            await InvalidateSessionCacheAsync();
+            await Client.Request("Logout")
+                .WithCookies(currentSessionCookies)
+                .PostAsync()
+                .ConfigureAwait(false);
+            await InvalidateSessionCacheAsync().ConfigureAwait(false);
             _loginResponse = new SLLoginResponse();
         }
         catch (FlurlHttpException ex)
@@ -598,7 +603,7 @@ public class SLConnection
                     throw;
                 }
 
-                var response = await ex.GetResponseJsonAsync<SLResponseError>();
+                var response = await ex.GetResponseJsonAsync<SLResponseError>().ConfigureAwait(false);
                 throw new SLException(response.Error.Message.Value, response.Error, ex);
             }
             catch (SLException)
@@ -668,7 +673,7 @@ public class SLConnection
 
             try
             {
-                var result = await action();
+                var result = await action().ConfigureAwait(false);
                 return result;
             }
             catch (FlurlHttpException ex)
@@ -682,7 +687,7 @@ public class SLConnection
                         throw;
                     }
 
-                    var response = await ex.GetResponseJsonAsync<SLResponseError>();
+                    var response = await ex.GetResponseJsonAsync<SLResponseError>().ConfigureAwait(false);
                     exceptions.Add(new SLException(response.Error.Message.Value, response.Error, ex));
                 }
                 catch
@@ -704,12 +709,12 @@ public class SLConnection
                         break;
                     }
 
-                    await ExecuteLoginAsync();
+                    await ExecuteLoginAsync().ConfigureAwait(false);
                     loginReattempted = true;
                 }
             }
 
-            await Task.Delay(200);
+            await Task.Delay(200).ConfigureAwait(false);
         }
 
         var uniqueExceptions = exceptions.Distinct(new ExceptionEqualityComparer());
@@ -732,9 +737,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLPingResponse" /> object containing the response details.
     /// </returns>
-    public async Task<SLPingResponse> PingAsync()
+    public Task<SLPingResponse> PingAsync()
     {
-        return await ExecutePingAsync("ping/");
+        return ExecutePingAsync("ping/");
     }
 
     /// <summary>
@@ -750,9 +755,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLPingResponse" /> object containing the response details.
     /// </returns>
-    public async Task<SLPingResponse> PingNodeAsync(int? node = null)
+    public Task<SLPingResponse> PingNodeAsync(int? node = null)
     {
-        return await ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer");
+        return ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer");
     }
 
     /// <summary>
@@ -764,8 +769,8 @@ public class SLConnection
         {
             var pingRequest = Client.Request();
             pingRequest.Url = pingRequest.Url.RemovePath().AppendPathSegment(path);
-            var flurlResponse = await pingRequest.GetAsync();
-            var pingResponse = await flurlResponse.GetJsonAsync<SLPingResponse>();
+            var flurlResponse = await pingRequest.GetAsync().ConfigureAwait(false);
+            var pingResponse = await flurlResponse.GetJsonAsync<SLPingResponse>().ConfigureAwait(false);
             pingResponse.IsSuccessStatusCode = flurlResponse.ResponseMessage.IsSuccessStatusCode;
             pingResponse.StatusCode = flurlResponse.ResponseMessage.StatusCode;
             return pingResponse;
@@ -779,7 +784,7 @@ public class SLConnection
                     throw;
                 }
 
-                var pingResponse = await ex.GetResponseJsonAsync<SLPingResponse>();
+                var pingResponse = await ex.GetResponseJsonAsync<SLPingResponse>().ConfigureAwait(false);
                 pingResponse.IsSuccessStatusCode = ex.Call.HttpResponseMessage.IsSuccessStatusCode;
                 pingResponse.StatusCode = ex.Call.HttpResponseMessage.StatusCode;
                 return pingResponse;
@@ -885,9 +890,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentAsync(string path)
+    public Task<SLAttachment> PostAttachmentAsync(string path)
     {
-        return await PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+        return PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
     }
 
     /// <summary>
@@ -905,9 +910,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file)
+    public Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file)
     {
-        return await PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } });
+        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } });
     }
 
     /// <summary>
@@ -925,9 +930,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file)
+    public Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file)
     {
-        return await PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, file } });
+        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, file } });
     }
 
     /// <summary>
@@ -942,9 +947,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files)
+    public Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files)
     {
-        return await PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
+        return PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
     }
 
     /// <summary>
@@ -959,9 +964,9 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, Stream> files)
+    public Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, Stream> files)
     {
-        return await ExecuteRequest(async () =>
+        return ExecuteRequest(async () =>
         {
             if (files is null || files.Count == 0)
             {
@@ -970,7 +975,7 @@ public class SLConnection
 
             var result = await Client
                 .Request("Attachments2")
-                .WithCookies(await GetSessionCookiesAsync())
+                .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
                 .PostMultipartAsync(mp =>
                 {
                     // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
@@ -987,7 +992,8 @@ public class SLConnection
                         mp.Add(content);
                     }
                 })
-                .ReceiveJson<SLAttachment>();
+                .ReceiveJson<SLAttachment>()
+                .ConfigureAwait(false);
 
             return result;
         });
@@ -1003,9 +1009,9 @@ public class SLConnection
     /// <param name="path">
     ///     The file path for the file to be updated including the file extension.
     /// </param>
-    public async Task PatchAttachmentAsync(int attachmentEntry, string path)
+    public Task PatchAttachmentAsync(int attachmentEntry, string path)
     {
-        await PatchAttachmentAsync(attachmentEntry, Path.GetFileName(path), File.ReadAllBytes(path));
+        return PatchAttachmentAsync(attachmentEntry, Path.GetFileName(path), File.ReadAllBytes(path));
     }
 
     /// <summary>
@@ -1021,9 +1027,9 @@ public class SLConnection
     /// <param name="file">
     ///     The file to be updated.
     /// </param>
-    public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file)
+    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file)
     {
-        await PatchAttachmentsAsync(attachmentEntry,
+        return PatchAttachmentsAsync(attachmentEntry,
             new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } });
     }
 
@@ -1040,9 +1046,9 @@ public class SLConnection
     /// <param name="file">
     ///     The file to be updated.
     /// </param>
-    public async Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file)
+    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file)
     {
-        await PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream> { { fileName, file } });
+        return PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream> { { fileName, file } });
     }
 
     /// <summary>
@@ -1055,9 +1061,9 @@ public class SLConnection
     /// <param name="files">
     ///     A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
     /// </param>
-    public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files)
+    public Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files)
     {
-        await PatchAttachmentsAsync(attachmentEntry,
+        return PatchAttachmentsAsync(attachmentEntry,
             files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
     }
 
@@ -1071,9 +1077,9 @@ public class SLConnection
     /// <param name="files">
     ///     A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
     /// </param>
-    public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, Stream> files)
+    public Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, Stream> files)
     {
-        await ExecuteRequest(async () =>
+        return ExecuteRequest(async () =>
         {
             if (files is null || files.Count == 0)
             {
@@ -1082,7 +1088,7 @@ public class SLConnection
 
             var result = await Client
                 .Request($"Attachments2({attachmentEntry})")
-                .WithCookies(await GetSessionCookiesAsync())
+                .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
                 .PatchMultipartAsync(mp =>
                 {
                     // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
@@ -1098,7 +1104,8 @@ public class SLConnection
                         content.Headers.Add("Content-Type", "application/octet-stream");
                         mp.Add(content);
                     }
-                });
+                })
+                .ConfigureAwait(false);
 
             return result;
         });
@@ -1120,7 +1127,7 @@ public class SLConnection
     /// </returns>
     public async Task<Stream> GetAttachmentAsStreamAsync(int attachmentEntry, string fileName = null)
     {
-        return new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName));
+        return new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName).ConfigureAwait(false));
     }
 
     /// <summary>
@@ -1137,15 +1144,16 @@ public class SLConnection
     /// <returns>
     ///     The downloaded attachment file as a <see cref="byte" /> array.
     /// </returns>
-    public async Task<byte[]> GetAttachmentAsBytesAsync(int attachmentEntry, string fileName = null)
+    public Task<byte[]> GetAttachmentAsBytesAsync(int attachmentEntry, string fileName = null)
     {
-        return await ExecuteRequest(async () =>
+        return ExecuteRequest(async () =>
         {
             var file = await Client
                 .Request($"Attachments2({attachmentEntry})/$value")
                 .SetQueryParam("filename", !string.IsNullOrEmpty(fileName) ? $"'{fileName}'" : null)
-                .WithCookies(await GetSessionCookiesAsync())
-                .GetBytesAsync();
+                .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
+                .GetBytesAsync()
+                .ConfigureAwait(false);
 
             return file;
         });
@@ -1168,9 +1176,9 @@ public class SLConnection
     /// <returns>
     ///     An <see cref="HttpResponseMessage" /> array containg the response messages of the batch request.
     /// </returns>
-    public async Task<HttpResponseMessage[]> PostBatchAsync(params SLBatchRequest[] requests)
+    public Task<HttpResponseMessage[]> PostBatchAsync(params SLBatchRequest[] requests)
     {
-        return await PostBatchAsync(requests, true);
+        return PostBatchAsync(requests, true);
     }
 
     /// <summary>
@@ -1188,9 +1196,9 @@ public class SLConnection
     /// <returns>
     ///     An <see cref="HttpResponseMessage" /> array containg the response messages of the batch request.
     /// </returns>
-    public async Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
+    public Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
     {
-        return await ExecuteRequest(async () =>
+        return ExecuteRequest(async () =>
         {
             if (requests is null || !requests.Any())
             {
@@ -1201,16 +1209,17 @@ public class SLConnection
 
             if (singleChangeSet)
             {
-                var singleContent = await BuildMixedMultipartContentAsync(requests);
+                var singleContent = await BuildMixedMultipartContentAsync(requests).ConfigureAwait(false);
                 var flurlResponse = await Client
                     .Request("$batch")
-                    .WithCookies(await GetSessionCookiesAsync())
+                    .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
                     .WithTimeout(BatchRequestTimeout)
                     .PostMultipartAsync(mp =>
                     {
                         mp.Headers.ContentType.MediaType = "multipart/mixed";
                         mp.Add(singleContent);
-                    });
+                    })
+                    .ConfigureAwait(false);
 
                 batchResponse = flurlResponse.ResponseMessage;
             }
@@ -1221,13 +1230,13 @@ public class SLConnection
                 foreach (var request in requests)
                 {
                     var boundary = "changeset_" + Guid.NewGuid();
-                    var content = await BuildMixedMultipartContentAsync(request, boundary);
+                    var content = await BuildMixedMultipartContentAsync(request, boundary).ConfigureAwait(false);
                     contents.Add(content);
                 }
 
                 var flurlResponse = await Client
                     .Request("$batch")
-                    .WithCookies(await GetSessionCookiesAsync())
+                    .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
                     .WithTimeout(BatchRequestTimeout)
                     .PostMultipartAsync(mp =>
                     {
@@ -1237,7 +1246,8 @@ public class SLConnection
                         {
                             mp.Add(content);
                         }
-                    });
+                    })
+                    .ConfigureAwait(false);
 
                 batchResponse = flurlResponse.ResponseMessage;
             }
@@ -1247,7 +1257,7 @@ public class SLConnection
                 throw new Exception("The batch request did not return a valid response.");
             }
 
-            var responses = await MultipartHelper.ReadMultipartResponseAsync(batchResponse);
+            var responses = await MultipartHelper.ReadMultipartResponseAsync(batchResponse).ConfigureAwait(false);
             return responses;
         });
     }
@@ -1262,7 +1272,7 @@ public class SLConnection
 
         foreach (var batchRequest in requests)
         {
-            await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
+            await BuildRequestForMultipartContentAsync(multipartContent, batchRequest).ConfigureAwait(false);
         }
 
         return multipartContent;
@@ -1274,7 +1284,7 @@ public class SLConnection
     private async Task<MultipartContent> BuildMixedMultipartContentAsync(SLBatchRequest batchRequest, string boundary)
     {
         var multipartContent = new MultipartContent("mixed", boundary);
-        await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
+        await BuildRequestForMultipartContentAsync(multipartContent, batchRequest).ConfigureAwait(false);
         return multipartContent;
     }
 
@@ -1305,7 +1315,7 @@ public class SLConnection
                     batchRequest.Encoding, "application/json");
         }
 
-        var innerContent = await MultipartHelper.CreateHttpContentAsync(request);
+        var innerContent = await MultipartHelper.CreateHttpContentAsync(request).ConfigureAwait(false);
         innerContent.Headers.Add("content-transfer-encoding", "binary");
 
         if (batchRequest.ContentID.HasValue)
