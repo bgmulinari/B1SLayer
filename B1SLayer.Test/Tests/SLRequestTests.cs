@@ -1,7 +1,6 @@
 using B1SLayer.Models;
 using B1SLayer.Test.Models;
 using Flurl;
-using Flurl.Http.Testing;
 
 namespace B1SLayer.Test;
 
@@ -124,5 +123,57 @@ public class SLRequestTests : TestBase
         Assert.Equal((page1.Value[1].DocEntry, page1.Value[1].CardCode), (orderList[1].DocEntry, orderList[1].CardCode));
         Assert.Equal((page2.Value[0].DocEntry, page2.Value[0].CardCode), (orderList[2].DocEntry, orderList[2].CardCode));
         Assert.Equal((page2.Value[1].DocEntry, page2.Value[1].CardCode), (orderList[3].DocEntry, orderList[3].CardCode));
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task PostAsync_PrimitiveNumber_ReturnsCorrectValue(SLConnection slConnection)
+    {
+        HttpTest.RespondWith("2.92920");
+
+        var result = await slConnection
+            .Request("SBOBobService_GetCurrencyRate")
+            .PostAsync<double?>(new { Currency = "EUR", Date = "20240101" });
+
+        Assert.Equal(2.92920, result);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task GetAsync_PrimitiveString_ReturnsCorrectValue(SLConnection slConnection)
+    {
+        HttpTest.RespondWith("\"hello\"");
+
+        var result = await slConnection
+            .Request("SomeService")
+            .GetAsync<string>();
+
+        Assert.Equal("hello", result);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task PostAsync_PrimitiveBoolean_ReturnsCorrectValue(SLConnection slConnection)
+    {
+        HttpTest.RespondWith("true");
+
+        var result = await slConnection
+            .Request("SomeService")
+            .PostAsync<bool>();
+
+        Assert.True(result);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task GetAsync_StringType_WithObjectResponse_ReturnsRawJson(SLConnection slConnection)
+    {
+        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}");
+
+        var result = await slConnection
+            .Request("Orders")
+            .GetAsync<string>();
+
+        Assert.Equal("{\"DocEntry\":1,\"CardCode\":\"C20001\"}", result);
     }
 }

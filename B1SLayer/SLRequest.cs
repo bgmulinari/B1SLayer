@@ -1,5 +1,4 @@
 ﻿using B1SLayer.Models;
-using Flurl;
 using Flurl.Http;
 using System;
 using System.Collections.Generic;
@@ -47,10 +46,17 @@ public class SLRequest
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
+            var root = jsonDoc.RootElement;
 
-            string jsonToDeserialize = (unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection))
+            if (root.ValueKind != JsonValueKind.Object)
+                return root.Deserialize<T>();
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)root.GetRawText();
+
+            string jsonToDeserialize = (unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection))
                 ? valueCollection.GetRawText()
-                : jsonDoc.RootElement.GetRawText();
+                : root.GetRawText();
 
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
@@ -74,10 +80,17 @@ public class SLRequest
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
+            var root = jsonDoc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+                return (root.Deserialize<T>(), 0);
+
+            if (typeof(T) == typeof(string))
+                return ((T)(object)root.GetRawText(), 0);
 
             var inlineCount = 0;
-            JsonElement? inlineCountElement = jsonDoc.RootElement.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
-            inlineCountElement ??= jsonDoc.RootElement.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
+            JsonElement? inlineCountElement = root.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
+            inlineCountElement ??= root.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
 
             if (inlineCountElement is not null)
             {
@@ -95,8 +108,8 @@ public class SLRequest
             }
 
             string jsonToDeserialize =
-                unwrapCollection && jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
-                jsonDoc.RootElement.GetRawText();
+                unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
+                root.GetRawText();
 
             T result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
             return (result, inlineCount);
@@ -224,8 +237,16 @@ public class SLRequest
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
-            bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+            var root = jsonDoc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+                return root.Deserialize<T>();
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)root.GetRawText();
+
+            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
+            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
@@ -248,8 +269,16 @@ public class SLRequest
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
-            bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+            var root = jsonDoc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+                return root.Deserialize<T>();
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)root.GetRawText();
+
+            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
+            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
@@ -269,8 +298,16 @@ public class SLRequest
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
-            bool hasValueToken = jsonDoc.RootElement.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : jsonDoc.RootElement.GetRawText();
+            var root = jsonDoc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+                return root.Deserialize<T>();
+
+            if (typeof(T) == typeof(string))
+                return (T)(object)root.GetRawText();
+
+            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
+            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
