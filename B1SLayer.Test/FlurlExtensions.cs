@@ -9,7 +9,7 @@ internal static class FlurlExtensions
     {
         return assertion.With(x =>
         {
-            string content = x.HttpRequestMessage.Content.ReadAsStringAsync().Result;
+            var content = x.HttpRequestMessage.Content.ReadAsStringAsync().Result;
             return predicate(new CapturedStringContent(content, "CapturedMultipartContent body"));
         });
     }

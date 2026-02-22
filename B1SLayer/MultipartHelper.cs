@@ -1,6 +1,4 @@
-﻿using Flurl.Http;
-using Flurl.Http.Content;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,18 +8,21 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Flurl.Http;
+using Flurl.Http.Content;
+
 namespace B1SLayer;
 
 /// <summary>
-/// Provides helper methods for handling multipart HTTP responses and creating HTTP content.
+///     Provides helper methods for handling multipart HTTP responses and creating HTTP content.
 /// </summary>
 internal static class MultipartHelper
 {
     /// <summary>
-    /// Reads a multipart HTTP response and parses it into an array of <see cref="HttpResponseMessage"/> objects.
+    ///     Reads a multipart HTTP response and parses it into an array of <see cref="HttpResponseMessage" /> objects.
     /// </summary>
     /// <param name="response">The HTTP response containing the multipart content.</param>
-    /// <returns>An array of <see cref="HttpResponseMessage"/> objects representing the individual parts of the multipart response.</returns>
+    /// <returns>An array of <see cref="HttpResponseMessage" /> objects representing the individual parts of the multipart response.</returns>
     public static async Task<HttpResponseMessage[]> ReadMultipartResponseAsync(HttpResponseMessage response)
     {
         var innerResponses = new List<HttpResponseMessage>();
@@ -47,7 +48,7 @@ internal static class MultipartHelper
             {
                 var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
 
-                if (httpResponse.Content == null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
+                if (httpResponse.Content is null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
                 {
                     httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
                 }
@@ -60,14 +61,14 @@ internal static class MultipartHelper
     }
 
     /// <summary>
-    /// Creates an HTTP content from the provided HTTP request message.
+    ///     Creates an HTTP content from the provided HTTP request message.
     /// </summary>
     /// <param name="request">The HTTP request message.</param>
     /// <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
     internal static async Task<HttpContent> CreateHttpContentAsync(HttpRequestMessage request)
     {
         var memoryStream = new MemoryStream();
-        using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, leaveOpen: true);
+        using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, true);
         writer.WriteLine($"{request.Method} {request.RequestUri.PathAndQuery} HTTP/{request.Version}");
         writer.WriteLine($"Host: {request.RequestUri.Host}:{request.RequestUri.Port}");
 
@@ -82,6 +83,7 @@ internal static class MultipartHelper
             {
                 writer.WriteLine($"{header.Key}: {string.Join(", ", header.Value)}");
             }
+
             writer.WriteLine();
             writer.Flush();
             memoryStream.Position = memoryStream.Length;
@@ -100,7 +102,7 @@ internal static class MultipartHelper
     }
 
     /// <summary>
-    /// Flurl extension method to provide a PATCH method for multipart requests.
+    ///     Flurl extension method to provide a PATCH method for multipart requests.
     /// </summary>
     internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, HttpCompletionOption httpCompletionOption = default, CancellationToken cancellationToken = default)
     {

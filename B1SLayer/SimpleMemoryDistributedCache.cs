@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace B1SLayer;
 
@@ -12,8 +13,10 @@ internal class SimpleMemoryDistributedCache : IDistributedCache
 
     public byte[] Get(string key)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         _memCache.TryGetValue(key, out byte[] value);
         return value;
@@ -21,20 +24,30 @@ internal class SimpleMemoryDistributedCache : IDistributedCache
 
     public Task<byte[]> GetAsync(string key, CancellationToken token = default)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         return Task.FromResult(Get(key));
     }
 
     public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
-        if (value == null)
+        }
+
+        if (value is null)
+        {
             throw new ArgumentNullException(nameof(value));
-        if (options == null)
+        }
+
+        if (options is null)
+        {
             throw new ArgumentNullException(nameof(options));
+        }
 
         var memoryCacheEntryOptions = new MemoryCacheEntryOptions
         {
@@ -49,12 +62,20 @@ internal class SimpleMemoryDistributedCache : IDistributedCache
     public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options,
         CancellationToken token = default)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
-        if (value == null)
+        }
+
+        if (value is null)
+        {
             throw new ArgumentNullException(nameof(value));
-        if (options == null)
+        }
+
+        if (options is null)
+        {
             throw new ArgumentNullException(nameof(options));
+        }
 
         Set(key, value, options);
         return Task.CompletedTask;
@@ -62,16 +83,20 @@ internal class SimpleMemoryDistributedCache : IDistributedCache
 
     public void Refresh(string key)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         _memCache.TryGetValue(key, out _);
     }
 
     public Task RefreshAsync(string key, CancellationToken token = default)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         Refresh(key);
         return Task.CompletedTask;
@@ -79,16 +104,20 @@ internal class SimpleMemoryDistributedCache : IDistributedCache
 
     public void Remove(string key)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         _memCache.Remove(key);
     }
 
     public Task RemoveAsync(string key, CancellationToken token = default)
     {
-        if (key == null)
+        if (key is null)
+        {
             throw new ArgumentNullException(nameof(key));
+        }
 
         Remove(key);
         return Task.CompletedTask;

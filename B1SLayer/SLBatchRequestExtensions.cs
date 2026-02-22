@@ -3,15 +3,15 @@
 namespace B1SLayer;
 
 /// <summary>
-/// Extension methods definitions for <see cref="SLBatchRequest"/>.
+///     Extension methods definitions for <see cref="SLBatchRequest" />.
 /// </summary>
 public static class SLBatchRequestExtensions
 {
     /// <summary>
-    /// Enables a case-insensitive query.
+    ///     Enables a case-insensitive query.
     /// </summary>
     /// <remarks>
-    /// This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
+    ///     This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
     /// </remarks>
     public static SLBatchRequest WithCaseInsensitive(this SLBatchRequest batchRequest)
     {
@@ -20,7 +20,7 @@ public static class SLBatchRequestExtensions
     }
 
     /// <summary>
-    /// Allows a PATCH request to remove items in a collection.
+    ///     Allows a PATCH request to remove items in a collection.
     /// </summary>
     public static SLBatchRequest WithReplaceCollectionsOnPatch(this SLBatchRequest batchRequest)
     {
@@ -29,11 +29,11 @@ public static class SLBatchRequestExtensions
     }
 
     /// <summary>
-    /// Configures a POST request to not return the created entity.
-    /// This is suitable for better performance in demanding scenarios where the return content is not needed.
+    ///     Configures a POST request to not return the created entity.
+    ///     This is suitable for better performance in demanding scenarios where the return content is not needed.
     /// </summary>
     /// <remarks>
-    /// On success, <see cref="HttpStatusCode.NoContent"/> is returned, instead of <see cref="HttpStatusCode.Created"/>.
+    ///     On success, <see cref="HttpStatusCode.NoContent" /> is returned, instead of <see cref="HttpStatusCode.Created" />.
     /// </remarks>
     public static SLBatchRequest WithReturnNoContent(this SLBatchRequest batchRequest)
     {
@@ -42,16 +42,16 @@ public static class SLBatchRequestExtensions
     }
 
     /// <summary>
-    /// Adds a custom request header to be sent.
+    ///     Adds a custom request header to be sent.
     /// </summary>
     /// <param name="batchRequest">
-    /// The current request.
+    ///     The current request.
     /// </param>
     /// <param name="name">
-    /// The name of the header.
+    ///     The name of the header.
     /// </param>
     /// <param name="value">
-    /// The value of the header.
+    ///     The value of the header.
     /// </param>
     public static SLBatchRequest WithHeader(this SLBatchRequest batchRequest, string name, string value)
     {

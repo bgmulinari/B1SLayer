@@ -1,5 +1,6 @@
 using B1SLayer.Models;
 using B1SLayer.Test.Models;
+
 using Flurl;
 
 namespace B1SLayer.Test;
@@ -92,8 +93,8 @@ public class SLRequestTests : TestBase
         {
             Value =
             [
-                new() { DocEntry = 1, CardCode = "C20001" },
-                new() { DocEntry = 2, CardCode = "C20002" }
+                new MarketingDocument { DocEntry = 1, CardCode = "C20001" },
+                new MarketingDocument { DocEntry = 2, CardCode = "C20002" }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=2"
         };
@@ -102,8 +103,8 @@ public class SLRequestTests : TestBase
         {
             Value =
             [
-                new() { DocEntry = 3, CardCode = "C20003" },
-                new() { DocEntry = 4, CardCode = "C20004" }
+                new MarketingDocument { DocEntry = 3, CardCode = "C20003" },
+                new MarketingDocument { DocEntry = 4, CardCode = "C20004" }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=4"
         };

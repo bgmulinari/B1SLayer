@@ -5,49 +5,49 @@ using System.Text.Json.Serialization;
 namespace B1SLayer;
 
 /// <summary>
-/// The root object that represents a Service Layer error.
+///     The root object that represents a Service Layer error.
 /// </summary>
 [JsonConverter(typeof(SLResponseErrorJsonConverter))]
 public class SLResponseError
 {
     /// <summary>
-    /// Gets or sets the details of a Service Layer error.
+    ///     Gets or sets the details of a Service Layer error.
     /// </summary>
     [JsonPropertyName("error")]
-    public SLErrorDetails Error { get; set; } = new SLErrorDetails();
+    public SLErrorDetails Error { get; set; } = new();
 }
 
 /// <summary>
-/// Represents the details of a Service Layer error.
+///     Represents the details of a Service Layer error.
 /// </summary>
 public class SLErrorDetails
 {
     /// <summary>
-    /// Gets or sets the error code of a Service Layer error.
+    ///     Gets or sets the error code of a Service Layer error.
     /// </summary>
     [JsonPropertyName("code")]
     public string Code { get; set; }
 
     /// <summary>
-    /// Gets or sets the error message of a Service Layer error.
+    ///     Gets or sets the error message of a Service Layer error.
     /// </summary>
     [JsonPropertyName("message")]
-    public SLErrorMessage Message { get; set; } = new SLErrorMessage();
+    public SLErrorMessage Message { get; set; } = new();
 }
 
 /// <summary>
-/// Represents the message of a Service Layer error.
+///     Represents the message of a Service Layer error.
 /// </summary>
 public class SLErrorMessage
 {
     /// <summary>
-    /// Gets or sets the message language of a Service Layer error.
+    ///     Gets or sets the message language of a Service Layer error.
     /// </summary>
     [JsonPropertyName("lang")]
     public string Lang { get; set; }
 
     /// <summary>
-    /// Gets or sets the message text of a Service Layer error.
+    ///     Gets or sets the message text of a Service Layer error.
     /// </summary>
     [JsonPropertyName("value")]
     public string Value { get; set; }
@@ -57,7 +57,7 @@ internal class SLResponseErrorJsonConverter : JsonConverter<SLResponseError>
 {
     public override SLResponseError Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using JsonDocument doc = JsonDocument.ParseValue(ref reader);
+        using var doc = JsonDocument.ParseValue(ref reader);
         var root = doc.RootElement;
         var slError = new SLResponseError();
 

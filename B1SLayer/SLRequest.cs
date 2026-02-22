@@ -1,6 +1,4 @@
-﻿using B1SLayer.Models;
-using Flurl.Http;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,19 +7,21 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
+using B1SLayer.Models;
+
+using Flurl.Http;
+
 namespace B1SLayer;
 
 /// <summary>
-/// Represents a request to the Service Layer.
+///     Represents a request to the Service Layer.
 /// </summary>
 /// <remarks>
-/// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
+///     The request can be configured using the extension methods provided in <see cref="SLRequestExtensions" />.
 /// </remarks>
 public class SLRequest
 {
     private readonly SLConnection _slConnection;
-
-    internal IFlurlRequest FlurlRequest { get; }
 
     internal SLRequest(SLConnection connection, IFlurlRequest flurlRequest)
     {
@@ -29,32 +29,38 @@ public class SLRequest
         FlurlRequest = flurlRequest;
     }
 
+    internal IFlurlRequest FlurlRequest { get; }
+
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
+    ///     Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
     /// </summary>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
     public async Task<T> GetAsync<T>(bool unwrapCollection = true)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest
+            var stringResult = await FlurlRequest
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
+            {
                 return root.Deserialize<T>();
+            }
 
             if (typeof(T) == typeof(string))
+            {
                 return (T)(object)root.GetRawText();
+            }
 
-            string jsonToDeserialize = (unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection))
+            var jsonToDeserialize = unwrapCollection && root.TryGetProperty("value", out var valueCollection)
                 ? valueCollection.GetRawText()
                 : root.GetRawText();
 
@@ -63,19 +69,19 @@ public class SLRequest
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
     /// </summary>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
     public async Task<(T Result, int Count)> GetWithInlineCountAsync<T>(bool unwrapCollection = true)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest
+            var stringResult = await FlurlRequest
                 .SetQueryParam("$inlinecount", "allpages")
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
@@ -83,10 +89,14 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
+            {
                 return (root.Deserialize<T>(), 0);
+            }
 
             if (typeof(T) == typeof(string))
+            {
                 return ((T)(object)root.GetRawText(), 0);
+            }
 
             var inlineCount = 0;
             JsonElement? inlineCountElement = root.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
@@ -107,31 +117,30 @@ public class SLRequest
                 }
             }
 
-            string jsonToDeserialize =
-                unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
-                root.GetRawText();
+            var jsonToDeserialize =
+                unwrapCollection && root.TryGetProperty("value", out var valueCollection) ? valueCollection.GetRawText() : root.GetRawText();
 
-            T result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            var result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
             return (result, inlineCount);
         });
     }
 
     /// <summary>
-    /// Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
+    ///     Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
     /// </summary>
     /// <remarks>
-    /// This can be very slow depending on the total amount of entities in the company database.
+    ///     This can be very slow depending on the total amount of entities in the company database.
     /// </remarks>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <returns>
-    /// An <see cref="IList{T}"/> containing all the entities in the given collection.
+    ///     An <see cref="IList{T}" /> containing all the entities in the given collection.
     /// </returns>
     public async Task<IList<T>> GetAllAsync<T>()
     {
         var allResultsList = new List<T>();
-        int skip = 0;
+        var skip = 0;
 
         do
         {
@@ -146,348 +155,326 @@ public class SLRequest
                 skip = currentResult.NextSkip;
                 return 0;
             });
-        }
-        while (skip > 0);
+        } while (skip > 0);
 
         return allResultsList;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="string"/>.
+    ///     Performs a GET request with the provided parameters and returns the result in a <see cref="string" />.
     /// </summary>
     public async Task<string> GetStringAsync()
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
-        });
+        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync());
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+    ///     Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
     /// </summary>
     /// <param name="anonymousTypeObject">
-    /// The anonymous type object.
+    ///     The anonymous type object.
     /// </param>
     /// <param name="jsonSerializerOptions">
-    /// The <see cref="JsonSerializerOptions"/> used to deserialize the object.
+    ///     The <see cref="JsonSerializerOptions" /> used to deserialize the object.
     /// </param>
     public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
-            return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions ?? new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
+            return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions
+                                                               ?? new JsonSerializerOptions
+                                                               {
+                                                                   DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                                                               });
         });
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="byte"/> array.
+    ///     Performs a GET request with the provided parameters and returns the result in a <see cref="byte" /> array.
     /// </summary>
     public async Task<byte[]> GetBytesAsync()
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetBytesAsync();
-        });
+        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetBytesAsync());
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="Stream"/>.
+    ///     Performs a GET request with the provided parameters and returns the result in a <see cref="Stream" />.
     /// </summary>
     public async Task<Stream> GetStreamAsync()
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStreamAsync();
-        });
+        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStreamAsync());
     }
 
     /// <summary>
-    /// Performs a GET request that returns the count of an entity collection.
+    ///     Performs a GET request that returns the count of an entity collection.
     /// </summary>
     public async Task<long> GetCountAsync()
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string result = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).AppendPathSegment("$count").GetStringAsync();
-            long.TryParse(result, out long quantity);
+            var result = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).AppendPathSegment("$count").GetStringAsync();
+            long.TryParse(result, out var quantity);
             return quantity;
         });
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
+    ///     Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type" />.
     /// </summary>
     /// <param name="data">
-    /// The object to be sent as the JSON body.
+    ///     The object to be sent as the JSON body.
     /// </param>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
     public async Task<T> PostAsync<T>(object data, bool unwrapCollection = true)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
+            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
+            {
                 return root.Deserialize<T>();
+            }
 
             if (typeof(T) == typeof(string))
+            {
                 return (T)(object)root.GetRawText();
+            }
 
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
+            var hasValueToken = root.TryGetProperty("value", out var valueCollection);
+            var jsonToDeserialize = unwrapCollection && hasValueToken ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
+    ///     Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type" />.
     /// </summary>
     /// <param name="data">
-    /// The JSON string to be sent as the request body.
+    ///     The JSON string to be sent as the request body.
     /// </param>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
     public async Task<T> PostStringAsync<T>(string data, bool unwrapCollection = true)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
+            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
+            {
                 return root.Deserialize<T>();
+            }
 
             if (typeof(T) == typeof(string))
+            {
                 return (T)(object)root.GetRawText();
+            }
 
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
+            var hasValueToken = root.TryGetProperty("value", out var valueCollection);
+            var jsonToDeserialize = unwrapCollection && hasValueToken ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
+    ///     Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type" />.
     /// </summary>
     /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
+    ///     The object type for the result to be deserialized into.
     /// </typeparam>
     /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
     /// </param>
     public async Task<T> PostAsync<T>(bool unwrapCollection = true)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
+            var stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
             using var jsonDoc = JsonDocument.Parse(stringResult);
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
+            {
                 return root.Deserialize<T>();
+            }
 
             if (typeof(T) == typeof(string))
+            {
                 return (T)(object)root.GetRawText();
+            }
 
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
+            var hasValueToken = root.TryGetProperty("value", out var valueCollection);
+            var jsonToDeserialize = unwrapCollection && hasValueToken ? valueCollection.GetRawText() : root.GetRawText();
             return JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters.
+    ///     Performs a POST request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The object to be sent as the JSON body.
+    ///     The object to be sent as the JSON body.
     /// </param>
     public async Task PostAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data));
     }
 
     /// <summary>
-    /// Performs a POST request without parameters and returns the result in a <see cref="string"/>.
+    ///     Performs a POST request without parameters and returns the result in a <see cref="string" />.
     /// </summary>
     public async Task<string> PostReceiveStringAsync()
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
-        });
+        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString());
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in a <see cref="string"/>.
+    ///     Performs a POST request with the provided parameters and returns the result in a <see cref="string" />.
     /// </summary>
     /// <param name="data">
-    /// The object to be sent as the JSON body.
+    ///     The object to be sent as the JSON body.
     /// </param>
     public async Task<string> PostReceiveStringAsync(object data)
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
-        });
+        return await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString());
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters.
+    ///     Performs a POST request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The JSON string to be sent as the request body.
+    ///     The JSON string to be sent as the request body.
     /// </param>
     public async Task PostStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data));
     }
 
     /// <summary>
-    /// Performs a POST request with the provided parameters.
+    ///     Performs a POST request with the provided parameters.
     /// </summary>
     public async Task PostAsync()
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync();
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync());
     }
 
     /// <summary>
-    /// Performs a PATCH request with the provided parameters.
+    ///     Performs a PATCH request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The object to be sent as the JSON body.
+    ///     The object to be sent as the JSON body.
     /// </param>
     public async Task PatchAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchJsonAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchJsonAsync(data));
     }
 
     /// <summary>
-    /// Performs a PATCH request with the provided parameters.
+    ///     Performs a PATCH request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The JSON string to be sent as the request body.
+    ///     The JSON string to be sent as the request body.
     /// </param>
     public async Task PatchStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchStringAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchStringAsync(data));
     }
 
     /// <summary>
-    /// Performs a PATCH request with the provided file.
+    ///     Performs a PATCH request with the provided file.
     /// </summary>
     /// <param name="path">
-    /// The path to the file to be sent.
+    ///     The path to the file to be sent.
     /// </param>
-    public async Task PatchWithFileAsync(string path) =>
+    public async Task PatchWithFileAsync(string path)
+    {
         await PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+    }
 
     /// <summary>
-    /// Performs a PATCH request with the provided file.
+    ///     Performs a PATCH request with the provided file.
     /// </summary>
     /// <param name="fileName">
-    /// The file name of the file including the file extension.
+    ///     The file name of the file including the file extension.
     /// </param>
     /// <param name="file">
-    /// The file to be sent.
+    ///     The file to be sent.
     /// </param>
-    public async Task PatchWithFileAsync(string fileName, byte[] file) =>
+    public async Task PatchWithFileAsync(string fileName, byte[] file)
+    {
         await PatchWithFileAsync(fileName, new MemoryStream(file));
+    }
 
     /// <summary>
-    /// Performs a PATCH request with the provided file.
+    ///     Performs a PATCH request with the provided file.
     /// </summary>
     /// <param name="fileName">
-    /// The file name of the file including the file extension.
+    ///     The file name of the file including the file extension.
     /// </param>
     /// <param name="file">
-    /// The file to be sent.
+    ///     The file to be sent.
     /// </param>
     public async Task PatchWithFileAsync(string fileName, Stream file)
     {
         await _slConnection.ExecuteRequest(async () =>
         {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchMultipartAsync(mp =>
-            {
-                // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
-                var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
-                boundary.Value = boundary.Value.Replace("\"", string.Empty);
+            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync())
+                .PatchMultipartAsync(mp =>
+                {
+                    // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
+                    var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
+                    boundary.Value = boundary.Value.Replace("\"", string.Empty);
 
-                var content = new StreamContent(file);
-                content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
-                content.Headers.Add("Content-Type", "application/octet-stream");
-                mp.Add(content);
-            });
+                    var content = new StreamContent(file);
+                    content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
+                    content.Headers.Add("Content-Type", "application/octet-stream");
+                    mp.Add(content);
+                });
         });
     }
 
     /// <summary>
-    /// Performs a PUT request with the provided parameters.
+    ///     Performs a PUT request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The object to be sent as the JSON body.
+    ///     The object to be sent as the JSON body.
     /// </param>
     public async Task PutAsync(object data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutJsonAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutJsonAsync(data));
     }
 
     /// <summary>
-    /// Performs a PUT request with the provided parameters.
+    ///     Performs a PUT request with the provided parameters.
     /// </summary>
     /// <param name="data">
-    /// The JSON string to be sent as the request body.
+    ///     The JSON string to be sent as the request body.
     /// </param>
     public async Task PutStringAsync(string data)
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutStringAsync(data);
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutStringAsync(data));
     }
 
     /// <summary>
-    /// Performs a DELETE request with the provided parameters.
+    ///     Performs a DELETE request with the provided parameters.
     /// </summary>
     public async Task DeleteAsync()
     {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).DeleteAsync();
-        });
+        await _slConnection.ExecuteRequest(async () => await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).DeleteAsync());
     }
 }
