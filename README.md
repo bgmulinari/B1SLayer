@@ -12,7 +12,7 @@ B1SLayer aims to provide:
 
 ## How to use it
 
-Firstly I highly recommend reading [my blog post on SAP Community](https://community.sap.com/t5/enterprise-resource-planning-blogs-by-members/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer/ba-p/13526121) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
+For detailed documentation and examples, check out the [complete guide](docs/B1SLayer-Post-Sap-Community.md) in the docs folder. Here's a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
 /* The connection object. All Service Layer requests and the session management are handled by this object
