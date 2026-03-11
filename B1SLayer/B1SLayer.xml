@@ -909,19 +909,20 @@
             An <see cref="T:System.Net.Http.HttpResponseMessage"/> array containg the response messages of the batch request. 
             </returns>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest})">
+        <member name="M:B1SLayer.SLConnection.BuildBatchContentsAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean)">
             <summary>
-            Builds the multipart content for a batch request using a single change set.
+            Builds the list of <see cref="T:System.Net.Http.HttpContent"/> parts for a batch request.
+            GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildMixedMultipartContentAsync(B1SLayer.SLBatchRequest,System.String)">
+        <member name="M:B1SLayer.SLConnection.BuildHttpContentFromBatchRequestAsync(B1SLayer.SLBatchRequest)">
             <summary>
-            Builds the multipart content for a batch request using multiple change sets.
+            Builds an <see cref="T:System.Net.Http.HttpContent"/> from a given <see cref="T:B1SLayer.SLBatchRequest"/>.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildRequestForMultipartContentAsync(System.Net.Http.MultipartContent,B1SLayer.SLBatchRequest)">
+        <member name="M:B1SLayer.SLConnection.IsQueryMethod(System.Net.Http.HttpMethod)">
             <summary>
-            Builds the <see cref="T:System.Net.Http.HttpRequestMessage"/> from a given <see cref="T:B1SLayer.SLBatchRequest"/> and adds it to the <see cref="T:System.Net.Http.MultipartContent"/> instance.
+            Determines whether the given HTTP method is a query (non-mutation) method.
             </summary>
         </member>
         <member name="T:B1SLayer.SLConnection.ExceptionEqualityComparer">

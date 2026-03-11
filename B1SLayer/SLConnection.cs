@@ -1086,51 +1086,29 @@ public class SLConnection
     {
         return await ExecuteRequest(async () =>
         {
-            if (requests == null || !requests.Any())
-                throw new ArgumentException("No requests to be sent.");
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
 
-            HttpResponseMessage batchResponse;
+            var slBatchRequests = requests.ToList();
+            if (slBatchRequests.Count == 0)
+                throw new ArgumentException("No requests to be sent.", nameof(requests));
 
-            if (singleChangeSet)
-            {
-                var singleContent = await BuildMixedMultipartContentAsync(requests);
-                var flurlResponse = await Client
-                    .Request("$batch")
-                    .WithCookies(await GetSessionCookiesAsync())
-                    .WithTimeout(BatchRequestTimeout)
-                    .PostMultipartAsync(mp =>
-                    {
-                        mp.Headers.ContentType.MediaType = "multipart/mixed";
-                        mp.Add(singleContent);
-                    });
+            var batchContents = await BuildBatchContentsAsync(slBatchRequests, singleChangeSet);
 
-                batchResponse = flurlResponse.ResponseMessage;
-            }
-            else
-            {
-                var contents = new List<MultipartContent>();
-                foreach (var request in requests)
+            var flurlResponse = await Client
+                .Request("$batch")
+                .WithCookies(await GetSessionCookiesAsync())
+                .WithTimeout(BatchRequestTimeout)
+                .PostMultipartAsync(mp =>
                 {
-                    string boundary = "changeset_" + Guid.NewGuid();
-                    var content = await BuildMixedMultipartContentAsync(request, boundary);
-                    contents.Add(content);
-                }
-
-                var flurlResponse = await Client
-                    .Request("$batch")
-                    .WithCookies(await GetSessionCookiesAsync())
-                    .WithTimeout(BatchRequestTimeout)
-                    .PostMultipartAsync(mp =>
+                    mp.Headers.ContentType.MediaType = "multipart/mixed";
+                    foreach (var content in batchContents)
                     {
-                        mp.Headers.ContentType.MediaType = "multipart/mixed";
-                        foreach (var content in contents)
-                        {
-                            mp.Add(content);
-                        }
-                    });
+                        mp.Add(content);
+                    }
+                });
 
-                batchResponse = flurlResponse.ResponseMessage;
-            }
+            var batchResponse = flurlResponse.ResponseMessage;
 
             if (batchResponse?.Content is null)
                 throw new Exception("The batch request did not return a valid response.");
@@ -1141,36 +1119,67 @@ public class SLConnection
     }
 
     /// <summary>
-    /// Builds the multipart content for a batch request using a single change set.
+    /// Builds the list of <see cref="HttpContent"/> parts for a batch request.
+    /// GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
     /// </summary>
-    private async Task<MultipartContent> BuildMixedMultipartContentAsync(IEnumerable<SLBatchRequest> requests)
+    private async Task<List<HttpContent>> BuildBatchContentsAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet)
     {
-        string boundary = "changeset_" + Guid.NewGuid();
-        var multipartContent = new MultipartContent("mixed", boundary);
+        var parts = new List<HttpContent>();
 
-        foreach (var batchRequest in requests)
+        if (singleChangeSet)
         {
-            await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
+            // Collect consecutive mutations into a single changeset.
+            // A query (GET/HEAD) between mutations closes the current changeset to preserve request ordering.
+            MultipartContent changeset = null;
+
+            foreach (var batchRequest in requests)
+            {
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest);
+
+                if (IsQueryMethod(batchRequest.HttpMethod))
+                {
+                    // Detach from current changeset so the next mutation starts a new one
+                    changeset = null;
+                    parts.Add(httpContent);
+                }
+                else
+                {
+                    if (changeset == null)
+                    {
+                        changeset = new MultipartContent("mixed", "changeset_" + Guid.NewGuid());
+                        parts.Add(changeset);
+                    }
+
+                    changeset.Add(httpContent);
+                }
+            }
+        }
+        else
+        {
+            foreach (var batchRequest in requests)
+            {
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest);
+
+                if (IsQueryMethod(batchRequest.HttpMethod))
+                {
+                    parts.Add(httpContent);
+                }
+                else
+                {
+                    var changeset = new MultipartContent("mixed", "changeset_" + Guid.NewGuid());
+                    changeset.Add(httpContent);
+                    parts.Add(changeset);
+                }
+            }
         }
 
-        return multipartContent;
+        return parts;
     }
 
     /// <summary>
-    /// Builds the multipart content for a batch request using multiple change sets.
+    /// Builds an <see cref="HttpContent"/> from a given <see cref="SLBatchRequest"/>.
     /// </summary>
-    private async Task<MultipartContent> BuildMixedMultipartContentAsync(SLBatchRequest batchRequest, string boundary)
-    {
-        var multipartContent = new MultipartContent("mixed", boundary);
-        await BuildRequestForMultipartContentAsync(multipartContent, batchRequest);
-        return multipartContent;
-    }
-
-    /// <summary>
-    /// Builds the <see cref="HttpRequestMessage"/> from a given <see cref="SLBatchRequest"/> and adds it to the <see cref="MultipartContent"/> instance.
-    /// </summary>
-    private async Task BuildRequestForMultipartContentAsync(MultipartContent multipartContent,
-        SLBatchRequest batchRequest)
+    private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest)
     {
         var request = new HttpRequestMessage(batchRequest.HttpMethod,
             Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
@@ -1193,8 +1202,14 @@ public class SLConnection
         if (batchRequest.ContentID.HasValue)
             innerContent.Headers.Add("Content-ID", batchRequest.ContentID.ToString());
 
-        multipartContent.Add(innerContent);
+        return innerContent;
     }
+
+    /// <summary>
+    /// Determines whether the given HTTP method is a query (non-mutation) method.
+    /// </summary>
+    private static bool IsQueryMethod(HttpMethod method)
+        => method == HttpMethod.Get || method == HttpMethod.Head;
 
     #endregion
 
