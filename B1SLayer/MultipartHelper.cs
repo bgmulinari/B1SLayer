@@ -48,7 +48,7 @@ internal static class MultipartHelper
             {
                 var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
 
-                if (httpResponse.Content is null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
+                if (httpResponse.Content == null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
                 {
                     httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
                 }
