@@ -14,7 +14,7 @@
     <PackageReleaseNotes>https://github.com/bgmulinari/B1SLayer/releases</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>B1SLayer</PackageId>
-    <Version>2.1.4</Version>
+    <Version>3.0.0-pre-1</Version>
   </PropertyGroup>
 
   <PropertyGroup>

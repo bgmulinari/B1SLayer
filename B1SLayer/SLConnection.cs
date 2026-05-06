@@ -401,9 +401,12 @@ public class SLConnection
     /// <remarks>
     ///     Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
     /// </remarks>
-    public Task<SLLoginResponse> LoginAsync()
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<SLLoginResponse> LoginAsync(CancellationToken cancellationToken = default)
     {
-        return ExecuteLoginAsync(true);
+        return ExecuteLoginAsync(true, cancellationToken);
     }
 
     /// <summary>
@@ -412,10 +415,13 @@ public class SLConnection
     /// <param name="expectReturn">
     ///     Whether the login information should be returned.
     /// </param>
-    private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false, CancellationToken cancellationToken = default)
     {
         // Prevents multiple login requests in a multi-threaded scenario
-        await _semaphoreSlim.WaitAsync().ConfigureAwait(false);
+        await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
@@ -424,19 +430,19 @@ public class SLConnection
                 _loginResponse = await Client
                     .Request("Login")
                     .WithCookies(out var cookieJar)
-                    .PostJsonAsync(new { CompanyDB, UserName, Password, Language })
+                    .PostJsonAsync(new { CompanyDB, UserName, Password, Language }, cancellationToken: cancellationToken)
                     .ReceiveJson<SLLoginResponse>()
                     .ConfigureAwait(false);
 
                 _loginResponse.LastLogin = DateTime.Now;
-                await SetSessionCookiesAsync(cookieJar, TimeSpan.FromMinutes(_loginResponse.SessionTimeout)).ConfigureAwait(false);
+                await SetSessionCookiesAsync(cookieJar, TimeSpan.FromMinutes(_loginResponse.SessionTimeout), cancellationToken).ConfigureAwait(false);
             }
             else
             {
                 // Obtains session context from UI API method
                 var connectionContext = _getServiceLayerConnectionContext(ServiceLayerRoot.ToString());
                 var cookies = CreateCookieJarFromConnectionContext(connectionContext);
-                await SetSessionCookiesAsync(cookies, TimeSpan.FromMinutes(_ssoSessionTimeout)).ConfigureAwait(false);
+                await SetSessionCookiesAsync(cookies, TimeSpan.FromMinutes(_ssoSessionTimeout), cancellationToken).ConfigureAwait(false);
                 _loginResponse.LastLogin = DateTime.Now;
                 _loginResponse.SessionTimeout = _ssoSessionTimeout;
                 _loginResponse.SessionId = cookies
@@ -480,18 +486,18 @@ public class SLConnection
     /// <returns>
     ///     The current session cookies to be used in each request.
     /// </returns>
-    internal async Task<CookieJar> GetSessionCookiesAsync()
+    internal async Task<CookieJar> GetSessionCookiesAsync(CancellationToken cancellationToken = default)
     {
-        var cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey).ConfigureAwait(false);
+        var cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey, cancellationToken).ConfigureAwait(false);
 
         if (string.IsNullOrEmpty(cookiesString))
         {
-            await ExecuteLoginAsync().ConfigureAwait(false);
-            cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey).ConfigureAwait(false);
+            await ExecuteLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            cookiesString = await DistributedCache.GetStringAsync(SessionCacheKey, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            await DistributedCache.RefreshAsync(SessionCacheKey).ConfigureAwait(false);
+            await DistributedCache.RefreshAsync(SessionCacheKey, cancellationToken).ConfigureAwait(false);
         }
 
         return string.IsNullOrEmpty(cookiesString)
@@ -508,7 +514,10 @@ public class SLConnection
     /// <param name="slidingExpiration">
     ///     The sliding expiration time for the session cache.
     /// </param>
-    private async Task SetSessionCookiesAsync(CookieJar cookies, TimeSpan slidingExpiration)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    private async Task SetSessionCookiesAsync(CookieJar cookies, TimeSpan slidingExpiration, CancellationToken cancellationToken = default)
     {
         var cookieString = cookies?.ToString();
 
@@ -517,7 +526,7 @@ public class SLConnection
             await DistributedCache.SetStringAsync(SessionCacheKey, cookieString, new DistributedCacheEntryOptions
                 {
                     SlidingExpiration = slidingExpiration
-                })
+                }, cancellationToken)
                 .ConfigureAwait(false);
         }
     }
@@ -525,9 +534,12 @@ public class SLConnection
     /// <summary>
     ///     Removes the current active session from the distributed cache.
     /// </summary>
-    public Task InvalidateSessionCacheAsync()
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task InvalidateSessionCacheAsync(CancellationToken cancellationToken = default)
     {
-        return DistributedCache.RemoveAsync(SessionCacheKey);
+        return DistributedCache.RemoveAsync(SessionCacheKey, cancellationToken);
     }
 
     /// <summary>
@@ -575,9 +587,12 @@ public class SLConnection
     /// <summary>
     ///     Performs a POST Logout request, ending the current session.
     /// </summary>
-    public async Task LogoutAsync()
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
-        var currentSessionCookies = await GetSessionCookiesAsync().ConfigureAwait(false);
+        var currentSessionCookies = await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false);
 
         if (currentSessionCookies == null)
         {
@@ -586,8 +601,8 @@ public class SLConnection
 
         try
         {
-            await Client.Request("Logout").WithCookies(currentSessionCookies).PostAsync().ConfigureAwait(false);
-            await InvalidateSessionCacheAsync().ConfigureAwait(false);
+            await Client.Request("Logout").WithCookies(currentSessionCookies).PostAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            await InvalidateSessionCacheAsync(cancellationToken).ConfigureAwait(false);
             _loginResponse = new SLLoginResponse();
         }
         catch (FlurlHttpException ex)
@@ -653,7 +668,7 @@ public class SLConnection
     ///     If the request is unsuccessfull with any return code present in <see cref="HttpStatusCodesToRetry" />,
     ///     it will be retried for <see cref="NumberOfAttempts" /> number of times.
     /// </summary>
-    internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action)
+    internal async Task<T> ExecuteRequest<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
         var loginReattempted = false;
         List<Exception> exceptions = null;
@@ -705,12 +720,12 @@ public class SLConnection
                         break;
                     }
 
-                    await ExecuteLoginAsync().ConfigureAwait(false);
+                    await ExecuteLoginAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
                     loginReattempted = true;
                 }
             }
 
-            await Task.Delay(200).ConfigureAwait(false);
+            await Task.Delay(200, cancellationToken).ConfigureAwait(false);
         }
 
         var uniqueExceptions = exceptions.Distinct(new ExceptionEqualityComparer());
@@ -733,9 +748,12 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLPingResponse" /> object containing the response details.
     /// </returns>
-    public async Task<SLPingResponse> PingAsync()
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task<SLPingResponse> PingAsync(CancellationToken cancellationToken = default)
     {
-        return await ExecutePingAsync("ping/").ConfigureAwait(false);
+        return await ExecutePingAsync("ping/", cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -751,21 +769,26 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLPingResponse" /> object containing the response details.
     /// </returns>
-    public async Task<SLPingResponse> PingNodeAsync(int? node = null)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task<SLPingResponse> PingNodeAsync(int? node = null, CancellationToken cancellationToken = default)
     {
-        return await ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer").ConfigureAwait(false);
+        return await ExecutePingAsync(node.HasValue ? $"ping/node/{node}" : "ping/load-balancer", cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
     ///     Performs the ping request with the provided path segment.
     /// </summary>
-    private async Task<SLPingResponse> ExecutePingAsync(string path)
+    private async Task<SLPingResponse> ExecutePingAsync(string path, CancellationToken cancellationToken = default)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var pingRequest = Client.Request();
             pingRequest.Url = pingRequest.Url.RemovePath().AppendPathSegment(path);
-            var flurlResponse = await pingRequest.GetAsync().ConfigureAwait(false);
+            var flurlResponse = await pingRequest.GetAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
             var pingResponse = await flurlResponse.GetJsonAsync<SLPingResponse>().ConfigureAwait(false);
             pingResponse.IsSuccessStatusCode = flurlResponse.ResponseMessage.IsSuccessStatusCode;
             pingResponse.StatusCode = flurlResponse.ResponseMessage.StatusCode;
@@ -886,9 +909,12 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public Task<SLAttachment> PostAttachmentAsync(string path)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<SLAttachment> PostAttachmentAsync(string path, CancellationToken cancellationToken = default)
     {
-        return PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path));
+        return PostAttachmentAsync(Path.GetFileName(path), File.ReadAllBytes(path), cancellationToken);
     }
 
     /// <summary>
@@ -906,9 +932,12 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<SLAttachment> PostAttachmentAsync(string fileName, byte[] file, CancellationToken cancellationToken = default)
     {
-        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } });
+        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } }, cancellationToken);
     }
 
     /// <summary>
@@ -926,9 +955,12 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file, CancellationToken cancellationToken = default)
     {
-        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, file } });
+        return PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, file } }, cancellationToken);
     }
 
     /// <summary>
@@ -943,9 +975,12 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files, CancellationToken cancellationToken = default)
     {
-        return PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
+        return PostAttachmentsAsync(files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)), cancellationToken);
     }
 
     /// <summary>
@@ -960,7 +995,10 @@ public class SLConnection
     /// <returns>
     ///     A <see cref="SLAttachment" /> object with information about the created attachment entry.
     /// </returns>
-    public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, Stream> files)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, Stream> files, CancellationToken cancellationToken = default)
     {
         return await ExecuteRequest(async () =>
             {
@@ -971,7 +1009,7 @@ public class SLConnection
 
                 var result = await Client
                     .Request("Attachments2")
-                    .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
+                    .WithCookies(await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false))
                     .PostMultipartAsync(mp =>
                     {
                         // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
@@ -987,12 +1025,12 @@ public class SLConnection
                             content.Headers.Add("Content-Type", "application/octet-stream");
                             mp.Add(content);
                         }
-                    })
+                    }, cancellationToken: cancellationToken)
                     .ReceiveJson<SLAttachment>()
                     .ConfigureAwait(false);
 
                 return result;
-            })
+            }, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -1006,9 +1044,12 @@ public class SLConnection
     /// <param name="path">
     ///     The file path for the file to be updated including the file extension.
     /// </param>
-    public Task PatchAttachmentAsync(int attachmentEntry, string path)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task PatchAttachmentAsync(int attachmentEntry, string path, CancellationToken cancellationToken = default)
     {
-        return PatchAttachmentAsync(attachmentEntry, Path.GetFileName(path), File.ReadAllBytes(path));
+        return PatchAttachmentAsync(attachmentEntry, Path.GetFileName(path), File.ReadAllBytes(path), cancellationToken);
     }
 
     /// <summary>
@@ -1024,10 +1065,13 @@ public class SLConnection
     /// <param name="file">
     ///     The file to be updated.
     /// </param>
-    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, byte[] file, CancellationToken cancellationToken = default)
     {
         return PatchAttachmentsAsync(attachmentEntry,
-            new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } });
+            new Dictionary<string, Stream> { { fileName, new MemoryStream(file) } }, cancellationToken);
     }
 
     /// <summary>
@@ -1043,9 +1087,12 @@ public class SLConnection
     /// <param name="file">
     ///     The file to be updated.
     /// </param>
-    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task PatchAttachmentAsync(int attachmentEntry, string fileName, Stream file, CancellationToken cancellationToken = default)
     {
-        return PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream> { { fileName, file } });
+        return PatchAttachmentsAsync(attachmentEntry, new Dictionary<string, Stream> { { fileName, file } }, cancellationToken);
     }
 
     /// <summary>
@@ -1058,10 +1105,13 @@ public class SLConnection
     /// <param name="files">
     ///     A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
     /// </param>
-    public Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, byte[]> files, CancellationToken cancellationToken = default)
     {
         return PatchAttachmentsAsync(attachmentEntry,
-            files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)));
+            files.ToDictionary(x => x.Key, x => (Stream)new MemoryStream(x.Value)), cancellationToken);
     }
 
     /// <summary>
@@ -1074,7 +1124,10 @@ public class SLConnection
     /// <param name="files">
     ///     A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
     /// </param>
-    public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, Stream> files)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task PatchAttachmentsAsync(int attachmentEntry, IDictionary<string, Stream> files, CancellationToken cancellationToken = default)
     {
         await ExecuteRequest(async () =>
             {
@@ -1085,7 +1138,7 @@ public class SLConnection
 
                 var result = await Client
                     .Request($"Attachments2({attachmentEntry})")
-                    .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
+                    .WithCookies(await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false))
                     .PatchMultipartAsync(mp =>
                     {
                         // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
@@ -1101,11 +1154,11 @@ public class SLConnection
                             content.Headers.Add("Content-Type", "application/octet-stream");
                             mp.Add(content);
                         }
-                    })
+                    }, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
 
                 return result;
-            })
+            }, cancellationToken)
             .ConfigureAwait(false);
     }
 
@@ -1123,9 +1176,12 @@ public class SLConnection
     /// <returns>
     ///     The downloaded attachment file as a <see cref="Stream" />.
     /// </returns>
-    public async Task<Stream> GetAttachmentAsStreamAsync(int attachmentEntry, string fileName = null)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public async Task<Stream> GetAttachmentAsStreamAsync(int attachmentEntry, string fileName = null, CancellationToken cancellationToken = default)
     {
-        return new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName).ConfigureAwait(false));
+        return new MemoryStream(await GetAttachmentAsBytesAsync(attachmentEntry, fileName, cancellationToken).ConfigureAwait(false));
     }
 
     /// <summary>
@@ -1142,19 +1198,22 @@ public class SLConnection
     /// <returns>
     ///     The downloaded attachment file as a <see cref="byte" /> array.
     /// </returns>
-    public Task<byte[]> GetAttachmentAsBytesAsync(int attachmentEntry, string fileName = null)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<byte[]> GetAttachmentAsBytesAsync(int attachmentEntry, string fileName = null, CancellationToken cancellationToken = default)
     {
         return ExecuteRequest(async () =>
         {
             var file = await Client
                 .Request($"Attachments2({attachmentEntry})/$value")
                 .SetQueryParam("filename", !string.IsNullOrEmpty(fileName) ? $"'{fileName}'" : null)
-                .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
-                .GetBytesAsync()
+                .WithCookies(await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false))
+                .GetBytesAsync(cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             return file;
-        });
+        }, cancellationToken);
     }
 
     #endregion
@@ -1194,7 +1253,10 @@ public class SLConnection
     /// <returns>
     ///     An <see cref="HttpResponseMessage" /> array containg the response messages of the batch request.
     /// </returns>
-    public Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true)
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<HttpResponseMessage[]> PostBatchAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet = true, CancellationToken cancellationToken = default)
     {
         return ExecuteRequest(async () =>
         {
@@ -1210,11 +1272,11 @@ public class SLConnection
                 throw new ArgumentException("No requests to be sent.", nameof(requests));
             }
 
-            var batchContents = await BuildBatchContentsAsync(slBatchRequests, singleChangeSet).ConfigureAwait(false);
+            var batchContents = await BuildBatchContentsAsync(slBatchRequests, singleChangeSet, cancellationToken).ConfigureAwait(false);
 
             var flurlResponse = await Client
                 .Request("$batch")
-                .WithCookies(await GetSessionCookiesAsync().ConfigureAwait(false))
+                .WithCookies(await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false))
                 .WithTimeout(BatchRequestTimeout)
                 .PostMultipartAsync(mp =>
                 {
@@ -1224,7 +1286,7 @@ public class SLConnection
                     {
                         mp.Add(content);
                     }
-                })
+                }, cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             var batchResponse = flurlResponse.ResponseMessage;
@@ -1236,14 +1298,14 @@ public class SLConnection
 
             var responses = await MultipartHelper.ReadMultipartResponseAsync(batchResponse).ConfigureAwait(false);
             return responses;
-        });
+        }, cancellationToken);
     }
 
     /// <summary>
     ///     Builds the list of <see cref="HttpContent" /> parts for a batch request.
     ///     GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
     /// </summary>
-    private async Task<List<HttpContent>> BuildBatchContentsAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet)
+    private async Task<List<HttpContent>> BuildBatchContentsAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet, CancellationToken cancellationToken = default)
     {
         var parts = new List<HttpContent>();
 
@@ -1255,7 +1317,7 @@ public class SLConnection
 
             foreach (var batchRequest in requests)
             {
-                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest).ConfigureAwait(false);
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, cancellationToken).ConfigureAwait(false);
 
                 if (IsQueryMethod(batchRequest.HttpMethod))
                 {
@@ -1279,7 +1341,7 @@ public class SLConnection
         {
             foreach (var batchRequest in requests)
             {
-                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest).ConfigureAwait(false);
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, cancellationToken).ConfigureAwait(false);
 
                 if (IsQueryMethod(batchRequest.HttpMethod))
                 {
@@ -1300,7 +1362,7 @@ public class SLConnection
     /// <summary>
     ///     Builds an <see cref="HttpContent" /> from a given <see cref="SLBatchRequest" />.
     /// </summary>
-    private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest)
+    private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest, CancellationToken cancellationToken = default)
     {
         var request = new HttpRequestMessage(batchRequest.HttpMethod,
             Url.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
@@ -1323,7 +1385,7 @@ public class SLConnection
                     batchRequest.Encoding, "application/json");
         }
 
-        var innerContent = await MultipartHelper.CreateHttpContentAsync(request).ConfigureAwait(false);
+        var innerContent = await MultipartHelper.CreateHttpContentAsync(request, cancellationToken).ConfigureAwait(false);
         innerContent.Headers.Add("content-transfer-encoding", "binary");
 
         if (batchRequest.ContentID.HasValue)

@@ -64,8 +64,9 @@ internal static class MultipartHelper
     ///     Creates an HTTP content from the provided HTTP request message.
     /// </summary>
     /// <param name="request">The HTTP request message.</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
-    internal static async Task<HttpContent> CreateHttpContentAsync(HttpRequestMessage request)
+    internal static async Task<HttpContent> CreateHttpContentAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
     {
         var memoryStream = new MemoryStream();
         using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, true);
@@ -87,7 +88,11 @@ internal static class MultipartHelper
             writer.WriteLine();
             writer.Flush();
             memoryStream.Position = memoryStream.Length;
+#if NETSTANDARD2_0
             await request.Content.CopyToAsync(memoryStream).ConfigureAwait(false);
+#else
+            await request.Content.CopyToAsync(memoryStream, cancellationToken).ConfigureAwait(false);
+#endif
         }
         else
         {

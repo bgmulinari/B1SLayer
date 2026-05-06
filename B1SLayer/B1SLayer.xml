@@ -1,1317 +1,1588 @@
 <?xml version="1.0"?>
 <doc>
-    <assembly>
-        <name>B1SLayer</name>
-    </assembly>
-    <members>
-        <member name="T:B1SLayer.B1SLayerSettings">
-            <summary>
-                A static object for configuring B1SLayer.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.B1SLayerSettings.DistributedCache">
-            <summary>
-                Gets or sets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLAttachment">
-            <summary>
-                Represents the details of an attachment entry.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachment.AbsoluteEntry">
-            <summary>
-                Gets or sets the ID of the attachment entry.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachment.Lines">
-            <summary>
-                Gets or sets the lines of the attachment entry.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLAttachmentLines">
-            <summary>
-                Represents the details of an attachment line.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.SourcePath">
-            <summary>
-                Gets or sets the source path of the file.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.FileName">
-            <summary>
-                Gets or sets the file name.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.FileExtension">
-            <summary>
-                Gets or sets the file extension.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.AttachmentDate">
-            <summary>
-                Gets or sets the attachment date.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.UserID">
-            <summary>
-                Gets or sets the user ID.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLAttachmentLines.Override">
-            <summary>
-                Gets or sets the override indication.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLBatchRequest">
-            <summary>
-                Represents a single request to be sent in a batch to the Service Layer.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequest.#ctor">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequest.#ctor(System.Net.Http.HttpMethod,System.String,System.Object,System.Nullable{System.Int32})">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
-            </summary>
-            <param name="httpMethod">
-                The HTTP method to be used for this request.
-            </param>
-            <param name="resource">
-                The Service Layer resource to be requested.
-            </param>
-            <param name="data">
-                The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
-            </param>
-            <param name="contentID">
-                Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
-                This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
-            </param>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.HttpMethod">
-            <summary>
-                Gets or sets the HTTP method to be used for this request.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.Resource">
-            <summary>
-                Gets or sets the Service Layer resource to be requested.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.Data">
-            <summary>
-                Gets or sets the JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.ContentID">
-            <summary>
-                Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
-                This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.Encoding">
-            <summary>
-                Gets or sets the <see cref="T:System.Text.Encoding" /> to be used for this request. UTF8 will be used by default.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.JsonSerializerOptions">
-            <summary>
-                Gets or sets the <see cref="T:System.Text.Json.JsonSerializerOptions" /> to be used for this request.
-                By default it is configured so the <see cref="P:System.Text.Json.JsonSerializerOptions.DefaultIgnoreCondition" /> is set to <see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull" />.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.HttpVersion">
-            <summary>
-                Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLBatchRequest.Headers">
-            <summary>
-                The HTTP headers to be sent in this request.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.Models.SLCollectionRoot`1">
-            <summary>
-                Represents the structure of a Service Layer collection.
-            </summary>
-            <typeparam name="T"></typeparam>
-        </member>
-        <member name="P:B1SLayer.Models.SLCollectionRoot`1.Value">
-            <summary>
-                Gets or sets the list that represents the JSON array containing the entities of the collection.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLink">
-            <summary>
-                Gets or sets the string that represents the link to the next page.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLinkJson">
-            <summary>
-                Gets or sets the string that represents the link to the next page.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.Models.SLCollectionRoot`1.NextSkip">
-            <summary>
-                Gets the skip number to obtain the entities of the next page.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLLoginResponse">
-            <summary>
-                Represents the response details of a login request.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLLoginResponse.SessionId">
-            <summary>
-                Gets or sets the session ID of the session.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLLoginResponse.Version">
-            <summary>
-                Gets or sets the SBO version.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLLoginResponse.SessionTimeout">
-            <summary>
-                Gets or sets the session timeout.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLLoginResponse.LastLogin">
-            <summary>
-                Gets or sets the <see cref="T:System.DateTime" /> of the last login.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLPingResponse">
-            <summary>
-                Represents the response of a ping request.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.Message">
-            <summary>
-                Gets or sets the message of a ping response.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.Sender">
-            <summary>
-                Gets or sets the sender of a ping response.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.Timestamp">
-            <summary>
-                Gets or sets the timestamp of a ping response.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.DateTime">
-            <summary>
-                Gets the corresponding <see cref="T:System.DateTime" /> of a ping response based on the <see cref="P:B1SLayer.SLPingResponse.Timestamp" />.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.IsSuccessStatusCode">
-            <summary>
-                Whether the ping response was successful.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLPingResponse.StatusCode">
-            <summary>
-                Gets the <see cref="T:System.Net.HttpStatusCode" /> of a ping response.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLResponseError">
-            <summary>
-                The root object that represents a Service Layer error.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLResponseError.Error">
-            <summary>
-                Gets or sets the details of a Service Layer error.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLErrorDetails">
-            <summary>
-                Represents the details of a Service Layer error.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLErrorDetails.Code">
-            <summary>
-                Gets or sets the error code of a Service Layer error.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLErrorDetails.Message">
-            <summary>
-                Gets or sets the error message of a Service Layer error.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLErrorMessage">
-            <summary>
-                Represents the message of a Service Layer error.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLErrorMessage.Lang">
-            <summary>
-                Gets or sets the message language of a Service Layer error.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLErrorMessage.Value">
-            <summary>
-                Gets or sets the message text of a Service Layer error.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.MultipartHelper">
-            <summary>
-                Provides helper methods for handling multipart HTTP responses and creating HTTP content.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.MultipartHelper.ReadMultipartResponseAsync(System.Net.Http.HttpResponseMessage)">
-            <summary>
-                Reads a multipart HTTP response and parses it into an array of <see cref="T:System.Net.Http.HttpResponseMessage" /> objects.
-            </summary>
-            <param name="response">The HTTP response containing the multipart content.</param>
-            <returns>An array of <see cref="T:System.Net.Http.HttpResponseMessage" /> objects representing the individual parts of the multipart response.</returns>
-        </member>
-        <member name="M:B1SLayer.MultipartHelper.CreateHttpContentAsync(System.Net.Http.HttpRequestMessage)">
-            <summary>
-                Creates an HTTP content from the provided HTTP request message.
-            </summary>
-            <param name="request">The HTTP request message.</param>
-            <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
-        </member>
-        <member name="M:B1SLayer.MultipartHelper.PatchMultipartAsync(Flurl.Http.IFlurlRequest,System.Action{Flurl.Http.Content.CapturedMultipartContent},System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
-            <summary>
-                Flurl extension method to provide a PATCH method for multipart requests.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLBatchRequestExtensions">
-            <summary>
-                Extension methods definitions for <see cref="T:B1SLayer.SLBatchRequest" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequestExtensions.WithCaseInsensitive(B1SLayer.SLBatchRequest)">
-            <summary>
-                Enables a case-insensitive query.
-            </summary>
-            <remarks>
-                This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequestExtensions.WithReplaceCollectionsOnPatch(B1SLayer.SLBatchRequest)">
-            <summary>
-                Allows a PATCH request to remove items in a collection.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequestExtensions.WithReturnNoContent(B1SLayer.SLBatchRequest)">
-            <summary>
-                Configures a POST request to not return the created entity.
-                This is suitable for better performance in demanding scenarios where the return content is not needed.
-            </summary>
-            <remarks>
-                On success, <see cref="F:System.Net.HttpStatusCode.NoContent" /> is returned, instead of <see cref="F:System.Net.HttpStatusCode.Created" />.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLBatchRequestExtensions.WithHeader(B1SLayer.SLBatchRequest,System.String,System.String)">
-            <summary>
-                Adds a custom request header to be sent.
-            </summary>
-            <param name="batchRequest">
-                The current request.
-            </param>
-            <param name="name">
-                The name of the header.
-            </param>
-            <param name="value">
-                The value of the header.
-            </param>
-        </member>
-        <member name="T:B1SLayer.SLConnection">
-            <summary>
-                Represents a connection to the Service Layer.
-            </summary>
-            <remarks>
-                Only one instance per company/user should be used in the application.
-            </remarks>
-        </member>
-        <member name="T:B1SLayer.SLConnection.ExceptionEqualityComparer">
-            <summary>
-                Used to aggregate exceptions that occur on request retries.
-            </summary>
-            <remarks>
-                In most cases, the same exception will occur multiple times,
-                but we don't want to return multiple copies of it. This class is used
-                to find exceptions that are duplicates by type and message so we can
-                only return one of them.
-            </remarks>
-        </member>
-        <member name="P:B1SLayer.SLConnection.Client">
-            <summary>
-                Gets the <see cref="T:Flurl.Http.IFlurlClient" /> responsible for the requests to Service Layer.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.DistributedCache">
-            <summary>
-                Gets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.SessionCacheKey">
-            <summary>
-                Gets or sets cache key to be used for the session cache.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.ServiceLayerRoot">
-            <summary>
-                Gets the Service Layer root URI.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.CompanyDB">
-            <summary>
-                Gets the Company database (schema) to connect to.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.UserName">
-            <summary>
-                Gets the username to be used for the Service Layer authentication.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.Password">
-            <summary>
-                Gets the password for the provided username.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.Language">
-            <summary>
-                Gets the Service Layer language code provided.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
-            <summary>
-                Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
-            <summary>
-                Gets or sets the timespan to wait before a batch request times out. The default value is 5 minutes (300 seconds).
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.IsUsingSingleSignOn">
-            <summary>
-                Gets whether this <see cref="T:B1SLayer.SLConnection" /> instance is using Single Sign-On (SSO) authentication.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.LoginResponse">
-            <summary>
-                Gets information about the latest Login request.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLConnection.HttpStatusCodesToRetry">
-            <summary>
-                Gets a list of <see cref="T:System.Net.HttpStatusCode" /> to be checked before retrying an unsuccessful request.
-            </summary>
-            <remarks>
-                The number of attempts is defined by <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" />.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class.
-                Only one instance per company/user should be used in the application.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="companyDB">
-                The Company database (schema) to connect to.
-            </param>
-            <param name="userName">
-                The SAP user to be used for the Service Layer authentication.
-            </param>
-            <param name="password">
-                The password for the provided user.
-            </param>
-            <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
-                A GET request to the UserLanguages resource will return all available languages and their respective codes.
-            </param>
-            <param name="numberOfAttempts">
-                The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
-                If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class.
-                Only one instance per company/user should be used in the application.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="companyDB">
-                The Company database (schema) to connect to.
-            </param>
-            <param name="userName">
-                The SAP user to be used for the Service Layer authentication.
-            </param>
-            <param name="password">
-                The password for the provided user.
-            </param>
-            <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
-                A GET request to the UserLanguages resource will return all available languages and their respective codes.
-            </param>
-            <param name="numberOfAttempts">
-                The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
-                If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class.
-                Only one instance per company/user should be used in the application.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="companyDB">
-                The Company database (schema) to connect to.
-            </param>
-            <param name="userName">
-                The SAP user to be used for the Service Layer authentication.
-            </param>
-            <param name="password">
-                The password for the provided user.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int32})">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class.
-                Only one instance per company/user should be used in the application.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="companyDB">
-                The Company database (schema) to connect to.
-            </param>
-            <param name="userName">
-                The SAP user to be used for the Service Layer authentication.
-            </param>
-            <param name="password">
-                The password for the provided user.
-            </param>
-            <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
-                A GET request to the UserLanguages resource will return all available languages and their respective codes.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.Func{System.String,System.String},System.Int32,System.Int32)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class using Single Sign-On (SSO) authentication.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="getServiceLayerConnectionContext">
-                The reference for the UI API method responsible for obtaining the connection context
-                (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
-            </param>
-            <param name="sessionTimeout">
-                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
-                specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
-            </param>
-            <param name="numberOfAttempts">
-                The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
-                If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.Func{System.String,System.String},System.Int32,System.Int32)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLConnection" /> class using Single Sign-On (SSO) authentication.
-            </summary>
-            <param name="serviceLayerRoot">
-                The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
-            </param>
-            <param name="getServiceLayerConnectionContext">
-                The reference for the UI API method responsible for obtaining the connection context
-                (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
-            </param>
-            <param name="sessionTimeout">
-                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
-                specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
-            </param>
-            <param name="numberOfAttempts">
-                The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
-                If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.LoginAsync">
-            <summary>
-                Performs a POST Login request with the provided information, regardless of the current session state.
-            </summary>
-            <remarks>
-                Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.ExecuteLoginAsync(System.Boolean)">
-            <summary>
-                Performs the POST Login request to the Service Layer.
-            </summary>
-            <param name="expectReturn">
-                Whether the login information should be returned.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.GetSessionCookiesAsync">
-            <summary>
-                Obtains the current session cookies from the distribued cache.
-                A login is performed if no valid cookies are retrieved from cache.
-            </summary>
-            <returns>
-                The current session cookies to be used in each request.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.SetSessionCookiesAsync(Flurl.Http.CookieJar,System.TimeSpan)">
-            <summary>
-                Sets the given session cookies to the distributed cache.
-            </summary>
-            <param name="cookies">
-                The cookies to be set to the distributed cache.
-            </param>
-            <param name="slidingExpiration">
-                The sliding expiration time for the session cache.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.InvalidateSessionCacheAsync">
-            <summary>
-                Removes the current active session from the distributed cache.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.CreateCookieJarFromConnectionContext(System.String)">
-            <summary>
-                Creates a <see cref="T:Flurl.Http.CookieJar" /> instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
-            </summary>
-            <param name="connectionContext">
-                The connection context string obtained from UI API.
-            </param>
-            <returns>
-                A <see cref="T:Flurl.Http.CookieJar" /> instance containing session cookies obtained after a successful authentication.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.LogoutAsync">
-            <summary>
-                Performs a POST Logout request, ending the current session.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.Request(System.String)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection" />.
-            </summary>
-            <remarks>
-                The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions" />.
-            </remarks>
-            <param name="resource">
-                The resource name to be requested.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.Request(System.String,System.Object)">
-            <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection" />.
-            </summary>
-            <remarks>
-                The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions" />.
-            </remarks>
-            <param name="resource">
-                The resource name to be requested.
-            </param>
-            <param name="id">
-                The entity ID to be requested.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.ExecuteRequest``1(System.Func{System.Threading.Tasks.Task{``0}})">
-            <summary>
-                Calls the Login method to ensure a valid session and then executes the provided request.
-                If the request is unsuccessfull with any return code present in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />,
-                it will be retried for <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" /> number of times.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PingAsync">
-            <summary>
-                Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
-            </summary>
-            <remarks>
-                This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
-            </remarks>
-            <returns>
-                A <see cref="T:B1SLayer.SLPingResponse" /> object containing the response details.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PingNodeAsync(System.Nullable{System.Int32})">
-            <summary>
-                Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
-            </summary>
-            <remarks>
-                This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
-            </remarks>
-            <param name="node">
-                The specific node to be monitored. If not specified, the request will be directed to the load balancer.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLPingResponse" /> object containing the response details.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.ExecutePingAsync(System.String)">
-            <summary>
-                Performs the ping request with the provided path segment.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.BeforeCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
-            <summary>
-                Sets a <see cref="T:System.Func`2" /> delegate that is called before every Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-                Response-related properties will be null in BeforeCall.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.BeforeCall(System.Action{Flurl.Http.FlurlCall})">
-            <summary>
-                Sets a <see cref="T:System.Action`1" /> delegate that is called before every Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-                Response-related properties will be null in BeforeCall.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.AfterCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
-            <summary>
-                Sets a <see cref="T:System.Func`2" /> delegate that is called after every Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.AfterCall(System.Action{Flurl.Http.FlurlCall})">
-            <summary>
-                Sets a <see cref="T:System.Action`1" /> delegate that is called after every Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.OnError(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
-            <summary>
-                Sets a <see cref="T:System.Func`2" /> delegate that is called after every unsuccessful Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.OnError(System.Action{Flurl.Http.FlurlCall})">
-            <summary>
-                Sets a <see cref="T:System.Action`1" /> delegate that is called after every unsuccessful Service Layer request.
-            </summary>
-            <remarks>
-                The <see cref="T:Flurl.Http.FlurlCall" /> object provides various details about the call than can be used for logging and error handling.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String)">
-            <summary>
-                Uploads the provided file as an attachment.
-            </summary>
-            <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="path">
-                The path to the file to be uploaded.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLAttachment" /> object with information about the created attachment entry.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.Byte[])">
-            <summary>
-                Uploads the provided file as an attachment.
-            </summary>
-            <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="fileName">
-                The file name of the file to be uploaded including the file extension.
-            </param>
-            <param name="file">
-                The file to be uploaded.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLAttachment" /> object with information about the created attachment entry.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.IO.Stream)">
-            <summary>
-                Uploads the provided file as an attachment.
-            </summary>
-            <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="fileName">
-                The file name of the file to be uploaded including the file extension.
-            </param>
-            <param name="file">
-                The file to be uploaded.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLAttachment" /> object with information about the created attachment entry.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.Byte[]})">
-            <summary>
-                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
-            </summary>
-            <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="files">
-                A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLAttachment" /> object with information about the created attachment entry.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.IO.Stream})">
-            <summary>
-                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
-            </summary>
-            <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="files">
-                A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
-            </param>
-            <returns>
-                A <see cref="T:B1SLayer.SLAttachment" /> object with information about the created attachment entry.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String)">
-            <summary>
-                Updates an existing attachment entry with the provided file. If the file already exists
-                in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be updated.
-            </param>
-            <param name="path">
-                The file path for the file to be updated including the file extension.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String,System.Byte[])">
-            <summary>
-                Updates an existing attachment entry with the provided file. If the file already exists
-                in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be updated.
-            </param>
-            <param name="fileName">
-                The file name of the file to be updated including the file extension.
-            </param>
-            <param name="file">
-                The file to be updated.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String,System.IO.Stream)">
-            <summary>
-                Updates an existing attachment entry with the provided file. If the file already exists
-                in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be updated.
-            </param>
-            <param name="fileName">
-                The file name of the file to be updated including the file extension.
-            </param>
-            <param name="file">
-                The file to be updated.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PatchAttachmentsAsync(System.Int32,System.Collections.Generic.IDictionary{System.String,System.Byte[]})">
-            <summary>
-                Updates an existing attachment entry with the provided files. If the file already exists
-                in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be updated.
-            </param>
-            <param name="files">
-                A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PatchAttachmentsAsync(System.Int32,System.Collections.Generic.IDictionary{System.String,System.IO.Stream})">
-            <summary>
-                Updates an existing attachment entry with the provided files. If the file already exists
-                in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be updated.
-            </param>
-            <param name="files">
-                A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLConnection.GetAttachmentAsStreamAsync(System.Int32,System.String)">
-            <summary>
-                Downloads the specified attachment file as a <see cref="T:System.IO.Stream" />. By default, the first attachment
-                line is downloaded if there are multiple attachment lines in one attachment.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be downloaded.
-            </param>
-            <param name="fileName">
-                The file name of the attachment to be downloaded  (including the file extension). Only required if
-                you want to download an attachment line other than the first attachment line.
-            </param>
-            <returns>
-                The downloaded attachment file as a <see cref="T:System.IO.Stream" />.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.GetAttachmentAsBytesAsync(System.Int32,System.String)">
-            <summary>
-                Downloads the specified attachment file as a <see cref="T:System.Byte" /> array. By default, the first attachment
-                line is downloaded if there are multiple attachment lines in one attachment.
-            </summary>
-            <param name="attachmentEntry">
-                The attachment entry ID to be downloaded.
-            </param>
-            <param name="fileName">
-                The file name of the attachment to be downloaded  (including the file extension). Only required if
-                you want to download an attachment line other than the first attachment line.
-            </param>
-            <returns>
-                The downloaded attachment file as a <see cref="T:System.Byte" /> array.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostBatchAsync(B1SLayer.SLBatchRequest[])">
-            <summary>
-                Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest" /> instances.
-                All requests are sent in a single change set.
-            </summary>
-            <remarks>
-                See section 'Batch Operations' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="requests">
-                <see cref="T:B1SLayer.SLBatchRequest" /> instances to be sent in the batch.
-            </param>
-            <returns>
-                An <see cref="T:System.Net.Http.HttpResponseMessage" /> array containg the response messages of the batch request.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.PostBatchAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean)">
-            <summary>
-                Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest" /> collection.
-            </summary>
-            <remarks>
-                See section 'Batch Operations' in the Service Layer User Manual for more details.
-            </remarks>
-            <param name="requests">
-                A collection of <see cref="T:B1SLayer.SLBatchRequest" /> to be sent in the batch.
-            </param>
-            <param name="singleChangeSet">
-                Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful request will cause the whole batch to be rolled back.
-            </param>
-            <returns>
-                An <see cref="T:System.Net.Http.HttpResponseMessage" /> array containg the response messages of the batch request.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLConnection.BuildBatchContentsAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean)">
-            <summary>
-                Builds the list of <see cref="T:System.Net.Http.HttpContent" /> parts for a batch request.
-                GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.BuildHttpContentFromBatchRequestAsync(B1SLayer.SLBatchRequest)">
-            <summary>
-                Builds an <see cref="T:System.Net.Http.HttpContent" /> from a given <see cref="T:B1SLayer.SLBatchRequest" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLConnection.IsQueryMethod(System.Net.Http.HttpMethod)">
-            <summary>
-                Determines whether the given HTTP method is a query (non-mutation) method.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLException">
-            <summary>
-                Represents a Service Layer exception.
-            </summary>
-        </member>
-        <member name="P:B1SLayer.SLException.ErrorDetails">
-            <summary>
-                Gets or sets the error details of a Service Layer exception.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLRequest">
-            <summary>
-                Represents a request to the Service Layer.
-            </summary>
-            <remarks>
-                The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions" />.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean)">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
-            </summary>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetWithInlineCountAsync``1(System.Boolean)">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
-            </summary>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetAllAsync``1">
-            <summary>
-                Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
-            </summary>
-            <remarks>
-                This can be very slow depending on the total amount of entities in the company database.
-            </remarks>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <returns>
-                An <see cref="T:System.Collections.Generic.IList`1" /> containing all the entities in the given collection.
-            </returns>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetStringAsync">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.String" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,System.Text.Json.JsonSerializerOptions)">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
-            </summary>
-            <param name="anonymousTypeObject">
-                The anonymous type object.
-            </param>
-            <param name="jsonSerializerOptions">
-                The <see cref="T:System.Text.Json.JsonSerializerOptions" /> used to deserialize the object.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetBytesAsync">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.Byte" /> array.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetStreamAsync">
-            <summary>
-                Performs a GET request with the provided parameters and returns the result in a <see cref="T:System.IO.Stream" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.GetCountAsync">
-            <summary>
-                Performs a GET request that returns the count of an entity collection.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Object,System.Boolean)">
-            <summary>
-                Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type" />.
-            </summary>
-            <param name="data">
-                The object to be sent as the JSON body.
-            </param>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostStringAsync``1(System.String,System.Boolean)">
-            <summary>
-                Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type" />.
-            </summary>
-            <param name="data">
-                The JSON string to be sent as the request body.
-            </param>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Boolean)">
-            <summary>
-                Performs a POST request with the provided parameters and returns the result in the specified <see cref="T:System.Type" />.
-            </summary>
-            <typeparam name="T">
-                The object type for the result to be deserialized into.
-            </typeparam>
-            <param name="unwrapCollection">
-                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostAsync(System.Object)">
-            <summary>
-                Performs a POST request with the provided parameters.
-            </summary>
-            <param name="data">
-                The object to be sent as the JSON body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostReceiveStringAsync">
-            <summary>
-                Performs a POST request without parameters and returns the result in a <see cref="T:System.String" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostReceiveStringAsync(System.Object)">
-            <summary>
-                Performs a POST request with the provided parameters and returns the result in a <see cref="T:System.String" />.
-            </summary>
-            <param name="data">
-                The object to be sent as the JSON body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostStringAsync(System.String)">
-            <summary>
-                Performs a POST request with the provided parameters.
-            </summary>
-            <param name="data">
-                The JSON string to be sent as the request body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PostAsync">
-            <summary>
-                Performs a POST request with the provided parameters.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PatchAsync(System.Object)">
-            <summary>
-                Performs a PATCH request with the provided parameters.
-            </summary>
-            <param name="data">
-                The object to be sent as the JSON body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PatchStringAsync(System.String)">
-            <summary>
-                Performs a PATCH request with the provided parameters.
-            </summary>
-            <param name="data">
-                The JSON string to be sent as the request body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String)">
-            <summary>
-                Performs a PATCH request with the provided file.
-            </summary>
-            <param name="path">
-                The path to the file to be sent.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.Byte[])">
-            <summary>
-                Performs a PATCH request with the provided file.
-            </summary>
-            <param name="fileName">
-                The file name of the file including the file extension.
-            </param>
-            <param name="file">
-                The file to be sent.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.IO.Stream)">
-            <summary>
-                Performs a PATCH request with the provided file.
-            </summary>
-            <param name="fileName">
-                The file name of the file including the file extension.
-            </param>
-            <param name="file">
-                The file to be sent.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PutAsync(System.Object)">
-            <summary>
-                Performs a PUT request with the provided parameters.
-            </summary>
-            <param name="data">
-                The object to be sent as the JSON body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.PutStringAsync(System.String)">
-            <summary>
-                Performs a PUT request with the provided parameters.
-            </summary>
-            <param name="data">
-                The JSON string to be sent as the request body.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequest.DeleteAsync">
-            <summary>
-                Performs a DELETE request with the provided parameters.
-            </summary>
-        </member>
-        <member name="T:B1SLayer.SLRequestExtensions">
-            <summary>
-                Extension methods definitions for <see cref="T:B1SLayer.SLRequest" />.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Filter(B1SLayer.SLRequest,System.String)">
-            <summary>
-                Sets the clause to be used to filter records.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Select(B1SLayer.SLRequest,System.String)">
-            <summary>
-                Sets the explicit properties that should be returned.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.OrderBy(B1SLayer.SLRequest,System.String)">
-            <summary>
-                Sets the order in which entities should be returned.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Top(B1SLayer.SLRequest,System.Int32)">
-            <summary>
-                Sets the maximum number of first records to be included in the result.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Skip(B1SLayer.SLRequest,System.Int32)">
-            <summary>
-                Sets the number of first results to be excluded from the result.
-            </summary>
-            <remarks>
-                Where $top and $skip are used together, the $skip is applied before
-                the $top, regardless of the order of appearance in the request.
-                This can be used when implementing a pagination mechanism.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Apply(B1SLayer.SLRequest,System.String)">
-            <summary>
-                Sets the aggregation expression.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.Expand(B1SLayer.SLRequest,System.String)">
-            <summary>
-                Sets the navigation properties to be retrieved.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.SetQueryParam(B1SLayer.SLRequest,System.String,System.String)">
-            <summary>
-                Sets a custom query parameter to be sent.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithPageSize(B1SLayer.SLRequest,System.Int32)">
-            <summary>
-                Sets the page size when paging is applied for a query. The default value is 20.
-            </summary>
-            <param name="request">
-                The current request.
-            </param>
-            <param name="pageSize">
-                The page size to be defined for this request.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithCaseInsensitive(B1SLayer.SLRequest)">
-            <summary>
-                Enables a case-insensitive query.
-            </summary>
-            <remarks>
-                This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithReplaceCollectionsOnPatch(B1SLayer.SLRequest)">
-            <summary>
-                Allows a PATCH request to remove items in a collection.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithReturnNoContent(B1SLayer.SLRequest)">
-            <summary>
-                Configures a POST request to not return the created entity.
-                This is suitable for better performance in demanding scenarios where the return content is not needed.
-            </summary>
-            <remarks>
-                On success, <see cref="F:System.Net.HttpStatusCode.NoContent" /> is returned, instead of <see cref="F:System.Net.HttpStatusCode.Created" />.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithHeader(B1SLayer.SLRequest,System.String,System.Object)">
-            <summary>
-                Adds a custom request header to be sent.
-            </summary>
-            <param name="request">
-                The current request.
-            </param>
-            <param name="name">
-                The name of the header.
-            </param>
-            <param name="value">
-                The value of the header.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.AllowHttpStatus(B1SLayer.SLRequest,System.Net.HttpStatusCode[])">
-            <summary>
-                Configures the request to not throw an exception when the response has any of the provided <see cref="T:System.Net.HttpStatusCode" />.
-            </summary>
-            <remarks>
-                By default, every response with an unsuccessful <see cref="T:System.Net.HttpStatusCode" /> (non-2XX) will result in a throw.
-            </remarks>
-            <param name="request">
-                The current request.
-            </param>
-            <param name="statusCodes">
-                The <see cref="T:System.Net.HttpStatusCode" /> to be allowed.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.AllowAnyHttpStatus(B1SLayer.SLRequest)">
-            <summary>
-                Configures the request to allow a response with any <see cref="T:System.Net.HttpStatusCode" /> without resulting in a throw.
-            </summary>
-            <remarks>
-                By default, every response with an unsuccessful <see cref="T:System.Net.HttpStatusCode" /> (non-2XX) will result in a throw.
-            </remarks>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.IncludeNullValues(B1SLayer.SLRequest)">
-            <summary>
-                Configures the JSON serializer to include null values for this request.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithJsonSerializerOptions(B1SLayer.SLRequest,System.Text.Json.JsonSerializerOptions)">
-            <summary>
-                Sets a custom <see cref="T:System.Text.Json.JsonSerializerOptions" /> to be used for this request.
-            </summary>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithTimeout(B1SLayer.SLRequest,System.TimeSpan)">
-            <summary>
-                Configures a custom timeout value for this request. The default timeout is 100 seconds.
-            </summary>
-            <param name="request">
-                The current request.
-            </param>
-            <param name="timeout">
-                A <see cref="T:System.TimeSpan" /> representing the timeout value to be configured.
-            </param>
-        </member>
-        <member name="M:B1SLayer.SLRequestExtensions.WithTimeout(B1SLayer.SLRequest,System.Int32)">
-            <summary>
-                Configures a custom timeout value for this request. The default timeout is 100 seconds.
-            </summary>
-            <param name="request">
-                The current request.
-            </param>
-            <param name="timeout">
-                An <see cref="T:System.Int32" /> representing the timeout in seconds to be configured.
-            </param>
-        </member>
-    </members>
+  <assembly>
+    <name>B1SLayer</name>
+  </assembly>
+  <members>
+    <member name="T:B1SLayer.B1SLayerSettings">
+      <summary>
+        A static object for configuring B1SLayer.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.B1SLayerSettings.DistributedCache">
+      <summary>
+        Gets or sets the
+        <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" />
+        implementation to be used for session management. By default, an in-memory implementation is used.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLAttachment">
+      <summary>
+        Represents the details of an attachment entry.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachment.AbsoluteEntry">
+      <summary>
+        Gets or sets the ID of the attachment entry.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachment.Lines">
+      <summary>
+        Gets or sets the lines of the attachment entry.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLAttachmentLines">
+      <summary>
+        Represents the details of an attachment line.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.SourcePath">
+      <summary>
+        Gets or sets the source path of the file.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.FileName">
+      <summary>
+        Gets or sets the file name.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.FileExtension">
+      <summary>
+        Gets or sets the file extension.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.AttachmentDate">
+      <summary>
+        Gets or sets the attachment date.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.UserID">
+      <summary>
+        Gets or sets the user ID.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLAttachmentLines.Override">
+      <summary>
+        Gets or sets the override indication.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLBatchRequest">
+      <summary>
+        Represents a single request to be sent in a batch to the Service Layer.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequest.#ctor">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        class, which represents the details of a request to be sent in a batch.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequest.#ctor(System.Net.Http.HttpMethod,System.String,System.Object,System.Nullable{System.Int32})">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        class, which represents the details of a request to be sent in a batch.
+      </summary>
+      <param name="httpMethod">
+        The HTTP method to be used for this request.
+      </param>
+      <param name="resource">
+        The Service Layer resource to be requested.
+      </param>
+      <param name="data">
+        The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
+      </param>
+      <param name="contentID">
+        Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+        This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
+      </param>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.HttpMethod">
+      <summary>
+        Gets or sets the HTTP method to be used for this request.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.Resource">
+      <summary>
+        Gets or sets the Service Layer resource to be requested.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.Data">
+      <summary>
+        Gets or sets the JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.ContentID">
+      <summary>
+        Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+        This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.Encoding">
+      <summary>
+        Gets or sets the
+        <see cref="T:System.Text.Encoding" />
+        to be used for this request. UTF8 will be used by default.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.JsonSerializerOptions">
+      <summary>
+        Gets or sets the
+        <see cref="T:System.Text.Json.JsonSerializerOptions" />
+        to be used for this request.
+        By default it is configured so the
+        <see cref="P:System.Text.Json.JsonSerializerOptions.DefaultIgnoreCondition" />
+        is set to<see cref="F:System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull" />.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.HttpVersion">
+      <summary>
+        Gets or sets the HTTP message version to be used for this request. Version 1.1 will be used by default.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLBatchRequest.Headers">
+      <summary>
+        The HTTP headers to be sent in this request.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.Models.SLCollectionRoot`1">
+      <summary>
+        Represents the structure of a Service Layer collection.
+      </summary>
+      <typeparam name="T"></typeparam>
+    </member>
+    <member name="P:B1SLayer.Models.SLCollectionRoot`1.Value">
+      <summary>
+        Gets or sets the list that represents the JSON array containing the entities of the collection.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLink">
+      <summary>
+        Gets or sets the string that represents the link to the next page.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.Models.SLCollectionRoot`1.ODataNextLinkJson">
+      <summary>
+        Gets or sets the string that represents the link to the next page.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.Models.SLCollectionRoot`1.NextSkip">
+      <summary>
+        Gets the skip number to obtain the entities of the next page.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLLoginResponse">
+      <summary>
+        Represents the response details of a login request.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLLoginResponse.SessionId">
+      <summary>
+        Gets or sets the session ID of the session.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLLoginResponse.Version">
+      <summary>
+        Gets or sets the SBO version.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLLoginResponse.SessionTimeout">
+      <summary>
+        Gets or sets the session timeout.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLLoginResponse.LastLogin">
+      <summary>
+        Gets or sets the
+        <see cref="T:System.DateTime" />
+        of the last login.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLPingResponse">
+      <summary>
+        Represents the response of a ping request.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.Message">
+      <summary>
+        Gets or sets the message of a ping response.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.Sender">
+      <summary>
+        Gets or sets the sender of a ping response.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.Timestamp">
+      <summary>
+        Gets or sets the timestamp of a ping response.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.DateTime">
+      <summary>
+        Gets the corresponding
+        <see cref="T:System.DateTime" />
+        of a ping response based on the<see cref="P:B1SLayer.SLPingResponse.Timestamp" />.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.IsSuccessStatusCode">
+      <summary>
+        Whether the ping response was successful.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLPingResponse.StatusCode">
+      <summary>
+        Gets the
+        <see cref="T:System.Net.HttpStatusCode" />
+        of a ping response.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLResponseError">
+      <summary>
+        The root object that represents a Service Layer error.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLResponseError.Error">
+      <summary>
+        Gets or sets the details of a Service Layer error.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLErrorDetails">
+      <summary>
+        Represents the details of a Service Layer error.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLErrorDetails.Code">
+      <summary>
+        Gets or sets the error code of a Service Layer error.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLErrorDetails.Message">
+      <summary>
+        Gets or sets the error message of a Service Layer error.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLErrorMessage">
+      <summary>
+        Represents the message of a Service Layer error.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLErrorMessage.Lang">
+      <summary>
+        Gets or sets the message language of a Service Layer error.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLErrorMessage.Value">
+      <summary>
+        Gets or sets the message text of a Service Layer error.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.MultipartHelper">
+      <summary>
+        Provides helper methods for handling multipart HTTP responses and creating HTTP content.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.MultipartHelper.ReadMultipartResponseAsync(System.Net.Http.HttpResponseMessage)">
+      <summary>
+        Reads a multipart HTTP response and parses it into an array of
+        <see cref="T:System.Net.Http.HttpResponseMessage" />
+        objects.
+      </summary>
+      <param name="response">The HTTP response containing the multipart content.</param>
+      <returns>An array of
+        <see cref="T:System.Net.Http.HttpResponseMessage" />
+        objects representing the individual parts of the multipart response.
+      </returns>
+    </member>
+    <member name="M:B1SLayer.MultipartHelper.CreateHttpContentAsync(System.Net.Http.HttpRequestMessage,System.Threading.CancellationToken)">
+      <summary>
+        Creates an HTTP content from the provided HTTP request message.
+      </summary>
+      <param name="request">The HTTP request message.</param>
+      <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
+      <returns>A task representing the asynchronous operation, containing the created HTTP content.</returns>
+    </member>
+    <member
+        name="M:B1SLayer.MultipartHelper.PatchMultipartAsync(Flurl.Http.IFlurlRequest,System.Action{Flurl.Http.Content.CapturedMultipartContent},System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
+      <summary>
+        Flurl extension method to provide a PATCH method for multipart requests.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLBatchRequestExtensions">
+      <summary>
+        Extension methods definitions for<see cref="T:B1SLayer.SLBatchRequest" />.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequestExtensions.WithCaseInsensitive(B1SLayer.SLBatchRequest)">
+      <summary>
+        Enables a case-insensitive query.
+      </summary>
+      <remarks>
+        This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequestExtensions.WithReplaceCollectionsOnPatch(B1SLayer.SLBatchRequest)">
+      <summary>
+        Allows a PATCH request to remove items in a collection.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequestExtensions.WithReturnNoContent(B1SLayer.SLBatchRequest)">
+      <summary>
+        Configures a POST request to not return the created entity.
+        This is suitable for better performance in demanding scenarios where the return content is not needed.
+      </summary>
+      <remarks>
+        On success,
+        <see cref="F:System.Net.HttpStatusCode.NoContent" />
+        is returned, instead of<see cref="F:System.Net.HttpStatusCode.Created" />.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLBatchRequestExtensions.WithHeader(B1SLayer.SLBatchRequest,System.String,System.String)">
+      <summary>
+        Adds a custom request header to be sent.
+      </summary>
+      <param name="batchRequest">
+        The current request.
+      </param>
+      <param name="name">
+        The name of the header.
+      </param>
+      <param name="value">
+        The value of the header.
+      </param>
+    </member>
+    <member name="T:B1SLayer.SLConnection">
+      <summary>
+        Represents a connection to the Service Layer.
+      </summary>
+      <remarks>
+        Only one instance per company/user should be used in the application.
+      </remarks>
+    </member>
+    <member name="T:B1SLayer.SLConnection.ExceptionEqualityComparer">
+      <summary>
+        Used to aggregate exceptions that occur on request retries.
+      </summary>
+      <remarks>
+        In most cases, the same exception will occur multiple times,
+        but we don't want to return multiple copies of it. This class is used
+        to find exceptions that are duplicates by type and message so we can
+        only return one of them.
+      </remarks>
+    </member>
+    <member name="P:B1SLayer.SLConnection.Client">
+      <summary>
+        Gets the
+        <see cref="T:Flurl.Http.IFlurlClient" />
+        responsible for the requests to Service Layer.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.DistributedCache">
+      <summary>
+        Gets the
+        <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" />
+        implementation to be used for session management. By default, an in-memory implementation is used.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.SessionCacheKey">
+      <summary>
+        Gets or sets cache key to be used for the session cache.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.ServiceLayerRoot">
+      <summary>
+        Gets the Service Layer root URI.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.CompanyDB">
+      <summary>
+        Gets the Company database (schema) to connect to.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.UserName">
+      <summary>
+        Gets the username to be used for the Service Layer authentication.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.Password">
+      <summary>
+        Gets the password for the provided username.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.Language">
+      <summary>
+        Gets the Service Layer language code provided.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
+      <summary>
+        Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in<see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.BatchRequestTimeout">
+      <summary>
+        Gets or sets the timespan to wait before a batch request times out. The default value is 5 minutes (300 seconds).
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.IsUsingSingleSignOn">
+      <summary>
+        Gets whether this
+        <see cref="T:B1SLayer.SLConnection" />
+        instance is using Single Sign-On (SSO) authentication.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.LoginResponse">
+      <summary>
+        Gets information about the latest Login request.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLConnection.HttpStatusCodesToRetry">
+      <summary>
+        Gets a list of
+        <see cref="T:System.Net.HttpStatusCode" />
+        to be checked before retrying an unsuccessful request.
+      </summary>
+      <remarks>
+        The number of attempts is defined by<see cref="P:B1SLayer.SLConnection.NumberOfAttempts" />.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class.
+        Only one instance per company/user should be used in the application.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="companyDB">
+        The Company database (schema) to connect to.
+      </param>
+      <param name="userName">
+        The SAP user to be used for the Service Layer authentication.
+      </param>
+      <param name="password">
+        The password for the provided user.
+      </param>
+      <param name="language">
+        The language code to be used. Specify a code if you want error messages in some specific language other than English.
+        A GET request to the UserLanguages resource will return all available languages and their respective codes.
+      </param>
+      <param name="numberOfAttempts">
+        The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int32},System.Int32)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class.
+        Only one instance per company/user should be used in the application.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="companyDB">
+        The Company database (schema) to connect to.
+      </param>
+      <param name="userName">
+        The SAP user to be used for the Service Layer authentication.
+      </param>
+      <param name="password">
+        The password for the provided user.
+      </param>
+      <param name="language">
+        The language code to be used. Specify a code if you want error messages in some specific language other than English.
+        A GET request to the UserLanguages resource will return all available languages and their respective codes.
+      </param>
+      <param name="numberOfAttempts">
+        The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class.
+        Only one instance per company/user should be used in the application.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="companyDB">
+        The Company database (schema) to connect to.
+      </param>
+      <param name="userName">
+        The SAP user to be used for the Service Layer authentication.
+      </param>
+      <param name="password">
+        The password for the provided user.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.Int32})">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class.
+        Only one instance per company/user should be used in the application.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="companyDB">
+        The Company database (schema) to connect to.
+      </param>
+      <param name="userName">
+        The SAP user to be used for the Service Layer authentication.
+      </param>
+      <param name="password">
+        The password for the provided user.
+      </param>
+      <param name="language">
+        The language code to be used. Specify a code if you want error messages in some specific language other than English.
+        A GET request to the UserLanguages resource will return all available languages and their respective codes.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.Uri,System.Func{System.String,System.String},System.Int32,System.Int32)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class using Single Sign-On (SSO) authentication.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="getServiceLayerConnectionContext">
+        The reference for the UI API method responsible for obtaining the connection context
+        (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
+      </param>
+      <param name="sessionTimeout">
+        The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+        specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+      </param>
+      <param name="numberOfAttempts">
+        The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.#ctor(System.String,System.Func{System.String,System.String},System.Int32,System.Int32)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLConnection" />
+        class using Single Sign-On (SSO) authentication.
+      </summary>
+      <param name="serviceLayerRoot">
+        The Service Layer root URI. The expected format is https://[server]:[port]/b1s/[version]
+      </param>
+      <param name="getServiceLayerConnectionContext">
+        The reference for the UI API method responsible for obtaining the connection context
+        (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
+      </param>
+      <param name="sessionTimeout">
+        The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+        specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+      </param>
+      <param name="numberOfAttempts">
+        The number of attempts for each request in case of an HTTP response code of 401, 500, 502, 503 or 504.
+        If the response code is 401 (Unauthorized), a login request will be performed before the new attempt.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.LoginAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST Login request with the provided information, regardless of the current session state.
+      </summary>
+      <remarks>
+        Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
+      </remarks>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.ExecuteLoginAsync(System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs the POST Login request to the Service Layer.
+      </summary>
+      <param name="expectReturn">
+        Whether the login information should be returned.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.GetSessionCookiesAsync(System.Threading.CancellationToken)">
+      <summary>
+        Obtains the current session cookies from the distribued cache.
+        A login is performed if no valid cookies are retrieved from cache.
+      </summary>
+      <returns>
+        The current session cookies to be used in each request.
+      </returns>
+    </member>
+    <member name="M:B1SLayer.SLConnection.SetSessionCookiesAsync(Flurl.Http.CookieJar,System.TimeSpan,System.Threading.CancellationToken)">
+      <summary>
+        Sets the given session cookies to the distributed cache.
+      </summary>
+      <param name="cookies">
+        The cookies to be set to the distributed cache.
+      </param>
+      <param name="slidingExpiration">
+        The sliding expiration time for the session cache.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.InvalidateSessionCacheAsync(System.Threading.CancellationToken)">
+      <summary>
+        Removes the current active session from the distributed cache.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.CreateCookieJarFromConnectionContext(System.String)">
+      <summary>
+        Creates a
+        <see cref="T:Flurl.Http.CookieJar" />
+        instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
+      </summary>
+      <param name="connectionContext">
+        The connection context string obtained from UI API.
+      </param>
+      <returns>
+        A
+        <see cref="T:Flurl.Http.CookieJar" />
+        instance containing session cookies obtained after a successful authentication.
+      </returns>
+    </member>
+    <member name="M:B1SLayer.SLConnection.LogoutAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST Logout request, ending the current session.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.Request(System.String)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLRequest" />
+        class that represents a request to the associated<see cref="T:B1SLayer.SLConnection" />.
+      </summary>
+      <remarks>
+        The request can be configured using the extension methods provided in<see cref="T:B1SLayer.SLRequestExtensions" />.
+      </remarks>
+      <param name="resource">
+        The resource name to be requested.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.Request(System.String,System.Object)">
+      <summary>
+        Initializes a new instance of the
+        <see cref="T:B1SLayer.SLRequest" />
+        class that represents a request to the associated<see cref="T:B1SLayer.SLConnection" />.
+      </summary>
+      <remarks>
+        The request can be configured using the extension methods provided in<see cref="T:B1SLayer.SLRequestExtensions" />.
+      </remarks>
+      <param name="resource">
+        The resource name to be requested.
+      </param>
+      <param name="id">
+        The entity ID to be requested.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.ExecuteRequest``1(System.Func{System.Threading.Tasks.Task{``0}},System.Threading.CancellationToken)">
+      <summary>
+        Calls the Login method to ensure a valid session and then executes the provided request.
+        If the request is unsuccessfull with any return code present in<see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />,
+        it will be retried for
+        <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" />
+        number of times.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PingAsync(System.Threading.CancellationToken)">
+      <summary>
+        Provides a direct response from the Apache server that can be used for network testing and component monitoring.
+        In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+      </summary>
+      <remarks>
+        This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+      </remarks>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLPingResponse" />
+        object containing the response details.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PingNodeAsync(System.Nullable{System.Int32},System.Threading.CancellationToken)">
+      <summary>
+        Provides a direct response from the Apache server that can be used for network testing and component monitoring.
+        In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+      </summary>
+      <remarks>
+        This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+      </remarks>
+      <param name="node">
+        The specific node to be monitored. If not specified, the request will be directed to the load balancer.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLPingResponse" />
+        object containing the response details.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.ExecutePingAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Performs the ping request with the provided path segment.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLConnection.BeforeCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+      <summary>
+        Sets a
+        <see cref="T:System.Func`2" />
+        delegate that is called before every Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+        Response-related properties will be null in BeforeCall.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.BeforeCall(System.Action{Flurl.Http.FlurlCall})">
+      <summary>
+        Sets a
+        <see cref="T:System.Action`1" />
+        delegate that is called before every Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+        Response-related properties will be null in BeforeCall.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.AfterCall(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+      <summary>
+        Sets a
+        <see cref="T:System.Func`2" />
+        delegate that is called after every Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.AfterCall(System.Action{Flurl.Http.FlurlCall})">
+      <summary>
+        Sets a
+        <see cref="T:System.Action`1" />
+        delegate that is called after every Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.OnError(System.Func{Flurl.Http.FlurlCall,System.Threading.Tasks.Task})">
+      <summary>
+        Sets a
+        <see cref="T:System.Func`2" />
+        delegate that is called after every unsuccessful Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.OnError(System.Action{Flurl.Http.FlurlCall})">
+      <summary>
+        Sets a
+        <see cref="T:System.Action`1" />
+        delegate that is called after every unsuccessful Service Layer request.
+      </summary>
+      <remarks>
+        The
+        <see cref="T:Flurl.Http.FlurlCall" />
+        object provides various details about the call than can be used for logging and error handling.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Uploads the provided file as an attachment.
+      </summary>
+      <remarks>
+        An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="path">
+        The path to the file to be uploaded.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLAttachment" />
+        object with information about the created attachment entry.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.Byte[],System.Threading.CancellationToken)">
+      <summary>
+        Uploads the provided file as an attachment.
+      </summary>
+      <remarks>
+        An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="fileName">
+        The file name of the file to be uploaded including the file extension.
+      </param>
+      <param name="file">
+        The file to be uploaded.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLAttachment" />
+        object with information about the created attachment entry.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.IO.Stream,System.Threading.CancellationToken)">
+      <summary>
+        Uploads the provided file as an attachment.
+      </summary>
+      <remarks>
+        An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="fileName">
+        The file name of the file to be uploaded including the file extension.
+      </param>
+      <param name="file">
+        The file to be uploaded.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLAttachment" />
+        object with information about the created attachment entry.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.Byte[]},System.Threading.CancellationToken)">
+      <summary>
+        Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+      </summary>
+      <remarks>
+        An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="files">
+        A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLAttachment" />
+        object with information about the created attachment entry.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.IO.Stream},System.Threading.CancellationToken)">
+      <summary>
+        Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+      </summary>
+      <remarks>
+        An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="files">
+        A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
+      </param>
+      <returns>
+        A
+        <see cref="T:B1SLayer.SLAttachment" />
+        object with information about the created attachment entry.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String,System.Threading.CancellationToken)">
+      <summary>
+        Updates an existing attachment entry with the provided file. If the file already exists
+        in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be updated.
+      </param>
+      <param name="path">
+        The file path for the file to be updated including the file extension.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String,System.Byte[],System.Threading.CancellationToken)">
+      <summary>
+        Updates an existing attachment entry with the provided file. If the file already exists
+        in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be updated.
+      </param>
+      <param name="fileName">
+        The file name of the file to be updated including the file extension.
+      </param>
+      <param name="file">
+        The file to be updated.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PatchAttachmentAsync(System.Int32,System.String,System.IO.Stream,System.Threading.CancellationToken)">
+      <summary>
+        Updates an existing attachment entry with the provided file. If the file already exists
+        in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be updated.
+      </param>
+      <param name="fileName">
+        The file name of the file to be updated including the file extension.
+      </param>
+      <param name="file">
+        The file to be updated.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member
+        name="M:B1SLayer.SLConnection.PatchAttachmentsAsync(System.Int32,System.Collections.Generic.IDictionary{System.String,System.Byte[]},System.Threading.CancellationToken)">
+      <summary>
+        Updates an existing attachment entry with the provided files. If the file already exists
+        in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be updated.
+      </param>
+      <param name="files">
+        A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member
+        name="M:B1SLayer.SLConnection.PatchAttachmentsAsync(System.Int32,System.Collections.Generic.IDictionary{System.String,System.IO.Stream},System.Threading.CancellationToken)">
+      <summary>
+        Updates an existing attachment entry with the provided files. If the file already exists
+        in the attachment entry, it will be replaced. Otherwise, a new attachment line is added.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be updated.
+      </param>
+      <param name="files">
+        A Dictionary containing the files to be updated, where the file name is the Key and the file is the Value.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.GetAttachmentAsStreamAsync(System.Int32,System.String,System.Threading.CancellationToken)">
+      <summary>
+        Downloads the specified attachment file as a<see cref="T:System.IO.Stream" />. By default, the first attachment
+        line is downloaded if there are multiple attachment lines in one attachment.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be downloaded.
+      </param>
+      <param name="fileName">
+        The file name of the attachment to be downloaded (including the file extension). Only required if
+        you want to download an attachment line other than the first attachment line.
+      </param>
+      <returns>
+        The downloaded attachment file as a<see cref="T:System.IO.Stream" />.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.GetAttachmentAsBytesAsync(System.Int32,System.String,System.Threading.CancellationToken)">
+      <summary>
+        Downloads the specified attachment file as a
+        <see cref="T:System.Byte" />
+        array. By default, the first attachment
+        line is downloaded if there are multiple attachment lines in one attachment.
+      </summary>
+      <param name="attachmentEntry">
+        The attachment entry ID to be downloaded.
+      </param>
+      <param name="fileName">
+        The file name of the attachment to be downloaded (including the file extension). Only required if
+        you want to download an attachment line other than the first attachment line.
+      </param>
+      <returns>
+        The downloaded attachment file as a
+        <see cref="T:System.Byte" />
+        array.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostBatchAsync(B1SLayer.SLBatchRequest[])">
+      <summary>
+        Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        instances.
+        All requests are sent in a single change set.
+      </summary>
+      <remarks>
+        See section 'Batch Operations' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="requests">
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        instances to be sent in the batch.
+      </param>
+      <returns>
+        An
+        <see cref="T:System.Net.Http.HttpResponseMessage" />
+        array containg the response messages of the batch request.
+      </returns>
+    </member>
+    <member name="M:B1SLayer.SLConnection.PostBatchAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        collection.
+      </summary>
+      <remarks>
+        See section 'Batch Operations' in the Service Layer User Manual for more details.
+      </remarks>
+      <param name="requests">
+        A collection of
+        <see cref="T:B1SLayer.SLBatchRequest" />
+        to be sent in the batch.
+      </param>
+      <param name="singleChangeSet">
+        Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful request will cause the whole batch to be rolled back.
+      </param>
+      <returns>
+        An
+        <see cref="T:System.Net.Http.HttpResponseMessage" />
+        array containg the response messages of the batch request.
+      </returns>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member
+        name="M:B1SLayer.SLConnection.BuildBatchContentsAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Builds the list of
+        <see cref="T:System.Net.Http.HttpContent" />
+        parts for a batch request.
+        GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLConnection.BuildHttpContentFromBatchRequestAsync(B1SLayer.SLBatchRequest,System.Threading.CancellationToken)">
+      <summary>
+        Builds an
+        <see cref="T:System.Net.Http.HttpContent" />
+        from a given<see cref="T:B1SLayer.SLBatchRequest" />.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLConnection.IsQueryMethod(System.Net.Http.HttpMethod)">
+      <summary>
+        Determines whether the given HTTP method is a query (non-mutation) method.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLException">
+      <summary>
+        Represents a Service Layer exception.
+      </summary>
+    </member>
+    <member name="P:B1SLayer.SLException.ErrorDetails">
+      <summary>
+        Gets or sets the error details of a Service Layer exception.
+      </summary>
+    </member>
+    <member name="T:B1SLayer.SLRequest">
+      <summary>
+        Represents a request to the Service Layer.
+      </summary>
+      <remarks>
+        The request can be configured using the extension methods provided in<see cref="T:B1SLayer.SLRequestExtensions" />.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
+      </summary>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="unwrapCollection">
+        Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetWithInlineCountAsync``1(System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+      </summary>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="unwrapCollection">
+        Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetAllAsync``1(System.Threading.CancellationToken)">
+      <summary>
+        Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
+      </summary>
+      <remarks>
+        This can be very slow depending on the total amount of entities in the company database.
+      </remarks>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+      <returns>
+        An
+        <see cref="T:System.Collections.Generic.IList`1" />
+        containing all the entities in the given collection.
+      </returns>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetStringAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in a<see cref="T:System.String" />.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,System.Text.Json.JsonSerializerOptions,System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+      </summary>
+      <param name="anonymousTypeObject">
+        The anonymous type object.
+      </param>
+      <param name="jsonSerializerOptions">
+        The
+        <see cref="T:System.Text.Json.JsonSerializerOptions" />
+        used to deserialize the object.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetBytesAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in a
+        <see cref="T:System.Byte" />
+        array.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetStreamAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request with the provided parameters and returns the result in a<see cref="T:System.IO.Stream" />.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.GetCountAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a GET request that returns the count of an entity collection.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Object,System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters and returns the result in the specified<see cref="T:System.Type" />.
+      </summary>
+      <param name="data">
+        The object to be sent as the JSON body.
+      </param>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="unwrapCollection">
+        Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostStringAsync``1(System.String,System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters and returns the result in the specified<see cref="T:System.Type" />.
+      </summary>
+      <param name="data">
+        The JSON string to be sent as the request body.
+      </param>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="unwrapCollection">
+        Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostAsync``1(System.Boolean,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters and returns the result in the specified<see cref="T:System.Type" />.
+      </summary>
+      <typeparam name="T">
+        The object type for the result to be deserialized into.
+      </typeparam>
+      <param name="unwrapCollection">
+        Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostAsync(System.Object,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters.
+      </summary>
+      <param name="data">
+        The object to be sent as the JSON body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostReceiveStringAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request without parameters and returns the result in a<see cref="T:System.String" />.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostReceiveStringAsync(System.Object,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters and returns the result in a<see cref="T:System.String" />.
+      </summary>
+      <param name="data">
+        The object to be sent as the JSON body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostStringAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters.
+      </summary>
+      <param name="data">
+        The JSON string to be sent as the request body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PostAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a POST request with the provided parameters.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PatchAsync(System.Object,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PATCH request with the provided parameters.
+      </summary>
+      <param name="data">
+        The object to be sent as the JSON body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PatchStringAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PATCH request with the provided parameters.
+      </summary>
+      <param name="data">
+        The JSON string to be sent as the request body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PATCH request with the provided file.
+      </summary>
+      <param name="path">
+        The path to the file to be sent.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.Byte[],System.Threading.CancellationToken)">
+      <summary>
+        Performs a PATCH request with the provided file.
+      </summary>
+      <param name="fileName">
+        The file name of the file including the file extension.
+      </param>
+      <param name="file">
+        The file to be sent.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PatchWithFileAsync(System.String,System.IO.Stream,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PATCH request with the provided file.
+      </summary>
+      <param name="fileName">
+        The file name of the file including the file extension.
+      </param>
+      <param name="file">
+        The file to be sent.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PutAsync(System.Object,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PUT request with the provided parameters.
+      </summary>
+      <param name="data">
+        The object to be sent as the JSON body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.PutStringAsync(System.String,System.Threading.CancellationToken)">
+      <summary>
+        Performs a PUT request with the provided parameters.
+      </summary>
+      <param name="data">
+        The JSON string to be sent as the request body.
+      </param>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequest.DeleteAsync(System.Threading.CancellationToken)">
+      <summary>
+        Performs a DELETE request with the provided parameters.
+      </summary>
+      <param name="cancellationToken">
+        A token to cancel the asynchronous operation.
+      </param>
+    </member>
+    <member name="T:B1SLayer.SLRequestExtensions">
+      <summary>
+        Extension methods definitions for<see cref="T:B1SLayer.SLRequest" />.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Filter(B1SLayer.SLRequest,System.String)">
+      <summary>
+        Sets the clause to be used to filter records.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Select(B1SLayer.SLRequest,System.String)">
+      <summary>
+        Sets the explicit properties that should be returned.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.OrderBy(B1SLayer.SLRequest,System.String)">
+      <summary>
+        Sets the order in which entities should be returned.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Top(B1SLayer.SLRequest,System.Int32)">
+      <summary>
+        Sets the maximum number of first records to be included in the result.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Skip(B1SLayer.SLRequest,System.Int32)">
+      <summary>
+        Sets the number of first results to be excluded from the result.
+      </summary>
+      <remarks>
+        Where $top and $skip are used together, the $skip is applied before
+        the $top, regardless of the order of appearance in the request.
+        This can be used when implementing a pagination mechanism.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Apply(B1SLayer.SLRequest,System.String)">
+      <summary>
+        Sets the aggregation expression.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.Expand(B1SLayer.SLRequest,System.String)">
+      <summary>
+        Sets the navigation properties to be retrieved.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.SetQueryParam(B1SLayer.SLRequest,System.String,System.String)">
+      <summary>
+        Sets a custom query parameter to be sent.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithPageSize(B1SLayer.SLRequest,System.Int32)">
+      <summary>
+        Sets the page size when paging is applied for a query. The default value is 20.
+      </summary>
+      <param name="request">
+        The current request.
+      </param>
+      <param name="pageSize">
+        The page size to be defined for this request.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithCaseInsensitive(B1SLayer.SLRequest)">
+      <summary>
+        Enables a case-insensitive query.
+      </summary>
+      <remarks>
+        This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithReplaceCollectionsOnPatch(B1SLayer.SLRequest)">
+      <summary>
+        Allows a PATCH request to remove items in a collection.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithReturnNoContent(B1SLayer.SLRequest)">
+      <summary>
+        Configures a POST request to not return the created entity.
+        This is suitable for better performance in demanding scenarios where the return content is not needed.
+      </summary>
+      <remarks>
+        On success,
+        <see cref="F:System.Net.HttpStatusCode.NoContent" />
+        is returned, instead of<see cref="F:System.Net.HttpStatusCode.Created" />.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithHeader(B1SLayer.SLRequest,System.String,System.Object)">
+      <summary>
+        Adds a custom request header to be sent.
+      </summary>
+      <param name="request">
+        The current request.
+      </param>
+      <param name="name">
+        The name of the header.
+      </param>
+      <param name="value">
+        The value of the header.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.AllowHttpStatus(B1SLayer.SLRequest,System.Net.HttpStatusCode[])">
+      <summary>
+        Configures the request to not throw an exception when the response has any of the provided<see cref="T:System.Net.HttpStatusCode" />.
+      </summary>
+      <remarks>
+        By default, every response with an unsuccessful
+        <see cref="T:System.Net.HttpStatusCode" />
+        (non-2XX) will result in a throw.
+      </remarks>
+      <param name="request">
+        The current request.
+      </param>
+      <param name="statusCodes">
+        The
+        <see cref="T:System.Net.HttpStatusCode" />
+        to be allowed.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.AllowAnyHttpStatus(B1SLayer.SLRequest)">
+      <summary>
+        Configures the request to allow a response with any
+        <see cref="T:System.Net.HttpStatusCode" />
+        without resulting in a throw.
+      </summary>
+      <remarks>
+        By default, every response with an unsuccessful
+        <see cref="T:System.Net.HttpStatusCode" />
+        (non-2XX) will result in a throw.
+      </remarks>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.IncludeNullValues(B1SLayer.SLRequest)">
+      <summary>
+        Configures the JSON serializer to include null values for this request.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithJsonSerializerOptions(B1SLayer.SLRequest,System.Text.Json.JsonSerializerOptions)">
+      <summary>
+        Sets a custom
+        <see cref="T:System.Text.Json.JsonSerializerOptions" />
+        to be used for this request.
+      </summary>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithTimeout(B1SLayer.SLRequest,System.TimeSpan)">
+      <summary>
+        Configures a custom timeout value for this request. The default timeout is 100 seconds.
+      </summary>
+      <param name="request">
+        The current request.
+      </param>
+      <param name="timeout">
+        A
+        <see cref="T:System.TimeSpan" />
+        representing the timeout value to be configured.
+      </param>
+    </member>
+    <member name="M:B1SLayer.SLRequestExtensions.WithTimeout(B1SLayer.SLRequest,System.Int32)">
+      <summary>
+        Configures a custom timeout value for this request. The default timeout is 100 seconds.
+      </summary>
+      <param name="request">
+        The current request.
+      </param>
+      <param name="timeout">
+        An
+        <see cref="T:System.Int32" />
+        representing the timeout in seconds to be configured.
+      </param>
+    </member>
+  </members>
 </doc>
