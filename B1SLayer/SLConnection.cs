@@ -454,6 +454,8 @@ public class SLConnection
         }
         catch (FlurlHttpException ex)
         {
+            ex.ThrowIfCallerCancellationRequested(cancellationToken);
+
             try
             {
                 if (ex.Call.HttpResponseMessage == null)
@@ -607,6 +609,8 @@ public class SLConnection
         }
         catch (FlurlHttpException ex)
         {
+            ex.ThrowIfCallerCancellationRequested(cancellationToken);
+
             try
             {
                 if (ex.Call.HttpResponseMessage == null)
@@ -689,6 +693,8 @@ public class SLConnection
             }
             catch (FlurlHttpException ex)
             {
+                ex.ThrowIfCallerCancellationRequested(cancellationToken);
+
                 exceptions ??= new List<Exception>();
 
                 try
@@ -796,6 +802,8 @@ public class SLConnection
         }
         catch (FlurlHttpException ex)
         {
+            ex.ThrowIfCallerCancellationRequested(cancellationToken);
+
             try
             {
                 if (ex.Call.HttpResponseMessage == null)

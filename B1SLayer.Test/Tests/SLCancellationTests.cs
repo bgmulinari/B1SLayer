@@ -2,12 +2,15 @@ using B1SLayer.Models;
 using B1SLayer.Test.Models;
 
 using Flurl;
+using Flurl.Http;
+using Flurl.Http.Testing;
 
 namespace B1SLayer.Test;
 
 public class SLCancellationTests : TestBase
 {
     private const string RetryableErrorResponse = "{\"error\":{\"message\":{\"value\":\"Server error\"}}}";
+    private const string WrappedCancellationMessage = "Caller cancellation.";
 
     public static IEnumerable<object[]> CancelledRequestOperations()
     {
@@ -107,6 +110,101 @@ public class SLCancellationTests : TestBase
         HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
             .WithVerb(HttpMethod.Get)
             .Times(1);
+    }
+
+    [Theory]
+    [MemberData(nameof(IsolatedSLConnections))]
+    public async Task ExecuteRequest_WhenFlurlWrapsCallerCancellation_ThrowsOperationCanceledException(SLConnection slConnection)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.ForCallsTo("*/b1s/v*/Login").RespondWithJson(LoginResponse, cookies: new { B1SESSION = "session", ROUTEID = ".node1" });
+        httpTest.ForCallsTo("*/b1s/v*/Orders").SimulateException(new TaskCanceledException(WrappedCancellationMessage));
+
+        using var cts = new CancellationTokenSource();
+        slConnection.OnError(_ => cts.Cancel());
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            slConnection.Request("Orders").GetStringAsync(cts.Token));
+
+        AssertWrappedFlurlCancellation(exception, cts.Token);
+    }
+
+    [Theory]
+    [MemberData(nameof(IsolatedSLConnections))]
+    public async Task LoginAsync_WhenFlurlWrapsCallerCancellation_ThrowsOperationCanceledException(SLConnection slConnection)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.ForCallsTo("*/b1s/v*/Login").SimulateException(new TaskCanceledException(WrappedCancellationMessage));
+
+        using var cts = new CancellationTokenSource();
+        slConnection.OnError(_ => cts.Cancel());
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => slConnection.LoginAsync(cts.Token));
+
+        AssertWrappedFlurlCancellation(exception, cts.Token);
+    }
+
+    [Theory]
+    [MemberData(nameof(IsolatedSLConnections))]
+    public async Task LogoutAsync_WhenFlurlWrapsCallerCancellation_ThrowsOperationCanceledException(SLConnection slConnection)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.ForCallsTo("*/b1s/v*/Login").RespondWithJson(LoginResponse, cookies: new { B1SESSION = "session", ROUTEID = ".node1" });
+        httpTest.ForCallsTo("*/b1s/v*/Logout").SimulateException(new TaskCanceledException(WrappedCancellationMessage));
+
+        using var cts = new CancellationTokenSource();
+        slConnection.OnError(_ => cts.Cancel());
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => slConnection.LogoutAsync(cts.Token));
+
+        AssertWrappedFlurlCancellation(exception, cts.Token);
+    }
+
+    [Theory]
+    [MemberData(nameof(IsolatedSLConnections))]
+    public async Task PingAsync_WhenFlurlWrapsCallerCancellation_ThrowsOperationCanceledException(SLConnection slConnection)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.SimulateException(new TaskCanceledException(WrappedCancellationMessage));
+
+        using var cts = new CancellationTokenSource();
+        slConnection.OnError(_ => cts.Cancel());
+
+        var exception = await Assert.ThrowsAsync<OperationCanceledException>(() => slConnection.PingAsync(cts.Token));
+
+        AssertWrappedFlurlCancellation(exception, cts.Token);
+    }
+
+    [Fact]
+    public void FlurlHttpExceptionExtensions_WhenFlurlTimeoutAndCallerTokenIsCancelled_DoesNotNormalize()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var timeoutException = new FlurlHttpTimeoutException(null, new TaskCanceledException(WrappedCancellationMessage));
+
+        var exception = Record.Exception(() =>
+            timeoutException.ThrowIfCallerCancellationRequested(cts.Token));
+
+        Assert.Null(exception);
+    }
+
+    [Theory]
+    [MemberData(nameof(IsolatedSLConnections))]
+    public async Task ExecuteRequest_WhenHttpFailureCancelsToken_DoesNotNormalizeToOperationCanceledException(
+        SLConnection slConnection)
+    {
+        using var httpTest = new HttpTest();
+        httpTest.ForCallsTo("*/b1s/v*/Login").RespondWithJson(LoginResponse, cookies: new { B1SESSION = "session", ROUTEID = ".node1" });
+        httpTest.ForCallsTo("*/b1s/v*/Orders").RespondWith(RetryableErrorResponse, 400);
+
+        using var cts = new CancellationTokenSource();
+        slConnection.OnError(_ => cts.Cancel());
+
+        var exception = await Assert.ThrowsAsync<SLException>(() =>
+            slConnection.Request("Orders").GetStringAsync(cts.Token));
+
+        Assert.Equal("Server error", exception.Message);
     }
 
     private async Task ExecuteRequestOperationAsync(
@@ -305,6 +403,14 @@ public class SLCancellationTests : TestBase
     private static SLConnection CreateIsolatedConnection(Uri serviceLayerRoot)
     {
         return new SLConnection(serviceLayerRoot, "CompanyDB", $"manager-{Guid.NewGuid():N}", "12345");
+    }
+
+    private static void AssertWrappedFlurlCancellation(OperationCanceledException exception, CancellationToken cancellationToken)
+    {
+        Assert.Equal(cancellationToken, exception.CancellationToken);
+
+        var flurlException = Assert.IsType<FlurlHttpException>(exception.InnerException);
+        Assert.IsType<TaskCanceledException>(flurlException.InnerException);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)
