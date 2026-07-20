@@ -7,25 +7,25 @@ namespace B1SLayer;
 
 internal class SystemTextJsonSerializer : ISerializer
 {
-    private readonly JsonSerializerOptions _options;
-
     public SystemTextJsonSerializer(JsonSerializerOptions options)
     {
-        _options = options ?? new JsonSerializerOptions();
+        Options = options ?? new JsonSerializerOptions();
     }
+
+    internal JsonSerializerOptions Options { get; }
 
     public string Serialize(object obj)
     {
-        return JsonSerializer.Serialize(obj, _options);
+        return JsonSerializer.Serialize(obj, Options);
     }
 
     public T Deserialize<T>(string s)
     {
-        return JsonSerializer.Deserialize<T>(s, _options);
+        return JsonSerializer.Deserialize<T>(s, Options);
     }
 
     public T Deserialize<T>(Stream stream)
     {
-        return JsonSerializer.Deserialize<T>(stream, _options);
+        return JsonSerializer.Deserialize<T>(stream, Options);
     }
 }
