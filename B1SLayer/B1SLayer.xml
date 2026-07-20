@@ -954,6 +954,24 @@
             The request can be configured using the extension methods provided in <see cref="T:B1SLayer.SLRequestExtensions"/>.
             </remarks>
         </member>
+        <member name="M:B1SLayer.SLRequest.DeserializeResponse``1(System.String)">
+            <summary>
+            Deserializes a JSON response through the effective Flurl serializer, honoring any
+            custom serializer configured at the request or connection level.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequest.ParseAndDeserialize``1(System.String,System.Boolean)">
+            <summary>
+            Parses a JSON response and deserializes it through the effective serializer,
+            unwrapping the OData 'value' collection when requested.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequest.ResponseDocumentOptions">
+            <summary>
+            Carries the reader-affecting serializer options into the initial JsonDocument parse,
+            so options like AllowTrailingCommas are honored before deserialization runs.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean)">
             <summary>
             Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
@@ -1003,7 +1021,8 @@
             The anonymous type object.
             </param>
             <param name="jsonSerializerOptions">
-            The <see cref="T:System.Text.Json.JsonSerializerOptions"/> used to deserialize the object.
+            The <see cref="T:System.Text.Json.JsonSerializerOptions"/> used to deserialize the object. When not provided,
+            the serializer configured at the request or connection level is used.
             </param>
         </member>
         <member name="M:B1SLayer.SLRequest.GetBytesAsync">

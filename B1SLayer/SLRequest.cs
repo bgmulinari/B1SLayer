@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace B1SLayer;
@@ -30,6 +29,57 @@ public class SLRequest
     }
 
     /// <summary>
+    /// Deserializes a JSON response through the effective Flurl serializer, honoring any
+    /// custom serializer configured at the request or connection level.
+    /// </summary>
+    private T DeserializeResponse<T>(string json) =>
+        FlurlRequest.Settings.JsonSerializer.Deserialize<T>(json);
+
+    /// <summary>
+    /// Parses a JSON response and deserializes it through the effective serializer,
+    /// unwrapping the OData 'value' collection when requested.
+    /// </summary>
+    private T ParseAndDeserialize<T>(string json, bool unwrapCollection)
+    {
+        using var jsonDoc = JsonDocument.Parse(json, ResponseDocumentOptions);
+        return DeserializeRoot<T>(jsonDoc.RootElement, unwrapCollection);
+    }
+
+    private T DeserializeRoot<T>(JsonElement root, bool unwrapCollection)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+            return DeserializeElement<T>(root);
+
+        if (typeof(T) == typeof(string))
+            return (T)(object)root.GetRawText();
+
+        var element = unwrapCollection && root.TryGetProperty("value", out var valueCollection)
+            ? valueCollection
+            : root;
+
+        return DeserializeElement<T>(element);
+    }
+
+    private T DeserializeElement<T>(JsonElement element) =>
+        FlurlRequest.Settings.JsonSerializer is SystemTextJsonSerializer stjSerializer
+            ? element.Deserialize<T>(stjSerializer.Options)
+            : FlurlRequest.Settings.JsonSerializer.Deserialize<T>(element.GetRawText());
+
+    /// <summary>
+    /// Carries the reader-affecting serializer options into the initial JsonDocument parse,
+    /// so options like AllowTrailingCommas are honored before deserialization runs.
+    /// </summary>
+    private JsonDocumentOptions ResponseDocumentOptions =>
+        FlurlRequest.Settings.JsonSerializer is SystemTextJsonSerializer stjSerializer
+            ? new JsonDocumentOptions
+            {
+                AllowTrailingCommas = stjSerializer.Options.AllowTrailingCommas,
+                CommentHandling = stjSerializer.Options.ReadCommentHandling,
+                MaxDepth = stjSerializer.Options.MaxDepth
+            }
+            : default;
+
+    /// <summary>
     /// Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
     /// </summary>
     /// <typeparam name="T">
@@ -45,20 +95,7 @@ public class SLRequest
             string stringResult = await FlurlRequest
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
-            using var jsonDoc = JsonDocument.Parse(stringResult);
-            var root = jsonDoc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
-
-            if (typeof(T) == typeof(string))
-                return (T)(object)root.GetRawText();
-
-            string jsonToDeserialize = (unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection))
-                ? valueCollection.GetRawText()
-                : root.GetRawText();
-
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
         });
     }
 
@@ -79,11 +116,11 @@ public class SLRequest
                 .SetQueryParam("$inlinecount", "allpages")
                 .WithCookies(await _slConnection.GetSessionCookiesAsync())
                 .GetStringAsync();
-            using var jsonDoc = JsonDocument.Parse(stringResult);
+            using var jsonDoc = JsonDocument.Parse(stringResult, ResponseDocumentOptions);
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return (root.Deserialize<T>(), 0);
+                return (DeserializeElement<T>(root), 0);
 
             if (typeof(T) == typeof(string))
                 return ((T)(object)root.GetRawText(), 0);
@@ -107,11 +144,7 @@ public class SLRequest
                 }
             }
 
-            string jsonToDeserialize =
-                unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
-                root.GetRawText();
-
-            T result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            T result = DeserializeRoot<T>(root, unwrapCollection);
             return (result, inlineCount);
         });
     }
@@ -170,17 +203,17 @@ public class SLRequest
     /// The anonymous type object.
     /// </param>
     /// <param name="jsonSerializerOptions">
-    /// The <see cref="JsonSerializerOptions"/> used to deserialize the object.
+    /// The <see cref="JsonSerializerOptions"/> used to deserialize the object. When not provided,
+    /// the serializer configured at the request or connection level is used.
     /// </param>
     public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
     {
         return await _slConnection.ExecuteRequest(async () =>
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
-            return JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions ?? new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
+            return jsonSerializerOptions is null
+                ? DeserializeResponse<T>(stringResult)
+                : JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions);
         });
     }
 
@@ -236,18 +269,7 @@ public class SLRequest
         return await _slConnection.ExecuteRequest(async () =>
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
-            using var jsonDoc = JsonDocument.Parse(stringResult);
-            var root = jsonDoc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
-
-            if (typeof(T) == typeof(string))
-                return (T)(object)root.GetRawText();
-
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
         });
     }
 
@@ -268,18 +290,7 @@ public class SLRequest
         return await _slConnection.ExecuteRequest(async () =>
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
-            using var jsonDoc = JsonDocument.Parse(stringResult);
-            var root = jsonDoc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
-
-            if (typeof(T) == typeof(string))
-                return (T)(object)root.GetRawText();
-
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
         });
     }
 
@@ -297,18 +308,7 @@ public class SLRequest
         return await _slConnection.ExecuteRequest(async () =>
         {
             string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
-            using var jsonDoc = JsonDocument.Parse(stringResult);
-            var root = jsonDoc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
-
-            if (typeof(T) == typeof(string))
-                return (T)(object)root.GetRawText();
-
-            bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
-            string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
         });
     }
 
