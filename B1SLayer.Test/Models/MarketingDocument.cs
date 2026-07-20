@@ -4,4 +4,5 @@ internal class MarketingDocument
 {
     public int DocEntry { get; set; }
     public string CardCode { get; set; }
+    public BoYesNoEnum? HandWritten { get; set; }
 }

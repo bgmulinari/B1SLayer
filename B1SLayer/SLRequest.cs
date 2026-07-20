@@ -49,7 +49,7 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
+                return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(root.GetRawText());
 
             if (typeof(T) == typeof(string))
                 return (T)(object)root.GetRawText();
@@ -58,7 +58,7 @@ public class SLRequest
                 ? valueCollection.GetRawText()
                 : root.GetRawText();
 
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
@@ -83,7 +83,7 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return (root.Deserialize<T>(), 0);
+                return (_slConnection.Client.Settings.JsonSerializer.Deserialize<T>(root.GetRawText()), 0);
 
             if (typeof(T) == typeof(string))
                 return ((T)(object)root.GetRawText(), 0);
@@ -111,7 +111,7 @@ public class SLRequest
                 unwrapCollection && root.TryGetProperty("value", out JsonElement valueCollection) ? valueCollection.GetRawText() :
                 root.GetRawText();
 
-            T result = JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            T result = _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(jsonToDeserialize);
             return (result, inlineCount);
         });
     }
@@ -240,14 +240,14 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
+                return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(root.GetRawText());
 
             if (typeof(T) == typeof(string))
                 return (T)(object)root.GetRawText();
 
             bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
@@ -272,14 +272,14 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
+                return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(root.GetRawText());
 
             if (typeof(T) == typeof(string))
                 return (T)(object)root.GetRawText();
 
             bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 
@@ -301,14 +301,14 @@ public class SLRequest
             var root = jsonDoc.RootElement;
 
             if (root.ValueKind != JsonValueKind.Object)
-                return root.Deserialize<T>();
+                return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(root.GetRawText());
 
             if (typeof(T) == typeof(string))
                 return (T)(object)root.GetRawText();
 
             bool hasValueToken = root.TryGetProperty("value", out JsonElement valueCollection);
             string jsonToDeserialize = (unwrapCollection && hasValueToken) ? valueCollection.GetRawText() : root.GetRawText();
-            return JsonSerializer.Deserialize<T>(jsonToDeserialize);
+            return _slConnection.Client.Settings.JsonSerializer.Deserialize<T>(jsonToDeserialize);
         });
     }
 

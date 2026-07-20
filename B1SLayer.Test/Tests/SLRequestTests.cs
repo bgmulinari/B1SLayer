@@ -1,6 +1,10 @@
 using B1SLayer.Models;
 using B1SLayer.Test.Models;
 using Flurl;
+using Flurl.Http;
+using Flurl.Http.Configuration;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace B1SLayer.Test;
 
@@ -81,6 +85,8 @@ public class SLRequestTests : TestBase
 
         Assert.Equal(2, result.Count);
         Assert.Equal(expectedData[0].DocEntry, result[0].DocEntry);
+        Assert.Equal(expectedData[0].CardCode, result[0].CardCode);
+        Assert.Equal(expectedData[1].DocEntry, result[1].DocEntry);
         Assert.Equal(expectedData[1].CardCode, result[1].CardCode);
     }
 
@@ -92,8 +98,8 @@ public class SLRequestTests : TestBase
         {
             Value =
             [
-                new() { DocEntry = 1, CardCode = "C20001" },
-                new() { DocEntry = 2, CardCode = "C20002" }
+                new() { DocEntry = 1, CardCode = "C20001", HandWritten = BoYesNoEnum.tNO },
+                new() { DocEntry = 2, CardCode = "C20002", HandWritten = BoYesNoEnum.tNO }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=2"
         };
@@ -102,8 +108,8 @@ public class SLRequestTests : TestBase
         {
             Value =
             [
-                new() { DocEntry = 3, CardCode = "C20003" },
-                new() { DocEntry = 4, CardCode = "C20004" }
+                new() { DocEntry = 3, CardCode = "C20003", HandWritten = BoYesNoEnum.tNO },
+                new() { DocEntry = 4, CardCode = "C20004", HandWritten = BoYesNoEnum.tNO }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=4"
         };
@@ -149,6 +155,44 @@ public class SLRequestTests : TestBase
             .GetAsync<string>();
 
         Assert.Equal("hello", result);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task GetAsync_EnumString_ReturnsCorrectValue(SLConnection slConnection)
+    {
+        var expectedData = new List<MarketingDocument>
+        {
+            new() { DocEntry = 1, CardCode = "C20001", HandWritten = BoYesNoEnum.tNO },
+            new() { DocEntry = 2, CardCode = "C20002", HandWritten = BoYesNoEnum.tYES }
+        };
+
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter() },
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        slConnection.Client.Settings.JsonSerializer = new DefaultJsonSerializer(options);
+
+        HttpTest.RespondWith("""{"value":[{"DocEntry":1,"CardCode":"C20001","HandWritten":"tNO"},{"DocEntry":2,"CardCode":"C20002","HandWritten":"tYES"}],"odata.nextLink":null,"@odata.nextLink":null,"NextSkip":0}""");
+
+        var result = await slConnection
+            .Request("Orders")
+            .GetAsync<List<MarketingDocument>>();
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithVerb(HttpMethod.Get)
+            .Times(1);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(expectedData[0].DocEntry, result[0].DocEntry);
+        Assert.Equal(expectedData[0].CardCode, result[0].CardCode);
+        Assert.Equal(expectedData[0].HandWritten, result[0].HandWritten);
+        Assert.Equal(expectedData[1].DocEntry, result[1].DocEntry);
+        Assert.Equal(expectedData[1].CardCode, result[1].CardCode);
+        Assert.Equal(expectedData[1].HandWritten, result[1].HandWritten);
     }
 
     [Theory]
