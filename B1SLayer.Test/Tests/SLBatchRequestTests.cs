@@ -1,7 +1,8 @@
-﻿using System.IO.Enumeration;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-using Flurl;
+using B1SLayer.Test.Models;
 
 namespace B1SLayer.Test;
 
@@ -34,7 +35,7 @@ public class SLBatchRequestTests : TestBase
 
         HttpTest.ShouldHaveCalled(SLConnectionV1.ServiceLayerRoot.AppendPathSegment("$batch"))
             .WithVerb(HttpMethod.Post)
-            .WithRequestMultipart(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.Content))
+            .WithRequestBody(expectedRequestBody)
             .Times(1);
 
         Assert.Equal(3, batchResult.Length);
@@ -56,7 +57,7 @@ public class SLBatchRequestTests : TestBase
 
         HttpTest.ShouldHaveCalled(SLConnectionV2.ServiceLayerRoot.AppendPathSegment("$batch"))
             .WithVerb(HttpMethod.Post)
-            .WithRequestMultipart(call => FileSystemName.MatchesSimpleExpression(expectedRequestBody, call.Content))
+            .WithRequestBody(expectedRequestBody)
             .Times(1);
 
         Assert.Equal(3, batchResult.Length);
@@ -67,9 +68,12 @@ public class SLBatchRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostBatchAsync_MixedGetAndMutations_GetsAreOutsideChangeset(SLConnection connection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostBatchAsync_MixedGetAndMutations_GetsAreOutsideChangeset(string version)
     {
+        var connection = GetConnection(version);
+
         // Batch: POST, GET, PATCH — the GET between mutations forces two separate changesets
         // and the serialized order must be: changeset{POST}, GET, changeset{PATCH}
         var mixedResponse =
@@ -112,8 +116,8 @@ public class SLBatchRequestTests : TestBase
             .WithVerb(HttpMethod.Post)
             .With(x =>
             {
-                Assert.NotNull(x.HttpRequestMessage.Content);
-                var body = x.HttpRequestMessage.Content.ReadAsStringAsync().Result;
+                Assert.NotNull(x.RequestBody);
+                var body = x.RequestBody;
 
                 // All three requests must appear in the body
                 var posPost = body.IndexOf("POST /b1s/", StringComparison.Ordinal);
@@ -169,5 +173,71 @@ public class SLBatchRequestTests : TestBase
                 return true;
             })
             .Times(1);
+    }
+
+    [Fact]
+    public async Task PostBatchAsync_WithoutPerRequestOptions_UsesConnectionSerializerOptions()
+    {
+        HttpTest.RespondWith(
+            v1Response,
+            202,
+            new Dictionary<string, string> { { "Content-Type", "multipart/mixed;boundary=batchresponse_00000000-0000-0000-0000-000000000000" } });
+
+        var connection = CreateConnection("v1");
+        connection.JsonSerializerOptions = new JsonSerializerOptions
+        {
+            Converters = { new JsonStringEnumConverter() },
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        };
+
+        await connection.PostBatchAsync(new SLBatchRequest(HttpMethod.Post, "Orders", new { DocumentStatus = BoStatus.bost_Open }, 1));
+
+        // The connection-level enum converter applies to the batch body when no per-request options are set
+        HttpTest.ShouldHaveCalled("*/b1s/v1/$batch")
+            .WithRequestBody("""*"DocumentStatus":"bost_Open"*""")
+            .Times(1);
+    }
+
+    [Fact]
+    public async Task PostBatchAsync_PerRequestOptions_TakePrecedenceOverConnectionOptions()
+    {
+        HttpTest.RespondWith(
+            v1Response,
+            202,
+            new Dictionary<string, string> { { "Content-Type", "multipart/mixed;boundary=batchresponse_00000000-0000-0000-0000-000000000000" } });
+
+        var connection = CreateConnection("v1");
+        connection.JsonSerializerOptions = new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } };
+
+        var batchRequest = new SLBatchRequest(HttpMethod.Post, "Orders", new { DocumentStatus = BoStatus.bost_Open }, 1)
+        {
+            JsonSerializerOptions = new JsonSerializerOptions()
+        };
+
+        await connection.PostBatchAsync(batchRequest);
+
+        // The per-request options (no enum converter) win, so the enum is serialized as a number
+        HttpTest.ShouldHaveCalled("*/b1s/v1/$batch")
+            .With(call => !call.RequestBody.Contains("bost_Open"))
+            .Times(1);
+    }
+
+    [Fact]
+    public async Task PostBatchAsync_SubResponseHeaders_EmptyAndColonContainingValuesAreParsed()
+    {
+        const string response =
+            "--batchresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: multipart/mixed; boundary=changesetresponse_00000000-0000-0000-0000-000000000000\r\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nHTTP/1.1 201 Created\r\nContent-ID: 1\r\nX-Empty-Header:\r\nX-Note: first: second\r\n\r\n{\"some\":\"content\"}\n\r\n--changesetresponse_00000000-0000-0000-0000-000000000000--\r\n--batchresponse_00000000-0000-0000-0000-000000000000--\r\n";
+
+        HttpTest.RespondWith(
+            response,
+            202,
+            new Dictionary<string, string> { { "Content-Type", "multipart/mixed;boundary=batchresponse_00000000-0000-0000-0000-000000000000" } });
+
+        var batchResult = await SLConnectionV1.PostBatchAsync(new SLBatchRequest(HttpMethod.Post, "Orders", new { DocEntry = 1 }, 1));
+
+        // An empty-value header must not fail the parse, and a value containing ': ' must not be truncated
+        Assert.Single(batchResult);
+        Assert.Equal(HttpStatusCode.Created, batchResult[0].StatusCode);
+        Assert.Equal("first: second", batchResult[0].Content.Headers.GetValues("X-Note").Single());
     }
 }

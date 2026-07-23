@@ -10,11 +10,11 @@
     <RepositoryUrl>https://github.com/bgmulinari/B1SLayer.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>sap business one;b1;service layer;http client;fluent;flurl</PackageTags>
+    <PackageTags>sap business one;b1;service layer;http client;fluent</PackageTags>
     <PackageReleaseNotes>https://github.com/bgmulinari/B1SLayer/releases</PackageReleaseNotes>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>B1SLayer</PackageId>
-    <Version>3.0.0-pre-2</Version>
+    <Version>3.0.0-pre-3</Version>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -35,7 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Flurl.Http" Version="4.0.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.3" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>

@@ -3,8 +3,6 @@ using System.Text.Json.Serialization;
 
 using B1SLayer.Test.Models;
 
-using Flurl;
-
 namespace B1SLayer.Test;
 
 public class SLSerializerOptionsTests : TestBase
@@ -17,9 +15,11 @@ public class SLSerializerOptionsTests : TestBase
     };
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"value":[{"DocEntry":1,"DocumentStatus":"bost_Close"}]}""");
 
         var result = await slConnection
@@ -33,9 +33,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_BareStringResponse_WithJsonSerializerOptions_UsesOptionsForDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_BareStringResponse_WithJsonSerializerOptions_UsesOptionsForDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("\"bost_Close\"");
 
         var result = await slConnection
@@ -47,9 +49,12 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_ReaderOptions_AreHonoredWhenParsing(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_ReaderOptions_AreHonoredWhenParsing(string version)
     {
+        var slConnection = GetConnection(version);
+
         var options = new JsonSerializerOptions
         {
             Converters = { new JsonStringEnumConverter() },
@@ -69,12 +74,15 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetWithInlineCountAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetWithInlineCountAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
+
         // v1 (OData v3) responses carry "odata.count"; v2 (OData v4) responses carry "@odata.count"
-        bool isV2 = slConnection.ServiceLayerRoot.ToString().Contains("/b1s/v2");
-        string countProperty = isV2 ? "@odata.count" : "odata.count";
+        var isV2 = slConnection.ServiceLayerRoot.ToString().Contains("/b1s/v2");
+        var countProperty = isV2 ? "@odata.count" : "odata.count";
         HttpTest.RespondWith($$"""{"{{countProperty}}":1,"value":[{"DocEntry":1,"DocumentStatus":"bost_Close"}]}""");
 
         var (result, count) = await slConnection
@@ -88,9 +96,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostAsync_WithJsonSerializerOptions_UsesOptionsForSerializationAndDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostAsync_WithJsonSerializerOptions_UsesOptionsForSerializationAndDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"DocEntry":5,"DocumentStatus":"bost_Close"}""");
 
         var result = await slConnection
@@ -108,9 +118,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostStringAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostStringAsync_WithJsonSerializerOptions_UsesOptionsForDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"DocEntry":7,"DocumentStatus":"bost_Paid"}""");
 
         var result = await slConnection
@@ -123,9 +135,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostAsync_Parameterless_WithJsonSerializerOptions_UsesOptionsForDeserialization(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostAsync_Parameterless_WithJsonSerializerOptions_UsesOptionsForDeserialization(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"DocEntry":9,"DocumentStatus":"bost_Delivered"}""");
 
         var result = await slConnection
@@ -137,11 +151,32 @@ public class SLSerializerOptionsTests : TestBase
         Assert.Equal(BoStatus.bost_Delivered, result.DocumentStatus);
     }
 
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task IncludeNullValues_PreservesOtherSerializerSettings(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders")
+            .WithJsonSerializerOptions(EnumAsStringOptions)
+            .IncludeNullValues()
+            .PostAsync(new { CardCode = (string)null, DocumentStatus = BoStatus.bost_Open });
+
+        // Null values are included while the enum converter from the underlying options is preserved
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithVerb(HttpMethod.Post)
+            .WithRequestBody("""*"CardCode":null*""")
+            .WithRequestBody("""*"DocumentStatus":"bost_Open"*""")
+            .Times(1);
+    }
+
     [Fact]
     public async Task GetAsync_ConnectionLevelSerializer_IsUsedForDeserialization()
     {
-        var connection = new SLConnection("https://sapserver:50000/b1s/v1", "CompanyDB", "manager", "12345");
-        connection.Client.Settings.JsonSerializer = new SystemTextJsonSerializer(EnumAsStringOptions);
+        var connection = CreateConnection("v1");
+        connection.JsonSerializerOptions = EnumAsStringOptions;
 
         HttpTest.RespondWith("""{"value":[{"DocEntry":1,"DocumentStatus":"bost_Close"}]}""");
 
@@ -152,9 +187,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAnonymousTypeAsync_WithoutOptions_UsesRequestSerializer(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAnonymousTypeAsync_WithoutOptions_UsesRequestSerializer(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"DocumentStatus":"bost_Close"}""");
 
         var result = await slConnection
@@ -166,9 +203,11 @@ public class SLSerializerOptionsTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAnonymousTypeAsync_ExplicitOptions_TakePrecedenceOverRequestSerializer(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAnonymousTypeAsync_ExplicitOptions_TakePrecedenceOverRequestSerializer(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("""{"DocumentStatus":"bost_Close"}""");
 
         // request-level serializer has no enum converter; the explicit options parameter must win

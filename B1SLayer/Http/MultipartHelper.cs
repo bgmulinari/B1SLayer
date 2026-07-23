@@ -8,9 +8,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Flurl.Http;
-using Flurl.Http.Content;
-
 namespace B1SLayer;
 
 /// <summary>
@@ -46,11 +43,20 @@ internal static class MultipartHelper
 
             foreach (var header in headers)
             {
-                var headerParts = header.Split(new[] { ": " }, StringSplitOptions.RemoveEmptyEntries);
+                // Each header line is split on the first ':' only, as the value itself may contain ':'
+                var separatorIndex = header.IndexOf(':');
 
-                if (httpResponse.Content == null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]))
+                if (separatorIndex <= 0)
                 {
-                    httpResponse.Headers.TryAddWithoutValidation(headerParts[0], headerParts[1]);
+                    continue;
+                }
+
+                var headerName = header.Substring(0, separatorIndex).Trim();
+                var headerValue = header.Substring(separatorIndex + 1).Trim();
+
+                if (httpResponse.Content == null || !httpResponse.Content.Headers.TryAddWithoutValidation(headerName, headerValue))
+                {
+                    httpResponse.Headers.TryAddWithoutValidation(headerName, headerValue);
                 }
             }
 
@@ -69,7 +75,9 @@ internal static class MultipartHelper
     internal static async Task<HttpContent> CreateHttpContentAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
     {
         var memoryStream = new MemoryStream();
-        using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, true);
+
+        // HTTP/MIME requires CRLF line endings regardless of the platform's default
+        using var writer = new StreamWriter(memoryStream, new UTF8Encoding(false), 1024, true) { NewLine = "\r\n" };
         writer.WriteLine($"{request.Method} {request.RequestUri.PathAndQuery} HTTP/{request.Version}");
         writer.WriteLine($"Host: {request.RequestUri.Host}:{request.RequestUri.Port}");
 
@@ -107,12 +115,32 @@ internal static class MultipartHelper
     }
 
     /// <summary>
-    ///     Flurl extension method to provide a PATCH method for multipart requests.
+    ///     Creates a <see cref="MultipartContent" /> with the given subtype and parts.
     /// </summary>
-    internal static Task<IFlurlResponse> PatchMultipartAsync(this IFlurlRequest request, Action<CapturedMultipartContent> buildContent, HttpCompletionOption httpCompletionOption = default, CancellationToken cancellationToken = default)
+    internal static MultipartContent CreateMultipartContent(string subtype, IEnumerable<HttpContent> parts)
     {
-        var cmc = new CapturedMultipartContent(request.Settings);
-        buildContent(cmc);
-        return request.SendAsync(new HttpMethod("PATCH"), cmc, httpCompletionOption, cancellationToken);
+        var multipartContent = new MultipartContent(subtype, "boundary_" + Guid.NewGuid());
+
+        // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
+        var boundary = multipartContent.Headers.ContentType.Parameters.First(x => x.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
+        boundary.Value = boundary.Value.Replace("\"", string.Empty);
+
+        foreach (var part in parts)
+        {
+            multipartContent.Add(part);
+        }
+
+        return multipartContent;
+    }
+
+    /// <summary>
+    ///     Creates a form-data file part for attachment uploads.
+    /// </summary>
+    internal static HttpContent CreateFilePart(string fileName, byte[] file)
+    {
+        var content = new ByteArrayContent(file);
+        content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
+        content.Headers.Add("Content-Type", "application/octet-stream");
+        return content;
     }
 }

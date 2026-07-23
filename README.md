@@ -6,13 +6,15 @@
 A lightweight SAP Business One Service Layer client for .NET
 
 B1SLayer aims to provide:
+
 - Fluent and easy Service Layer requests
 - Automatic session management
 - Automatic retry of failed requests
 
 ## How to use it
 
-Firstly I highly recommend reading [my blog post on SAP Community](https://community.sap.com/t5/enterprise-resource-planning-blogs-by-members/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer/ba-p/13526121) where I go into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
+Firstly I highly recommend reading [my blog post on SAP Community](https://community.sap.com/t5/enterprise-resource-planning-blogs-by-members/b1slayer-a-clean-and-easy-way-to-consume-sap-business-one-service-layer/ba-p/13526121) where I go
+into more details, but here's a couple examples of what's possible (but not limited to) with B1SLayer:
 
 ````c#
 /* The connection object. All Service Layer requests and the session management are handled by this object
@@ -83,7 +85,3 @@ await serviceLayer.LogoutAsync();
 `PM> Install-Package B1SLayer`
 
 `dotnet add package B1SLayer`
-
-#### Special thanks
-
-B1Slayer is based and depends on the awesome [Flurl](https://github.com/tmenier/Flurl) library, which I highly recommend checking out. Thanks, Todd!
