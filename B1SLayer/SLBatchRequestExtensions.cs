@@ -29,6 +29,21 @@ public static class SLBatchRequestExtensions
     }
 
     /// <summary>
+    /// Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+    /// </summary>
+    /// <param name="batchRequest">
+    /// The batch request to configure.
+    /// </param>
+    /// <param name="etag">
+    /// The ETag returned by a previous Service Layer request.
+    /// </param>
+    public static SLBatchRequest WithETag(this SLBatchRequest batchRequest, string etag)
+    {
+        batchRequest.Headers.Add("If-Match", etag);
+        return batchRequest;
+    }
+
+    /// <summary>
     /// Configures a POST request to not return the created entity.
     /// This is suitable for better performance in demanding scenarios where the return content is not needed.
     /// </summary>

@@ -126,6 +126,21 @@ public static class SLRequestExtensions
     }
 
     /// <summary>
+    /// Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+    /// </summary>
+    /// <param name="request">
+    /// The current request.
+    /// </param>
+    /// <param name="etag">
+    /// The ETag returned by a previous Service Layer request.
+    /// </param>
+    public static SLRequest WithETag(this SLRequest request, string etag)
+    {
+        request.FlurlRequest.WithHeader("If-Match", etag);
+        return request;
+    }
+
+    /// <summary>
     /// Configures a POST request to not return the created entity.
     /// This is suitable for better performance in demanding scenarios where the return content is not needed.
     /// </summary>

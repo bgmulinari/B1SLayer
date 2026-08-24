@@ -86,6 +86,55 @@ public class SLRequestTests : TestBase
 
     [Theory]
     [MemberData(nameof(SLConnections))]
+    public async Task GetWithETagAsync_ReturnsResponseBodyAndETag(SLConnection slConnection)
+    {
+        const string etag = "W/\"0000000000000000000000000000000000000000\"";
+        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}", 200,
+            new Dictionary<string, string> { ["ETag"] = etag });
+
+        var (result, resultETag) = await slConnection
+            .Request("Orders", 1)
+            .GetWithETagAsync<MarketingDocument>();
+
+        Assert.Equal(1, result.DocEntry);
+        Assert.Equal("C20001", result.CardCode);
+        Assert.Equal(etag, resultETag);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task WithETag_SendsIfMatchHeader(SLConnection slConnection)
+    {
+        const string etag = "W/\"0000000000000000000000000000000000000000\"";
+        HttpTest.RespondWith("", 204);
+
+        await slConnection
+            .Request("Orders", 1)
+            .WithETag(etag)
+            .PatchAsync(new { Comments = "Updated" });
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
+            .WithVerb(HttpMethod.Patch)
+            .WithHeader("If-Match", etag)
+            .Times(1);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
+    public async Task PatchAsync_WithoutETag_DoesNotSendIfMatchHeader(SLConnection slConnection)
+    {
+        HttpTest.RespondWith("", 204);
+
+        await slConnection.Request("Orders", 1).PatchAsync(new { Comments = "Updated" });
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
+            .WithVerb(HttpMethod.Patch)
+            .WithoutHeader("If-Match", "*")
+            .Times(1);
+    }
+
+    [Theory]
+    [MemberData(nameof(SLConnections))]
     public async Task GetAllAsync_ReturnsCorrectData(SLConnection slConnection)
     {
         var page1 = new SLCollectionRoot<MarketingDocument>

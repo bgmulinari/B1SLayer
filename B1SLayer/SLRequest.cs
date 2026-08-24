@@ -100,6 +100,27 @@ public class SLRequest
     }
 
     /// <summary>
+    /// Performs a GET request and returns both the deserialized result and the ETag returned by the Service Layer.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The object type for the result to be deserialized into.
+    /// </typeparam>
+    /// <param name="unwrapCollection">
+    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    /// </param>
+    public async Task<(T Result, string ETag)> GetWithETagAsync<T>(bool unwrapCollection = true)
+    {
+        return await _slConnection.ExecuteRequest(async () =>
+        {
+            var response = await FlurlRequest
+                .WithCookies(await _slConnection.GetSessionCookiesAsync())
+                .GetAsync();
+            var stringResult = await response.GetStringAsync();
+            return (ParseAndDeserialize<T>(stringResult, unwrapCollection), response.ResponseMessage.Headers.ETag?.ToString());
+        });
+    }
+
+    /// <summary>
     /// Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
     /// </summary>
     /// <typeparam name="T">
