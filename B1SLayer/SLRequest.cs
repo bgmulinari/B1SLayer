@@ -1,514 +1,292 @@
-﻿using B1SLayer.Models;
-using Flurl.Http;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Globalization;
+using System.Net;
 using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace B1SLayer;
 
 /// <summary>
-/// Represents a request to the Service Layer.
+///     Represents a request to the Service Layer, configured through its fluent methods
+///     and executed through one of its HTTP methods (e.g. <see cref="GetAsync{T}" />, <see cref="PostAsync(object, CancellationToken)" />).
 /// </summary>
-/// <remarks>
-/// The request can be configured using the extension methods provided in <see cref="SLRequestExtensions"/>.
-/// </remarks>
-public class SLRequest
+public partial class SLRequest
 {
+    internal static readonly HttpMethod PatchMethod = new("PATCH");
+
     private readonly SLConnection _slConnection;
 
-    internal IFlurlRequest FlurlRequest { get; }
-
-    internal SLRequest(SLConnection connection, IFlurlRequest flurlRequest)
+    internal SLRequest(SLConnection connection, string resource)
     {
         _slConnection = connection;
-        FlurlRequest = flurlRequest;
+        Resource = resource;
     }
 
-    /// <summary>
-    /// Deserializes a JSON response through the effective Flurl serializer, honoring any
-    /// custom serializer configured at the request or connection level.
-    /// </summary>
-    private T DeserializeResponse<T>(string json) =>
-        FlurlRequest.Settings.JsonSerializer.Deserialize<T>(json);
 
     /// <summary>
-    /// Parses a JSON response and deserializes it through the effective serializer,
-    /// unwrapping the OData 'value' collection when requested.
+    ///     The resource this request is directed to, including the entity ID when applicable.
     /// </summary>
-    private T ParseAndDeserialize<T>(string json, bool unwrapCollection)
+    internal string Resource { get; }
+
+    /// <summary>
+    ///     Extra path segments appended after the resource, such as "$count".
+    /// </summary>
+    internal List<string> ExtraPathSegments { get; } = [];
+
+    /// <summary>
+    ///     The query parameters to be sent, in insertion order.
+    /// </summary>
+    internal List<KeyValuePair<string, string>> QueryParams { get; } = [];
+
+    /// <summary>
+    ///     The headers to be sent, in insertion order.
+    /// </summary>
+    internal List<KeyValuePair<string, string>> Headers { get; } = [];
+
+    /// <summary>
+    ///     The timeout for this request, or null to use the connection's <see cref="SLConnection.DefaultRequestTimeout" />.
+    /// </summary>
+    internal TimeSpan? RequestTimeout { get; set; }
+
+    /// <summary>
+    ///     The unsuccessful HTTP status codes that should not result in a throw.
+    /// </summary>
+    internal HashSet<int> AllowedStatusCodes { get; } = [];
+
+    /// <summary>
+    ///     Whether any HTTP status code is allowed without resulting in a throw.
+    /// </summary>
+    internal bool AllowAnyStatusCode { get; set; }
+
+    /// <summary>
+    ///     The serializer options for this request, or null to use the connection's <see cref="SLConnection.JsonSerializerOptions" />.
+    /// </summary>
+    internal JsonSerializerOptions SerializerOptions { get; set; }
+
+    /// <summary>
+    ///     The effective serializer options for this request, honoring the request-level override.
+    /// </summary>
+    internal JsonSerializerOptions EffectiveSerializerOptions => SerializerOptions ?? _slConnection.JsonSerializerOptions;
+
+
+    /// <summary>
+    ///     Sets the clause to be used to filter records.
+    /// </summary>
+    public SLRequest Filter(string filter)
     {
-        using var jsonDoc = JsonDocument.Parse(json, ResponseDocumentOptions);
-        return DeserializeRoot<T>(jsonDoc.RootElement, unwrapCollection);
+        SetQueryParamValue("$filter", filter);
+        return this;
     }
-
-    private T DeserializeRoot<T>(JsonElement root, bool unwrapCollection)
-    {
-        if (root.ValueKind != JsonValueKind.Object)
-            return DeserializeElement<T>(root);
-
-        if (typeof(T) == typeof(string))
-            return (T)(object)root.GetRawText();
-
-        var element = unwrapCollection && root.TryGetProperty("value", out var valueCollection)
-            ? valueCollection
-            : root;
-
-        return DeserializeElement<T>(element);
-    }
-
-    private T DeserializeElement<T>(JsonElement element) =>
-        FlurlRequest.Settings.JsonSerializer is SystemTextJsonSerializer stjSerializer
-            ? element.Deserialize<T>(stjSerializer.Options)
-            : FlurlRequest.Settings.JsonSerializer.Deserialize<T>(element.GetRawText());
 
     /// <summary>
-    /// Carries the reader-affecting serializer options into the initial JsonDocument parse,
-    /// so options like AllowTrailingCommas are honored before deserialization runs.
+    ///     Sets the explicit properties that should be returned.
     /// </summary>
-    private JsonDocumentOptions ResponseDocumentOptions =>
-        FlurlRequest.Settings.JsonSerializer is SystemTextJsonSerializer stjSerializer
-            ? new JsonDocumentOptions
-            {
-                AllowTrailingCommas = stjSerializer.Options.AllowTrailingCommas,
-                CommentHandling = stjSerializer.Options.ReadCommentHandling,
-                MaxDepth = stjSerializer.Options.MaxDepth
-            }
-            : default;
-
-    /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a new instance of the specified type.
-    /// </summary>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<T> GetAsync<T>(bool unwrapCollection = true)
+    public SLRequest Select(string select)
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string stringResult = await FlurlRequest
-                .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                .GetStringAsync();
-            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
-        });
+        SetQueryParamValue("$select", select);
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request and returns both the deserialized result and the ETag returned by the Service Layer.
+    ///     Sets the order in which entities should be returned.
     /// </summary>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<(T Result, string ETag)> GetWithETagAsync<T>(bool unwrapCollection = true)
+    public SLRequest OrderBy(string orderBy)
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            var response = await FlurlRequest
-                .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                .GetAsync();
-            var stringResult = await response.GetStringAsync();
-            return (ParseAndDeserialize<T>(stringResult, unwrapCollection), response.ResponseMessage.Headers.ETag?.ToString());
-        });
+        SetQueryParamValue("$orderby", orderBy);
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+    ///     Sets the maximum number of first records to be included in the result.
     /// </summary>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<(T Result, int Count)> GetWithInlineCountAsync<T>(bool unwrapCollection = true)
+    public SLRequest Top(int top)
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string stringResult = await FlurlRequest
-                .SetQueryParam("$inlinecount", "allpages")
-                .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                .GetStringAsync();
-            using var jsonDoc = JsonDocument.Parse(stringResult, ResponseDocumentOptions);
-            var root = jsonDoc.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-                return (DeserializeElement<T>(root), 0);
-
-            if (typeof(T) == typeof(string))
-                return ((T)(object)root.GetRawText(), 0);
-
-            var inlineCount = 0;
-            JsonElement? inlineCountElement = root.TryGetProperty("odata.count", out var inlineCountElement1) ? inlineCountElement1 : null;
-            inlineCountElement ??= root.TryGetProperty("@odata.count", out var inlineCountElement2) ? inlineCountElement2 : null;
-
-            if (inlineCountElement is not null)
-            {
-                switch (inlineCountElement.Value.ValueKind)
-                {
-                    case JsonValueKind.Number:
-                        inlineCount = inlineCountElement.Value.GetInt32();
-                        break;
-                    case JsonValueKind.String:
-                        inlineCount = int.TryParse(inlineCountElement.Value.GetString(), out var inlineCountElementIntValue) ? inlineCountElementIntValue : 0;
-                        break;
-                    default:
-                        throw new Exception("Inline count is not a number or string");
-                }
-            }
-
-            T result = DeserializeRoot<T>(root, unwrapCollection);
-            return (result, inlineCount);
-        });
+        SetQueryParamValue("$top", top.ToString(CultureInfo.InvariantCulture));
+        return this;
     }
 
     /// <summary>
-    /// Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
+    ///     Sets the number of first results to be excluded from the result.
     /// </summary>
     /// <remarks>
-    /// This can be very slow depending on the total amount of entities in the company database.
+    ///     Where $top and $skip are used together, the $skip is applied before
+    ///     the $top, regardless of the order of appearance in the request.
+    ///     This can be used when implementing a pagination mechanism.
     /// </remarks>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <returns>
-    /// An <see cref="IList{T}"/> containing all the entities in the given collection.
-    /// </returns>
-    public async Task<IList<T>> GetAllAsync<T>()
+    public SLRequest Skip(int skip)
     {
-        var allResultsList = new List<T>();
-        int skip = 0;
+        SetQueryParamValue("$skip", skip.ToString(CultureInfo.InvariantCulture));
+        return this;
+    }
 
-        do
+    /// <summary>
+    ///     Sets the aggregation expression.
+    /// </summary>
+    public SLRequest Apply(string apply)
+    {
+        SetQueryParamValue("$apply", apply);
+        return this;
+    }
+
+    /// <summary>
+    ///     Sets the navigation properties to be retrieved.
+    /// </summary>
+    public SLRequest Expand(string expand)
+    {
+        SetQueryParamValue("$expand", expand);
+        return this;
+    }
+
+    /// <summary>
+    ///     Sets a custom query parameter to be sent. A null value removes the parameter.
+    /// </summary>
+    public SLRequest SetQueryParam(string name, string value)
+    {
+        SetQueryParamValue(name, value);
+        return this;
+    }
+
+    /// <summary>
+    ///     Sets the page size when paging is applied for a query. The default value is 20.
+    /// </summary>
+    /// <param name="pageSize">
+    ///     The page size to be defined for this request.
+    /// </param>
+    public SLRequest WithPageSize(int pageSize)
+    {
+        SetHeaderValue("B1S-PageSize", pageSize.ToString(CultureInfo.InvariantCulture));
+        return this;
+    }
+
+    /// <summary>
+    ///     Enables a case-insensitive query.
+    /// </summary>
+    /// <remarks>
+    ///     This is only applicable to SAP HANA databases, where every query is case-sensitive by default.
+    /// </remarks>
+    public SLRequest WithCaseInsensitive()
+    {
+        SetHeaderValue("B1S-CaseInsensitive", "true");
+        return this;
+    }
+
+    /// <summary>
+    ///     Allows a PATCH request to remove items in a collection.
+    /// </summary>
+    public SLRequest WithReplaceCollectionsOnPatch()
+    {
+        SetHeaderValue("B1S-ReplaceCollectionsOnPatch", "true");
+        return this;
+    }
+
+    /// <summary>
+    ///     Configures a POST request to not return the created entity.
+    ///     This is suitable for better performance in demanding scenarios where the return content is not needed.
+    /// </summary>
+    /// <remarks>
+    ///     On success, <see cref="HttpStatusCode.NoContent" /> is returned, instead of <see cref="HttpStatusCode.Created" />.
+    /// </remarks>
+    public SLRequest WithReturnNoContent()
+    {
+        SetHeaderValue("Prefer", "return-no-content");
+        return this;
+    }
+
+    /// <summary>
+    ///     Adds a custom request header to be sent. A null value removes the header.
+    /// </summary>
+    /// <param name="name">
+    ///     The name of the header.
+    /// </param>
+    /// <param name="value">
+    ///     The value of the header.
+    /// </param>
+    public SLRequest WithHeader(string name, object value)
+    {
+        // Convert.ToString(null) returns an empty string, which would defeat the removal-by-null contract
+        SetHeaderValue(name, value == null ? null : Convert.ToString(value, CultureInfo.InvariantCulture)?.Trim());
+        return this;
+    }
+
+    /// <summary>
+    ///     Configures the request to not throw an exception when the response has any of the provided <see cref="HttpStatusCode" />.
+    /// </summary>
+    /// <remarks>
+    ///     By default, every response with an unsuccessful <see cref="HttpStatusCode" /> (non-2XX) will result in a throw.
+    /// </remarks>
+    /// <param name="statusCodes">
+    ///     The <see cref="HttpStatusCode" /> to be allowed.
+    /// </param>
+    public SLRequest AllowHttpStatus(params HttpStatusCode[] statusCodes)
+    {
+        foreach (var statusCode in statusCodes)
         {
-            await _slConnection.ExecuteRequest(async () =>
-            {
-                var currentResult = await FlurlRequest
-                    .WithCookies(await _slConnection.GetSessionCookiesAsync())
-                    .SetQueryParam("$skip", skip)
-                    .GetJsonAsync<SLCollectionRoot<T>>();
-
-                allResultsList.AddRange(currentResult.Value);
-                skip = currentResult.NextSkip;
-                return 0;
-            });
+            AllowedStatusCodes.Add((int)statusCode);
         }
-        while (skip > 0);
 
-        return allResultsList;
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="string"/>.
+    ///     Configures the request to allow a response with any <see cref="HttpStatusCode" /> without resulting in a throw.
     /// </summary>
-    public async Task<string> GetStringAsync()
+    /// <remarks>
+    ///     By default, every response with an unsuccessful <see cref="HttpStatusCode" /> (non-2XX) will result in a throw.
+    /// </remarks>
+    public SLRequest AllowAnyHttpStatus()
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
-        });
+        AllowAnyStatusCode = true;
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+    ///     Configures the JSON serializer to include null values for this request,
+    ///     preserving any other settings configured at the request or connection level.
     /// </summary>
-    /// <param name="anonymousTypeObject">
-    /// The anonymous type object.
-    /// </param>
-    /// <param name="jsonSerializerOptions">
-    /// The <see cref="JsonSerializerOptions"/> used to deserialize the object. When not provided,
-    /// the serializer configured at the request or connection level is used.
-    /// </param>
-    public async Task<T> GetAnonymousTypeAsync<T>(T anonymousTypeObject, JsonSerializerOptions jsonSerializerOptions = null)
+    public SLRequest IncludeNullValues()
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        SerializerOptions = new JsonSerializerOptions(EffectiveSerializerOptions)
         {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStringAsync();
-            return jsonSerializerOptions is null
-                ? DeserializeResponse<T>(stringResult)
-                : JsonSerializer.Deserialize<T>(stringResult, jsonSerializerOptions);
-        });
+            DefaultIgnoreCondition = JsonIgnoreCondition.Never
+        };
+
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="byte"/> array.
+    ///     Sets a custom <see cref="JsonSerializerOptions" /> to be used for this request.
     /// </summary>
-    public async Task<byte[]> GetBytesAsync()
+    public SLRequest WithJsonSerializerOptions(JsonSerializerOptions jsonSerializerOptions)
     {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetBytesAsync();
-        });
+        SerializerOptions = jsonSerializerOptions;
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request with the provided parameters and returns the result in a <see cref="Stream"/>.
+    ///     Configures a custom timeout value for this request. The default timeout is 100 seconds.
     /// </summary>
-    public async Task<Stream> GetStreamAsync()
+    /// <param name="timeout">
+    ///     A <see cref="TimeSpan" /> representing the timeout value to be configured.
+    /// </param>
+    public SLRequest WithTimeout(TimeSpan timeout)
     {
-        return await _slConnection.ExecuteRequest(async () =>
+        if (timeout != Timeout.InfiniteTimeSpan && (timeout <= TimeSpan.Zero || timeout > TimeSpan.FromMilliseconds(int.MaxValue)))
         {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).GetStreamAsync();
-        });
+            throw new ArgumentOutOfRangeException(nameof(timeout));
+        }
+
+        RequestTimeout = timeout;
+        return this;
     }
 
     /// <summary>
-    /// Performs a GET request that returns the count of an entity collection.
+    ///     Configures a custom timeout value for this request. The default timeout is 100 seconds.
     /// </summary>
-    public async Task<long> GetCountAsync()
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string result = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).AppendPathSegment("$count").GetStringAsync();
-            long.TryParse(result, out long quantity);
-            return quantity;
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
-    /// </summary>
-    /// <param name="data">
-    /// The object to be sent as the JSON body.
+    /// <param name="timeout">
+    ///     An <see cref="int" /> representing the timeout in seconds to be configured.
     /// </param>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<T> PostAsync<T>(object data, bool unwrapCollection = true)
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
-            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
-    /// </summary>
-    /// <param name="data">
-    /// The JSON string to be sent as the request body.
-    /// </param>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<T> PostStringAsync<T>(string data, bool unwrapCollection = true)
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data).ReceiveString();
-            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in the specified <see cref="Type"/>.
-    /// </summary>
-    /// <typeparam name="T">
-    /// The object type for the result to be deserialized into.
-    /// </typeparam>
-    /// <param name="unwrapCollection">
-    /// Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
-    /// </param>
-    public async Task<T> PostAsync<T>(bool unwrapCollection = true)
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            string stringResult = await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
-            return ParseAndDeserialize<T>(stringResult, unwrapCollection);
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The object to be sent as the JSON body.
-    /// </param>
-    public async Task PostAsync(object data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request without parameters and returns the result in a <see cref="string"/>.
-    /// </summary>
-    public async Task<string> PostReceiveStringAsync()
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync().ReceiveString();
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters and returns the result in a <see cref="string"/>.
-    /// </summary>
-    /// <param name="data">
-    /// The object to be sent as the JSON body.
-    /// </param>
-    public async Task<string> PostReceiveStringAsync(object data)
-    {
-        return await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostJsonAsync(data).ReceiveString();
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The JSON string to be sent as the request body.
-    /// </param>
-    public async Task PostStringAsync(string data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostStringAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a POST request with the provided parameters.
-    /// </summary>
-    public async Task PostAsync()
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PostAsync();
-        });
-    }
-
-    /// <summary>
-    /// Performs a PATCH request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The object to be sent as the JSON body.
-    /// </param>
-    public async Task PatchAsync(object data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchJsonAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a PATCH request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The JSON string to be sent as the request body.
-    /// </param>
-    public async Task PatchStringAsync(string data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchStringAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a PATCH request with the provided file.
-    /// </summary>
-    /// <param name="path">
-    /// The path to the file to be sent.
-    /// </param>
-    public async Task PatchWithFileAsync(string path) =>
-        await PatchWithFileAsync(Path.GetFileName(path), File.ReadAllBytes(path));
-
-    /// <summary>
-    /// Performs a PATCH request with the provided file.
-    /// </summary>
-    /// <param name="fileName">
-    /// The file name of the file including the file extension.
-    /// </param>
-    /// <param name="file">
-    /// The file to be sent.
-    /// </param>
-    public async Task PatchWithFileAsync(string fileName, byte[] file) =>
-        await PatchWithFileAsync(fileName, new MemoryStream(file));
-
-    /// <summary>
-    /// Performs a PATCH request with the provided file.
-    /// </summary>
-    /// <param name="fileName">
-    /// The file name of the file including the file extension.
-    /// </param>
-    /// <param name="file">
-    /// The file to be sent.
-    /// </param>
-    public async Task PatchWithFileAsync(string fileName, Stream file)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PatchMultipartAsync(mp =>
-            {
-                // Removes double quotes from boundary, otherwise the request fails with error 405 Method Not Allowed
-                var boundary = mp.Headers.ContentType.Parameters.First(o => o.Name.Equals("boundary", StringComparison.OrdinalIgnoreCase));
-                boundary.Value = boundary.Value.Replace("\"", string.Empty);
-
-                var content = new StreamContent(file);
-                content.Headers.Add("Content-Disposition", $"form-data; name=\"files\"; filename=\"{fileName}\"");
-                content.Headers.Add("Content-Type", "application/octet-stream");
-                mp.Add(content);
-            });
-        });
-    }
-
-    /// <summary>
-    /// Performs a PUT request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The object to be sent as the JSON body.
-    /// </param>
-    public async Task PutAsync(object data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutJsonAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a PUT request with the provided parameters.
-    /// </summary>
-    /// <param name="data">
-    /// The JSON string to be sent as the request body.
-    /// </param>
-    public async Task PutStringAsync(string data)
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).PutStringAsync(data);
-        });
-    }
-
-    /// <summary>
-    /// Performs a DELETE request with the provided parameters.
-    /// </summary>
-    public async Task DeleteAsync()
-    {
-        await _slConnection.ExecuteRequest(async () =>
-        {
-            return await FlurlRequest.WithCookies(await _slConnection.GetSessionCookiesAsync()).DeleteAsync();
-        });
-    }
+    public SLRequest WithTimeout(int timeout) => WithTimeout(TimeSpan.FromSeconds(timeout));
 }

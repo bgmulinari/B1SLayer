@@ -1,15 +1,16 @@
 using B1SLayer.Models;
 using B1SLayer.Test.Models;
-using Flurl;
 
 namespace B1SLayer.Test;
 
 public class SLRequestTests : TestBase
 {
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task RequestParameters_AreApplied(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task RequestParameters_AreApplied(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("{}");
 
         await slConnection.Request("$crossjoin(Orders,Orders/DocumentLines)")
@@ -47,9 +48,12 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task LoginAsync_IsPerformedAutomatically(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task LoginAsync_IsPerformedAutomatically(string version)
     {
+        var slConnection = GetConnection(version);
+
         await slConnection.Request("Orders").GetStringAsync(); // random request
 
         Assert.Equal(LoginResponse.SessionId, slConnection.LoginResponse.SessionId);
@@ -60,9 +64,12 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_ReturnsCorrectData(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_ReturnsCorrectData(string version)
     {
+        var slConnection = GetConnection(version);
+
         var expectedData = new List<MarketingDocument>
         {
             new() { DocEntry = 1, CardCode = "C20001" },
@@ -85,64 +92,18 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetWithETagAsync_ReturnsResponseBodyAndETag(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAllAsync_ReturnsCorrectData(string version)
     {
-        const string etag = "W/\"0000000000000000000000000000000000000000\"";
-        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}", 200,
-            new Dictionary<string, string> { ["ETag"] = etag });
+        var slConnection = GetConnection(version);
 
-        var (result, resultETag) = await slConnection
-            .Request("Orders", 1)
-            .GetWithETagAsync<MarketingDocument>();
-
-        Assert.Equal(1, result.DocEntry);
-        Assert.Equal("C20001", result.CardCode);
-        Assert.Equal(etag, resultETag);
-    }
-
-    [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task WithETag_SendsIfMatchHeader(SLConnection slConnection)
-    {
-        const string etag = "W/\"0000000000000000000000000000000000000000\"";
-        HttpTest.RespondWith("", 204);
-
-        await slConnection
-            .Request("Orders", 1)
-            .WithETag(etag)
-            .PatchAsync(new { Comments = "Updated" });
-
-        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
-            .WithVerb(HttpMethod.Patch)
-            .WithHeader("If-Match", etag)
-            .Times(1);
-    }
-
-    [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PatchAsync_WithoutETag_DoesNotSendIfMatchHeader(SLConnection slConnection)
-    {
-        HttpTest.RespondWith("", 204);
-
-        await slConnection.Request("Orders", 1).PatchAsync(new { Comments = "Updated" });
-
-        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
-            .WithVerb(HttpMethod.Patch)
-            .WithoutHeader("If-Match", "*")
-            .Times(1);
-    }
-
-    [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAllAsync_ReturnsCorrectData(SLConnection slConnection)
-    {
         var page1 = new SLCollectionRoot<MarketingDocument>
         {
             Value =
             [
-                new() { DocEntry = 1, CardCode = "C20001" },
-                new() { DocEntry = 2, CardCode = "C20002" }
+                new MarketingDocument { DocEntry = 1, CardCode = "C20001" },
+                new MarketingDocument { DocEntry = 2, CardCode = "C20002" }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=2"
         };
@@ -151,8 +112,8 @@ public class SLRequestTests : TestBase
         {
             Value =
             [
-                new() { DocEntry = 3, CardCode = "C20003" },
-                new() { DocEntry = 4, CardCode = "C20004" }
+                new MarketingDocument { DocEntry = 3, CardCode = "C20003" },
+                new MarketingDocument { DocEntry = 4, CardCode = "C20004" }
             ],
             ODataNextLinkJson = "Orders?$select=DocEntry,CardCode&$skip=4"
         };
@@ -175,9 +136,11 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostAsync_PrimitiveNumber_ReturnsCorrectValue(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostAsync_PrimitiveNumber_ReturnsCorrectValue(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("2.92920");
 
         var result = await slConnection
@@ -188,9 +151,11 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_PrimitiveString_ReturnsCorrectValue(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_PrimitiveString_ReturnsCorrectValue(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("\"hello\"");
 
         var result = await slConnection
@@ -201,9 +166,11 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task PostAsync_PrimitiveBoolean_ReturnsCorrectValue(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostAsync_PrimitiveBoolean_ReturnsCorrectValue(string version)
     {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("true");
 
         var result = await slConnection
@@ -214,9 +181,119 @@ public class SLRequestTests : TestBase
     }
 
     [Theory]
-    [MemberData(nameof(SLConnections))]
-    public async Task GetAsync_StringType_WithObjectResponse_ReturnsRawJson(SLConnection slConnection)
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task SessionCookies_AreCachedAndReusedAcrossRequests(string version)
     {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders").GetStringAsync();
+        await slConnection.Request("Orders").GetStringAsync();
+
+        // A single login serves both requests, and the session cookies are attached to each resource request
+        HttpTest.ShouldHaveCalled($"{slConnection.ServiceLayerRoot}/Login")
+            .WithVerb(HttpMethod.Post)
+            .Times(1);
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithVerb(HttpMethod.Get)
+            .WithHeader("Cookie", SessionCookieHeader)
+            .Times(2);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task WithHeader_NullValue_RemovesHeader(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders")
+            .WithPageSize(50)
+            .WithHeader("B1S-PageSize", null)
+            .GetStringAsync();
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithoutHeader("B1S-PageSize")
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task SetQueryParam_NullValue_RemovesParameter(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders")
+            .Top(5)
+            .SetQueryParam("$top", null)
+            .GetStringAsync();
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithoutQueryParam("$top")
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task WithHeader_UserCookie_IsMergedWithSessionCookies(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders")
+            .WithHeader("Cookie", "ROUTEID=.node9")
+            .GetStringAsync();
+
+        // A single Cookie header field is sent, with the user's cookies taking precedence
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithHeader("Cookie", $"ROUTEID=.node9; {SessionCookieHeader}")
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetWithInlineCountAsync_StringType_ReturnsRawJsonAndCount(string version)
+    {
+        var slConnection = GetConnection(version);
+        var countProperty = version == "v2" ? "@odata.count" : "odata.count";
+        HttpTest.RespondWith($$"""{"{{countProperty}}":155,"value":[{"DocEntry":1}]}""");
+
+        var (result, count) = await slConnection.Request("Orders").GetWithInlineCountAsync<string>();
+
+        Assert.Equal(155, count);
+        Assert.Contains("\"DocEntry\":1", result);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PostStringAsync_SendsJsonContentType(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{}");
+
+        await slConnection.Request("Orders").PostStringAsync("{\"DocEntry\":1}");
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders"))
+            .WithVerb(HttpMethod.Post)
+            .WithHeader("Content-Type", "application/json; charset=utf-8")
+            .WithRequestBody("{\"DocEntry\":1}")
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetAsync_StringType_WithObjectResponse_ReturnsRawJson(string version)
+    {
+        var slConnection = GetConnection(version);
         HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}");
 
         var result = await slConnection
