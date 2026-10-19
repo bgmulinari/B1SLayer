@@ -128,6 +128,18 @@ public class SLBatchRequest
     }
 
     /// <summary>
+    ///     Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+    /// </summary>
+    /// <param name="etag">
+    ///     The ETag returned by a previous Service Layer request, such as through <see cref="SLRequest.GetWithETagAsync{T}" />.
+    /// </param>
+    public SLBatchRequest WithETag(string etag)
+    {
+        Headers.Add("If-Match", etag);
+        return this;
+    }
+
+    /// <summary>
     ///     Adds a custom request header to be sent.
     /// </summary>
     /// <param name="name">

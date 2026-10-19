@@ -196,6 +196,18 @@ public partial class SLRequest
     }
 
     /// <summary>
+    ///     Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+    /// </summary>
+    /// <param name="etag">
+    ///     The ETag returned by a previous Service Layer request, such as through <see cref="GetWithETagAsync{T}" />.
+    /// </param>
+    public SLRequest WithETag(string etag)
+    {
+        SetHeaderValue("If-Match", etag);
+        return this;
+    }
+
+    /// <summary>
     ///     Adds a custom request header to be sent. A null value removes the header.
     /// </summary>
     /// <param name="name">

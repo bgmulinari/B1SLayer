@@ -38,6 +38,31 @@ public partial class SLRequest
     }
 
     /// <summary>
+    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the ETag returned by the Service Layer.
+    /// </summary>
+    /// <remarks>
+    ///     The returned ETag can be supplied to <see cref="WithETag(string)" /> on a subsequent update or delete request for optimistic concurrency control.
+    /// </remarks>
+    /// <typeparam name="T">
+    ///     The object type for the result to be deserialized into.
+    /// </typeparam>
+    /// <param name="unwrapCollection">
+    ///     Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+    /// </param>
+    /// <param name="cancellationToken">
+    ///     A token to cancel the asynchronous operation.
+    /// </param>
+    public Task<(T Result, string ETag)> GetWithETagAsync<T>(bool unwrapCollection = true, CancellationToken cancellationToken = default)
+    {
+        return SendAsync(HttpMethod.Get,
+            null,
+            null,
+            async response => (await DeserializeResponseAsync<T>(response, unwrapCollection, cancellationToken).ConfigureAwait(false),
+                response.Headers.ETag?.ToString()),
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
     ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
     /// </summary>
     /// <typeparam name="T">

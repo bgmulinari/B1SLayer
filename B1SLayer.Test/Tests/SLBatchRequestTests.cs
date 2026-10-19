@@ -67,6 +67,25 @@ public class SLBatchRequestTests : TestBase
         Assert.Equal("{\"some\":\"content\"}", await batchResult[0].Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task PostBatchAsync_WithETag_SendsIfMatchHeader()
+    {
+        const string etag = "W/\"0000000000000000000000000000000000000000\"";
+        HttpTest.RespondWith(
+            v2Response,
+            202,
+            new Dictionary<string, string> { { "Content-Type", "multipart/mixed;boundary=batchresponse_00000000-0000-0000-0000-000000000000" } });
+        var request = new SLBatchRequest(HttpMethod.Patch, "BusinessPartners('C00001')", new { CardName = "Updated" }, 1)
+            .WithETag(etag);
+
+        await SLConnectionV2.PostBatchAsync(request);
+
+        HttpTest.ShouldHaveCalled(SLConnectionV2.ServiceLayerRoot.AppendPathSegment("$batch"))
+            .WithVerb(HttpMethod.Post)
+            .With(call => call.RequestBody.Contains($"If-Match: {etag}", StringComparison.Ordinal), "If-Match header in the batch part")
+            .Times(1);
+    }
+
     [Theory]
     [InlineData("v1")]
     [InlineData("v2")]
