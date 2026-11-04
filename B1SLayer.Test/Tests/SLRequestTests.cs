@@ -205,6 +205,77 @@ public class SLRequestTests : TestBase
     [Theory]
     [InlineData("v1")]
     [InlineData("v2")]
+    public async Task GetWithETagAsync_ReturnsResponseBodyAndETag(string version)
+    {
+        var slConnection = GetConnection(version);
+        const string etag = "W/\"0000000000000000000000000000000000000000\"";
+        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}", 200,
+            new Dictionary<string, string> { ["ETag"] = etag });
+
+        var (result, resultETag) = await slConnection
+            .Request("Orders", 1)
+            .GetWithETagAsync<MarketingDocument>();
+
+        Assert.Equal(1, result.DocEntry);
+        Assert.Equal("C20001", result.CardCode);
+        Assert.Equal(etag, resultETag);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task GetWithETagAsync_NoETagHeader_ReturnsNullETag(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("{\"DocEntry\":1}");
+
+        var (result, resultETag) = await slConnection
+            .Request("Orders", 1)
+            .GetWithETagAsync<MarketingDocument>();
+
+        Assert.Equal(1, result.DocEntry);
+        Assert.Null(resultETag);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task WithETag_SendsIfMatchHeader(string version)
+    {
+        var slConnection = GetConnection(version);
+        const string etag = "W/\"0000000000000000000000000000000000000000\"";
+        HttpTest.RespondWith("", 204);
+
+        await slConnection
+            .Request("Orders", 1)
+            .WithETag(etag)
+            .PatchAsync(new { Comments = "Updated" });
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
+            .WithVerb(HttpMethod.Patch)
+            .WithHeader("If-Match", etag)
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task PatchAsync_WithoutETag_DoesNotSendIfMatchHeader(string version)
+    {
+        var slConnection = GetConnection(version);
+        HttpTest.RespondWith("", 204);
+
+        await slConnection.Request("Orders", 1).PatchAsync(new { Comments = "Updated" });
+
+        HttpTest.ShouldHaveCalled(slConnection.ServiceLayerRoot.AppendPathSegment("Orders(1)"))
+            .WithVerb(HttpMethod.Patch)
+            .WithoutHeader("If-Match")
+            .Times(1);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
     public async Task WithHeader_NullValue_RemovesHeader(string version)
     {
         var slConnection = GetConnection(version);
