@@ -11,7 +11,8 @@ namespace B1SLayer;
 public partial class SLConnection
 {
     /// <summary>
-    ///     Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest" /> instances.
+    ///     Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+    ///     <see cref="SLBatchRequest" /> instances.
     ///     All requests are sent in a single change set.
     /// </summary>
     /// <remarks>
@@ -26,7 +27,8 @@ public partial class SLConnection
     public Task<HttpResponseMessage[]> PostBatchAsync(params SLBatchRequest[] requests) => PostBatchAsync(requests, true);
 
     /// <summary>
-    ///     Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="SLBatchRequest" /> collection.
+    ///     Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+    ///     <see cref="SLBatchRequest" /> collection.
     /// </summary>
     /// <remarks>
     ///     See section 'Batch Operations' in the Service Layer User Manual for more details.
@@ -35,7 +37,8 @@ public partial class SLConnection
     ///     A collection of <see cref="SLBatchRequest" /> to be sent in the batch.
     /// </param>
     /// <param name="singleChangeSet">
-    ///     Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful request will cause the whole batch to be rolled back.
+    ///     Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful
+    ///     request will cause the whole batch to be rolled back.
     /// </param>
     /// <returns>
     ///     An <see cref="HttpResponseMessage" /> array containg the response messages of the batch request.

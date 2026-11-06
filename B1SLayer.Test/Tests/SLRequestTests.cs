@@ -209,7 +209,8 @@ public class SLRequestTests : TestBase
     {
         var slConnection = GetConnection(version);
         const string etag = "W/\"0000000000000000000000000000000000000000\"";
-        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}", 200,
+        HttpTest.RespondWith("{\"DocEntry\":1,\"CardCode\":\"C20001\"}",
+            200,
             new Dictionary<string, string> { ["ETag"] = etag });
 
         var (result, resultETag) = await slConnection

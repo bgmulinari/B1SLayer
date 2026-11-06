@@ -23,7 +23,8 @@ public partial class SLConnection
     private readonly List<Func<SLCallContext, Task>> _onErrorHandlers = [];
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="SLRequest" /> class that represents a request to the associated <see cref="SLConnection" />.
+    ///     Initializes a new instance of the <see cref="SLRequest" /> class that represents a request to the associated
+    ///     <see cref="SLConnection" />.
     /// </summary>
     /// <remarks>
     ///     The request can be configured through the fluent methods of <see cref="SLRequest" />.
@@ -34,7 +35,8 @@ public partial class SLConnection
     public SLRequest Request(string resource) => new(this, resource);
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="SLRequest" /> class that represents a request to the associated <see cref="SLConnection" />.
+    ///     Initializes a new instance of the <see cref="SLRequest" /> class that represents a request to the associated
+    ///     <see cref="SLConnection" />.
     /// </summary>
     /// <remarks>
     ///     The request can be configured through the fluent methods of <see cref="SLRequest" />.
@@ -56,7 +58,8 @@ public partial class SLConnection
     ///     Ensures a valid session and then executes the request built by the provided factory,
     ///     handing the successful response to the provided handler.
     ///     If the request is unsuccessfull with any return code present in <see cref="HttpStatusCodesToRetry" />,
-    ///     it will be retried for <see cref="NumberOfAttempts" /> number of times, waiting <see cref="RetryDelay" /> between attempts.
+    ///     it will be retried for <see cref="NumberOfAttempts" /> number of times, waiting <see cref="RetryDelay" /> between
+    ///     attempts.
     /// </summary>
     /// <remarks>
     ///     The factory is invoked once per attempt, as an <see cref="HttpRequestMessage" /> and its content can not be reused.
@@ -485,10 +488,12 @@ public partial class SLConnection
 
     /// <summary>
     ///     Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-    ///     In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+    ///     In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG
+    ///     response.
     /// </summary>
     /// <remarks>
-    ///     This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+    ///     This feature is only available on version 9.3 PL10 or above. See SAP Note
+    ///     <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
     /// </remarks>
     /// <returns>
     ///     A <see cref="SLPingResponse" /> object containing the response details.
@@ -500,10 +505,12 @@ public partial class SLConnection
 
     /// <summary>
     ///     Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-    ///     In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+    ///     In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG
+    ///     response.
     /// </summary>
     /// <remarks>
-    ///     This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+    ///     This feature is only available on version 9.3 PL10 or above. See SAP Note
+    ///     <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
     /// </remarks>
     /// <param name="node">
     ///     The specific node to be monitored. If not specified, the request will be directed to the load balancer.
@@ -556,7 +563,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Func{T, TResult}" /> delegate that is called before every Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     ///     Response-related properties will be null in BeforeCall.
     /// </remarks>
     public SLConnection BeforeCall(Func<SLCallContext, Task> action)
@@ -569,7 +577,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Action{T}" /> delegate that is called before every Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     ///     Response-related properties will be null in BeforeCall.
     /// </remarks>
     public SLConnection BeforeCall(Action<SLCallContext> action)
@@ -582,7 +591,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Func{T, TResult}" /> delegate that is called after every Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     /// </remarks>
     public SLConnection AfterCall(Func<SLCallContext, Task> action)
     {
@@ -594,7 +604,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Action{T}" /> delegate that is called after every Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     /// </remarks>
     public SLConnection AfterCall(Action<SLCallContext> action)
     {
@@ -606,7 +617,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Func{T, TResult}" /> delegate that is called after every unsuccessful Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     /// </remarks>
     public SLConnection OnError(Func<SLCallContext, Task> action)
     {
@@ -618,7 +630,8 @@ public partial class SLConnection
     ///     Sets a <see cref="Action{T}" /> delegate that is called after every unsuccessful Service Layer request.
     /// </summary>
     /// <remarks>
-    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+    ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
+    ///     error handling.
     /// </remarks>
     public SLConnection OnError(Action<SLCallContext> action)
     {

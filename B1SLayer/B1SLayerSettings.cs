@@ -8,7 +8,8 @@ namespace B1SLayer;
 public static class B1SLayerSettings
 {
     /// <summary>
-    ///     Gets or sets the <see cref="IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
+    ///     Gets or sets the <see cref="IDistributedCache" /> implementation to be used for session management. By default, an
+    ///     in-memory implementation is used.
     /// </summary>
     public static IDistributedCache DistributedCache { get; set; } = new SimpleMemoryDistributedCache();
 }

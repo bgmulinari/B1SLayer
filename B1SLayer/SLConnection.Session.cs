@@ -227,7 +227,8 @@ public partial class SLConnection
     public Task InvalidateSessionCacheAsync(CancellationToken cancellationToken = default) => DistributedCache.RemoveAsync(SessionCacheKey, cancellationToken);
 
     /// <summary>
-    ///     Creates a <see cref="SLCookieJar" /> instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
+    ///     Creates a <see cref="SLCookieJar" /> instance from the context string obtained from the UI API method
+    ///     "GetServiceLayerConnectionContext";
     /// </summary>
     /// <param name="connectionContext">
     ///     The connection context string obtained from UI API.

@@ -34,7 +34,8 @@ public class SLConnectionOptions
     public string Password { get; set; }
 
     /// <summary>
-    ///     Gets or sets the language code to be used. Specify a code if you want error messages in some specific language other than English.
+    ///     Gets or sets the language code to be used. Specify a code if you want error messages in some specific language
+    ///     other than English.
     ///     A GET request to the UserLanguages resource will return all available languages and their respective codes.
     /// </summary>
     public int? Language { get; set; }
@@ -51,13 +52,15 @@ public class SLConnectionOptions
     public TimeSpan RetryDelay { get; set; } = TimeSpan.FromMilliseconds(200);
 
     /// <summary>
-    ///     Gets or sets the reference for the UI API method responsible for obtaining the connection context when using Single Sign-On (SSO) authentication
+    ///     Gets or sets the reference for the UI API method responsible for obtaining the connection context when using Single
+    ///     Sign-On (SSO) authentication
     ///     (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
     /// </summary>
     public Func<string, string> GetServiceLayerConnectionContext { get; set; }
 
     /// <summary>
-    ///     Gets or sets the timeout value in minutes for a Service Layer session when using Single Sign-On (SSO) authentication.
+    ///     Gets or sets the timeout value in minutes for a Service Layer session when using Single Sign-On (SSO)
+    ///     authentication.
     ///     If the configured value differs from the default 30 minutes, specify it through this property.
     ///     Check the "SessionTimeout" property in the file "b1s.conf" on the server.
     /// </summary>
@@ -67,7 +70,8 @@ public class SLConnectionOptions
     ///     Gets or sets a custom <see cref="System.Net.Http.HttpClient" /> to be used for the requests to the Service Layer.
     /// </summary>
     /// <remarks>
-    ///     The provided instance must be exclusive to this connection and unused, as its <see cref="System.Net.Http.HttpClient.Timeout" />
+    ///     The provided instance must be exclusive to this connection and unused, as its
+    ///     <see cref="System.Net.Http.HttpClient.Timeout" />
     ///     is set to infinite (timeouts are managed per request by B1SLayer) and it will not be disposed by B1SLayer.
     ///     The underlying handler must have cookies disabled (UseCookies = false), otherwise the session cookies managed
     ///     by B1SLayer will not be sent. Can not be combined with <see cref="HttpMessageHandler" />.
@@ -78,9 +82,11 @@ public class SLConnectionOptions
     ///     Gets or sets a custom <see cref="System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service Layer.
     /// </summary>
     /// <remarks>
-    ///     The handler will be wrapped in an <see cref="System.Net.Http.HttpClient" /> managed by B1SLayer and will not be disposed by it.
+    ///     The handler will be wrapped in an <see cref="System.Net.Http.HttpClient" /> managed by B1SLayer and will not be
+    ///     disposed by it.
     ///     B1SLayer disables cookie management (UseCookies = false) on the innermost handler when it is an
-    ///     <see cref="System.Net.Http.HttpClientHandler" /> or SocketsHttpHandler, including through DelegatingHandler chains —
+    ///     <see cref="System.Net.Http.HttpClientHandler" /> or SocketsHttpHandler, including through DelegatingHandler chains
+    ///     —
     ///     for any other handler type that manages cookies, cookies must be disabled manually, otherwise the session
     ///     cookies managed by B1SLayer will not be sent. A handler that has already served requests can no longer be
     ///     configured and is used as-is; in that scenario, cookie management must have been disabled beforehand.
@@ -119,7 +125,8 @@ public class SLConnectionOptions
     public TimeSpan DefaultRequestTimeout { get; set; } = TimeSpan.FromSeconds(100);
 
     /// <summary>
-    ///     Gets or sets the default <see cref="System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request and response bodies.
+    ///     Gets or sets the default <see cref="System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize
+    ///     request and response bodies.
     ///     By default, null values are ignored when serializing. Can be overridden per request with
     ///     <see cref="SLRequest.WithJsonSerializerOptions(JsonSerializerOptions)" />.
     /// </summary>

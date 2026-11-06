@@ -11,7 +11,8 @@ namespace B1SLayer;
 
 /// <summary>
 ///     Represents a request to the Service Layer, configured through its fluent methods
-///     and executed through one of its HTTP methods (e.g. <see cref="GetAsync{T}" />, <see cref="PostAsync(object, CancellationToken)" />).
+///     and executed through one of its HTTP methods (e.g. <see cref="GetAsync{T}" />,
+///     <see cref="PostAsync(object, CancellationToken)" />).
 /// </summary>
 public partial class SLRequest
 {
@@ -62,7 +63,8 @@ public partial class SLRequest
     internal bool AllowAnyStatusCode { get; set; }
 
     /// <summary>
-    ///     The serializer options for this request, or null to use the connection's <see cref="SLConnection.JsonSerializerOptions" />.
+    ///     The serializer options for this request, or null to use the connection's
+    ///     <see cref="SLConnection.JsonSerializerOptions" />.
     /// </summary>
     internal JsonSerializerOptions SerializerOptions { get; set; }
 
@@ -224,7 +226,8 @@ public partial class SLRequest
     }
 
     /// <summary>
-    ///     Configures the request to not throw an exception when the response has any of the provided <see cref="HttpStatusCode" />.
+    ///     Configures the request to not throw an exception when the response has any of the provided
+    ///     <see cref="HttpStatusCode" />.
     /// </summary>
     /// <remarks>
     ///     By default, every response with an unsuccessful <see cref="HttpStatusCode" /> (non-2XX) will result in a throw.

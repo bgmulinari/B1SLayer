@@ -10,7 +10,8 @@ namespace B1SLayer.Test;
 /// <summary>
 ///     A mock <see cref="HttpMessageHandler" /> that serves canned responses and records every request:
 ///     sticky-last FIFO response queues, URL-pattern routing, exception simulation and fluent call assertions.
-///     An instance is injected into the tested <see cref="SLConnection" /> through <see cref="SLConnectionOptions.HttpMessageHandler" />.
+///     An instance is injected into the tested <see cref="SLConnection" /> through
+///     <see cref="SLConnectionOptions.HttpMessageHandler" />.
 /// </summary>
 public sealed class MockHttp : HttpMessageHandler
 {

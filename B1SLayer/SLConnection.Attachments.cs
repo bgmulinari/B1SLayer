@@ -15,7 +15,8 @@ public partial class SLConnection
     ///     Uploads the provided file as an attachment.
     /// </summary>
     /// <remarks>
-    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+    ///     Manual for more details.
     /// </remarks>
     /// <param name="path">
     ///     The path to the file to be uploaded.
@@ -32,7 +33,8 @@ public partial class SLConnection
     ///     Uploads the provided file as an attachment.
     /// </summary>
     /// <remarks>
-    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+    ///     Manual for more details.
     /// </remarks>
     /// <param name="fileName">
     ///     The file name of the file to be uploaded including the file extension.
@@ -52,7 +54,8 @@ public partial class SLConnection
     ///     Uploads the provided file as an attachment.
     /// </summary>
     /// <remarks>
-    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+    ///     Manual for more details.
     /// </remarks>
     /// <param name="fileName">
     ///     The file name of the file to be uploaded including the file extension.
@@ -69,10 +72,12 @@ public partial class SLConnection
     public Task<SLAttachment> PostAttachmentAsync(string fileName, Stream file, CancellationToken cancellationToken = default) => PostAttachmentsAsync(new Dictionary<string, Stream> { { fileName, file } }, cancellationToken);
 
     /// <summary>
-    ///     Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+    ///     Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment
+    ///     entry.
     /// </summary>
     /// <remarks>
-    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+    ///     Manual for more details.
     /// </remarks>
     /// <param name="files">
     ///     A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
@@ -86,10 +91,12 @@ public partial class SLConnection
     public Task<SLAttachment> PostAttachmentsAsync(IDictionary<string, byte[]> files, CancellationToken cancellationToken = default) => PostAttachmentsCoreAsync(ToBufferedFiles(files), cancellationToken);
 
     /// <summary>
-    ///     Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+    ///     Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment
+    ///     entry.
     /// </summary>
     /// <remarks>
-    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+    ///     An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+    ///     Manual for more details.
     /// </remarks>
     /// <param name="files">
     ///     A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
@@ -219,7 +226,8 @@ public partial class SLConnection
     }
 
     /// <summary>
-    ///     Validates and buffers the given files upfront so the multipart content can be rebuilt in case the request is retried.
+    ///     Validates and buffers the given files upfront so the multipart content can be rebuilt in case the request is
+    ///     retried.
     /// </summary>
     private static async Task<List<KeyValuePair<string, byte[]>>> BufferAttachmentFilesAsync(IDictionary<string, Stream> files, CancellationToken cancellationToken)
     {

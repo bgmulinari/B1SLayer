@@ -19,7 +19,10 @@ internal static class MultipartHelper
     ///     Reads a multipart HTTP response and parses it into an array of <see cref="HttpResponseMessage" /> objects.
     /// </summary>
     /// <param name="response">The HTTP response containing the multipart content.</param>
-    /// <returns>An array of <see cref="HttpResponseMessage" /> objects representing the individual parts of the multipart response.</returns>
+    /// <returns>
+    ///     An array of <see cref="HttpResponseMessage" /> objects representing the individual parts of the multipart
+    ///     response.
+    /// </returns>
     public static async Task<HttpResponseMessage[]> ReadMultipartResponseAsync(HttpResponseMessage response)
     {
         var innerResponses = new List<HttpResponseMessage>();

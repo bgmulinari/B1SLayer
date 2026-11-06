@@ -38,10 +38,12 @@ public partial class SLRequest
     }
 
     /// <summary>
-    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the ETag returned by the Service Layer.
+    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the
+    ///     deserialized result and the ETag returned by the Service Layer.
     /// </summary>
     /// <remarks>
-    ///     The returned ETag can be supplied to <see cref="WithETag(string)" /> on a subsequent update or delete request for optimistic concurrency control.
+    ///     The returned ETag can be supplied to <see cref="WithETag(string)" /> on a subsequent update or delete request for
+    ///     optimistic concurrency control.
     /// </remarks>
     /// <typeparam name="T">
     ///     The object type for the result to be deserialized into.
@@ -63,7 +65,8 @@ public partial class SLRequest
     }
 
     /// <summary>
-    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+    ///     Performs a GET request with the provided parameters and returns the result in a value tuple containing the
+    ///     deserialized result and the count of matching resources.
     /// </summary>
     /// <typeparam name="T">
     ///     The object type for the result to be deserialized into.
@@ -110,7 +113,8 @@ public partial class SLRequest
     }
 
     /// <summary>
-    ///     Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
+    ///     Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped
+    ///     from the 'value' array.
     /// </summary>
     /// <remarks>
     ///     This can be very slow depending on the total amount of entities in the company database.
@@ -169,7 +173,8 @@ public partial class SLRequest
     }
 
     /// <summary>
-    ///     Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+    ///     Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous
+    ///     type.
     /// </summary>
     /// <param name="anonymousTypeObject">
     ///     The anonymous type object.

@@ -12,14 +12,16 @@ namespace B1SLayer;
 public class SLBatchRequest
 {
     /// <summary>
-    ///     Initializes a new instance of the <see cref="SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
+    ///     Initializes a new instance of the <see cref="SLBatchRequest" /> class, which represents the details of a request to
+    ///     be sent in a batch.
     /// </summary>
     public SLBatchRequest()
     {
     }
 
     /// <summary>
-    ///     Initializes a new instance of the <see cref="SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
+    ///     Initializes a new instance of the <see cref="SLBatchRequest" /> class, which represents the details of a request to
+    ///     be sent in a batch.
     /// </summary>
     /// <param name="httpMethod">
     ///     The HTTP method to be used for this request.
@@ -31,7 +33,8 @@ public class SLBatchRequest
     ///     The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
     /// </param>
     /// <param name="contentID">
-    ///     Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+    ///     Entity reference that can be used by subsequent requests to refer to a new entity created within the same change
+    ///     set.
     ///     This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
     /// </param>
     public SLBatchRequest(HttpMethod httpMethod, string resource, object data = null, int? contentID = null)
@@ -58,7 +61,8 @@ public class SLBatchRequest
     public object Data { get; set; }
 
     /// <summary>
-    ///     Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+    ///     Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer
+    ///     to a new entity created within the same change set.
     ///     This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
     /// </summary>
     public int? ContentID { get; set; }
@@ -85,7 +89,8 @@ public class SLBatchRequest
     internal HttpRequestHeaders Headers { get; } = CreateHeaders();
 
     /// <summary>
-    ///     <see cref="HttpRequestHeaders" /> has no public constructor, so an instance is obtained from a throwaway request message.
+    ///     <see cref="HttpRequestHeaders" /> has no public constructor, so an instance is obtained from a throwaway request
+    ///     message.
     /// </summary>
     private static HttpRequestHeaders CreateHeaders()
     {
@@ -119,7 +124,8 @@ public class SLBatchRequest
     ///     This is suitable for better performance in demanding scenarios where the return content is not needed.
     /// </summary>
     /// <remarks>
-    ///     On success, <see cref="System.Net.HttpStatusCode.NoContent" /> is returned, instead of <see cref="System.Net.HttpStatusCode.Created" />.
+    ///     On success, <see cref="System.Net.HttpStatusCode.NoContent" /> is returned, instead of
+    ///     <see cref="System.Net.HttpStatusCode.Created" />.
     /// </remarks>
     public SLBatchRequest WithReturnNoContent()
     {
@@ -131,7 +137,8 @@ public class SLBatchRequest
     ///     Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
     /// </summary>
     /// <param name="etag">
-    ///     The ETag returned by a previous Service Layer request, such as through <see cref="SLRequest.GetWithETagAsync{T}" />.
+    ///     The ETag returned by a previous Service Layer request, such as through <see cref="SLRequest.GetWithETagAsync{T}" />
+    ///     .
     /// </param>
     public SLBatchRequest WithETag(string etag)
     {

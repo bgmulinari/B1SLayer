@@ -107,7 +107,8 @@ public partial class SLConnection
     ///     The password for the provided user.
     /// </param>
     /// <param name="language">
-    ///     The language code to be used. Specify a code if you want error messages in some specific language other than English.
+    ///     The language code to be used. Specify a code if you want error messages in some specific language other than
+    ///     English.
     ///     A GET request to the UserLanguages resource will return all available languages and their respective codes.
     /// </param>
     /// <param name="numberOfAttempts">
@@ -145,7 +146,8 @@ public partial class SLConnection
     ///     The password for the provided user.
     /// </param>
     /// <param name="language">
-    ///     The language code to be used. Specify a code if you want error messages in some specific language other than English.
+    ///     The language code to be used. Specify a code if you want error messages in some specific language other than
+    ///     English.
     ///     A GET request to the UserLanguages resource will return all available languages and their respective codes.
     /// </param>
     /// <param name="numberOfAttempts">
@@ -201,7 +203,8 @@ public partial class SLConnection
     ///     The password for the provided user.
     /// </param>
     /// <param name="language">
-    ///     The language code to be used. Specify a code if you want error messages in some specific language other than English.
+    ///     The language code to be used. Specify a code if you want error messages in some specific language other than
+    ///     English.
     ///     A GET request to the UserLanguages resource will return all available languages and their respective codes.
     /// </param>
     public SLConnection(string serviceLayerRoot, string companyDB, string userName, string password, int? language)
@@ -224,7 +227,8 @@ public partial class SLConnection
     ///     (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
     /// </param>
     /// <param name="sessionTimeout">
-    ///     The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+    ///     The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30
+    ///     minutes,
     ///     specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
     /// </param>
     /// <param name="numberOfAttempts">
@@ -254,7 +258,8 @@ public partial class SLConnection
     ///     (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
     /// </param>
     /// <param name="sessionTimeout">
-    ///     The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+    ///     The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30
+    ///     minutes,
     ///     specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
     /// </param>
     /// <param name="numberOfAttempts">
@@ -273,7 +278,8 @@ public partial class SLConnection
     public HttpClient HttpClient { get; }
 
     /// <summary>
-    ///     Gets the <see cref="IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
+    ///     Gets the <see cref="IDistributedCache" /> implementation to be used for session management. By default, an
+    ///     in-memory implementation is used.
     /// </summary>
     public IDistributedCache DistributedCache { get; }
 
@@ -308,7 +314,8 @@ public partial class SLConnection
     public int? Language { get; }
 
     /// <summary>
-    ///     Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in <see cref="HttpStatusCodesToRetry" />.
+    ///     Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in
+    ///     <see cref="HttpStatusCodesToRetry" />.
     /// </summary>
     public int NumberOfAttempts { get; set; }
 
@@ -330,7 +337,8 @@ public partial class SLConnection
     } = TimeSpan.FromMilliseconds(200);
 
     /// <summary>
-    ///     Gets or sets the <see cref="System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request and response bodies.
+    ///     Gets or sets the <see cref="System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request
+    ///     and response bodies.
     ///     By default, null values are ignored when serializing. Can be overridden per request with
     ///     <see cref="SLRequest.WithJsonSerializerOptions(JsonSerializerOptions)" />.
     /// </summary>
