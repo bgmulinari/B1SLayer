@@ -1,0 +1,101 @@
+# Publishes the version set in B1SLayer.csproj from the selected branch; bump <Version> first.
+# GitHub only offers this workflow once the file also exists on the default branch.
+# If publishing fails, use "Re-run failed jobs": it reuses the built packages and tolerates
+# a push that already went through. "Re-run all jobs" stops at the version check instead.
+name: Release to NuGet
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build, test and pack only, without publishing
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Read version and check it is unpublished
+        id: version
+        run: |
+          version=$(dotnet msbuild B1SLayer/B1SLayer.csproj -getProperty:Version)
+          published=$(curl -fsS --retry 3 https://api.nuget.org/v3-flatcontainer/b1slayer/index.json)
+          if jq -e --arg v "${version,,}" 'any(.versions[]; . == $v)' <<< "$published" > /dev/null; then
+            echo "::error::B1SLayer $version is already on NuGet; bump <Version> in B1SLayer.csproj."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: dotnet build -c Release -p:ContinuousIntegrationBuild=true -p:GeneratePackageOnBuild=false
+
+      - name: Test
+        run: dotnet test -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack B1SLayer/B1SLayer.csproj -c Release --no-build -p:ContinuousIntegrationBuild=true -o artifacts
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nuget-packages
+          path: artifacts/*
+          if-no-files-found: error
+
+  # Separate from the build so restored packages and tests never run with these permissions.
+  publish:
+    needs: build
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    environment: nuget
+    permissions:
+      contents: write # create the draft GitHub release
+      id-token: write # NuGet Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nuget-packages
+          path: artifacts
+
+      - name: Log in to NuGet
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: bgmulinari
+
+      # Also pushes the matching .snupkg from the same folder. The build job already rejected
+      # published versions, so --skip-duplicate only ever applies when re-running this job.
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      # A draft, so the notes can be written before publishing it creates the tag.
+      - name: Draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PRERELEASE: ${{ contains(needs.build.outputs.version, '-') }}
+        run: |
+          gh release create "$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --prerelease="$PRERELEASE" \
+            --target "$GITHUB_SHA" \
+            --title "$VERSION" \
+            --generate-notes \
+            --notes "Get it on NuGet: https://www.nuget.org/packages/B1SLayer/$VERSION"
