@@ -1,7 +1,8 @@
 namespace B1SLayer;
 
 /// <summary>
-///     The credential a single send attempt carries: nothing (Login, Ping), session cookies or an access token.
+///     The credential a single send attempt carries: nothing (Login, Ping), session cookies, an access token or
+///     whatever the browser adds on its own (an ambient session).
 ///     Having one value hold exactly one of them is what makes a request carrying both unrepresentable before
 ///     <see cref="SLConnection" /> enforces it on the wire.
 /// </summary>
@@ -18,6 +19,11 @@ internal sealed class SLRequestCredential
     ///     An attempt that doesn't authenticate, such as the Login request itself or Ping.
     /// </summary>
     public static SLRequestCredential None { get; } = new(null, null, null);
+
+    /// <summary>
+    ///     An attempt that relies on the session the browser holds, which B1SLayer neither sees nor sends itself.
+    /// </summary>
+    public static SLRequestCredential Ambient { get; } = new(SLRequestIdentity.AmbientSession, null, null);
 
     /// <summary>
     ///     The identity this credential was resolved from, or null when the attempt doesn't authenticate.
@@ -38,6 +44,11 @@ internal sealed class SLRequestCredential
     ///     Whether this attempt authenticates with an access token.
     /// </summary>
     public bool IsToken => AccessToken != null;
+
+    /// <summary>
+    ///     Whether this attempt relies on the session the browser holds.
+    /// </summary>
+    public bool IsAmbient => ReferenceEquals(this, Ambient);
 
     public static SLRequestCredential ForSession(SLCookieJar sessionCookies) => new(SLRequestIdentity.Session, sessionCookies, null);
 
@@ -101,5 +112,5 @@ internal sealed class SLRequestCredential
     /// <summary>
     ///     Returns a description of this credential, which never includes a token or cookie.
     /// </summary>
-    public override string ToString() => $"{nameof(SLRequestCredential)}({(IsToken ? "Token" : SessionCookies != null ? "Session" : "None")})";
+    public override string ToString() => $"{nameof(SLRequestCredential)}({(IsToken ? "Token" : IsAmbient ? "Ambient" : SessionCookies != null ? "Session" : "None")})";
 }

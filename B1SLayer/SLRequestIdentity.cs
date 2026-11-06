@@ -3,15 +3,18 @@ using System;
 namespace B1SLayer;
 
 /// <summary>
-///     The identity a single request runs with: the connection's session (cookies obtained through a login)
-///     or a user's access token, as returned by <see cref="SLConnectionOptions.IdentityResolver" />.
+///     The identity a single request runs with: the connection's session (cookies obtained through a login),
+///     a user's access token, or the session the browser already holds (see
+///     <see cref="SLConnectionOptions.UseAmbientSession" />).
+///     The first two can be returned by <see cref="SLConnectionOptions.IdentityResolver" />.
 /// </summary>
 public sealed class SLRequestIdentity
 {
-    private SLRequestIdentity(ISLAccessTokenSource tokenSource, string companyId)
+    private SLRequestIdentity(ISLAccessTokenSource tokenSource, string companyId, bool isAmbientSession = false)
     {
         TokenSource = tokenSource;
         CompanyId = companyId;
+        IsAmbientSession = isAmbientSession;
     }
 
     /// <summary>
@@ -21,9 +24,21 @@ public sealed class SLRequestIdentity
     public static SLRequestIdentity Session { get; } = new(null, null);
 
     /// <summary>
+    ///     The identity of a connection using <see cref="SLConnectionOptions.UseAmbientSession" />. Internal, as it
+    ///     is decided by the connection: a resolver choosing it would run a request under whatever the browser holds.
+    /// </summary>
+    internal static SLRequestIdentity AmbientSession { get; } = new(null, null, true);
+
+    /// <summary>
     ///     Gets whether requests with this identity run with the connection's session cookies.
     /// </summary>
-    public bool IsSession => TokenSource == null;
+    public bool IsSession => TokenSource == null && !IsAmbientSession;
+
+    /// <summary>
+    ///     Gets whether requests with this identity run with the session the browser already holds,
+    ///     such as the one of the SAP Business One Web Client, with no credential managed by B1SLayer.
+    /// </summary>
+    public bool IsAmbientSession { get; }
 
     /// <summary>
     ///     Gets the SLD company ID sent in the X-b1-companyid header, or null for <see cref="Session" />.
@@ -67,7 +82,9 @@ public sealed class SLRequestIdentity
     /// <summary>
     ///     Returns a description of this identity, which never includes a token.
     /// </summary>
-    public override string ToString() => IsSession
-        ? $"{nameof(SLRequestIdentity)}({nameof(Session)})"
-        : $"{nameof(SLRequestIdentity)}(Token, {nameof(CompanyId)}={CompanyId})";
+    public override string ToString() => IsAmbientSession
+        ? $"{nameof(SLRequestIdentity)}({nameof(AmbientSession)})"
+        : IsSession
+            ? $"{nameof(SLRequestIdentity)}({nameof(Session)})"
+            : $"{nameof(SLRequestIdentity)}(Token, {nameof(CompanyId)}={CompanyId})";
 }

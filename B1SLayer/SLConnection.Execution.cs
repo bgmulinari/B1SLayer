@@ -70,6 +70,8 @@ public partial class SLConnection
     ///     On a 401, a session request logs in again, while a token request asks the token source for a fresh token and
     ///     retries once.
     ///     A token request never falls back to a login, even when the connection has session credentials.
+    ///     A request relying on the browser's session surfaces the 401, as only the application holding that session can renew
+    ///     it.
     /// </remarks>
     internal async Task<T> ExecuteRequestAsync<T>(
         Func<SLRequestCredential, CancellationToken, Task<HttpRequestMessage>> requestFactory,
@@ -107,7 +109,11 @@ public partial class SLConnection
             loginReattempted = false;
             SLRequestCredential credential;
 
-            if (identity.IsSession)
+            if (identity.IsAmbientSession)
+            {
+                credential = SLRequestCredential.Ambient;
+            }
+            else if (identity.IsSession)
             {
                 EnsureSessionCredentials();
 
@@ -181,6 +187,12 @@ public partial class SLConnection
 
                 // Whether the request should be retried
                 if (ex.StatusCode is not { } statusCode || !HttpStatusCodesToRetry.Contains(statusCode))
+                {
+                    break;
+                }
+
+                // The browser's session has ended, and only its application can start a new one
+                if (statusCode == HttpStatusCode.Unauthorized && credential.IsAmbient)
                 {
                     break;
                 }
@@ -463,8 +475,9 @@ public partial class SLConnection
                 // Cookies set by any response in the chain are merged into a per-call jar seeded from the
                 // request's own cookies, so intermediate hops (e.g. a load balancer issuing its affinity
                 // cookie on a redirect) are not lost and later hops send the updated cookie set.
-                // Token requests carry no cookies, so they ignore the ROUTEID cookie the Service Layer sets on them
-                if (!credential.IsToken && response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
+                // Token requests carry no cookies, so they ignore the ROUTEID cookie the Service Layer
+                // sets on them, and the cookies of an ambient session are the browser's to manage
+                if (!credential.IsToken && !credential.IsAmbient && response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
                 {
                     chainCookies ??= credential.SessionCookies?.Clone() ?? new SLCookieJar();
                     chainCookies.MergeSetCookieHeaders(setCookieHeaders, currentRequest.RequestUri);

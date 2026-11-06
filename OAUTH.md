@@ -110,6 +110,36 @@ This is configured on the server, as B1SLayer only sends the token it gets:
 
 If every request gets a 401 with a token that the SLD accepts, check the audience first. `SLCachingAccessTokenSource` limits the cost of this: it replaces a rejected token at most once every 30 seconds, see [401 responses](#401-responses).
 
+## Web Client tile extensions
+
+> **Blazor tiles don't start on Web Client 10.0 FP 2608.** The Content Security Policy the Web Client sends for extension files has no `wasm-unsafe-eval`, so the browser refuses to compile the .NET runtime: `WebAssembly.compileStreaming(): Compiling or instantiating WebAssembly module violates the following Content Security policy directive`. This was seen on version 1000340 in Chrome, despite SAP documenting Blazor as a supported tile type. No documented setting that changes the policy was found, and B1SLayer can't work around it, as it runs inside that runtime. `UseAmbientSession` is only usable where the policy allows WebAssembly. Adding `'wasm-unsafe-eval'` to `default-src` is all it took in testing, with no other change to the policy.
+
+A tile extension hosted by the SAP Business One Web Client, such as a Blazor WebAssembly app packaged with `deploy_mode: b1-webclient`, doesn't need OAuth at all. SAP designed these to reach the Service Layer without logging in to it, on the same origin as the Web Client, so requests inherit the signed-in user. `UseAmbientSession` does that:
+
+```csharp
+var serviceLayer = new SLConnection(new SLConnectionOptions
+{
+    ServiceLayerRoot = new Uri(new Uri(navigationManager.BaseUri), "/b1s/v2"),
+    UseAmbientSession = true
+});
+
+var items = await serviceLayer.Request("Items").Top(5).GetAsync<List<MyItemModel>>();
+```
+
+- B1SLayer sends no credential and never logs in. `LoginAsync` and `LogoutAsync` throw `InvalidOperationException`, as the session belongs to the Web Client.
+- A 401 surfaces right away as a `SLException`, as it means that the Web Client's session has ended and the user has to log in again. The Web Client's gateway answers a signed-out session with a plain 401, not a redirect to its login page.
+- The browser follows redirects, because only it can add the session's cookies to them. On a connection with no provided transport, this is the one case where B1SLayer doesn't follow them itself.
+- A bearer token in an `Authorization` header fails the request with `InvalidOperationException`, and `Cookie` and `Authorization` headers are dropped from the inner requests of a batch.
+- It can't be combined with session credentials or access tokens, and outside a browser it needs a provided `HttpClient` or `HttpMessageHandler`.
+- `SLConnectionOptions.Language` has no effect, as there is no login to send it with.
+- `PingAsync` doesn't work through the Web Client's gateway, which answers `/ping/` with a 500, so it fails with a `SLException`.
+
+This was tested on a real Web Client (10.0 FP 2608, version 1000340) as a deployed Blazor tile in Chrome, with the gateway temporarily sending the policy above with `'wasm-unsafe-eval'` added. The session reaches the Service Layer through the gateway's own `SESSION` cookie, not `B1SESSION`. Requests ran as the signed-in user, and reads, writes, batches and attachment uploads all worked with no CSRF token. A real Sign Out resulted in the 401 described above.
+
+A tile's `index.html` also can't use .NET's inline import map under this policy, and `data:` images in its CSS, like the icons of the Blazor template, don't load. Should the policy allow WebAssembly, set `WasmFingerprintAssets` to false, remove the `importmap` and resource preloader tags, and use `<base href="./" />`. An `.mtar` needs directory entries in its `data.zip`, or the Web Client won't serve the files in its subfolders. `mbt build` is what SAP documents for packaging.
+
+This only applies to apps hosted by the Web Client. A URL Mashup is your own app on its own origin, so it signs in with OIDC, where the Web Client's single sign-on spares the user from entering credentials, and takes the company from the tile's `{b1-companyID}` placeholder. Use [`AccessTokenSource`](#web-apps-and-the-authorization-code-flow) for that. A UI API extension is sandboxed JavaScript with its own `ServiceLayer` client, so B1SLayer doesn't apply.
+
 ## Tokens from other identity providers
 
 With principal propagation, an administrator registers a partner's identity provider in the Extension Single Sign-On Manager and binds it to companies. The Service Layer then accepts that provider's JWT access tokens directly, with the same two headers, so they work through `AccessTokenSource` or `IdentityResolver`:
@@ -161,7 +191,7 @@ The Service Layer honors a session cookie over a bearer token, even an invalid o
 - A token request drops every `Cookie` header, whether set by the caller or a `BeforeCall` handler, overwrites `Authorization` and `X-b1-companyid`, and tells a browser to omit its cookies. It ignores the `ROUTEID` cookie the Service Layer sets on its responses, so there is no load balancer affinity. The inner requests of a token batch have those same headers dropped.
 - On a connection using access tokens, a session request with a bearer token in its `Authorization` header, including an inner request of a batch, fails with `InvalidOperationException`, because dropping either credential would run the request differently than intended. Other schemes, like `Basic` for a proxy, are unaffected.
 - A connection with no `AccessTokenSource` or `IdentityResolver` leaves its headers to you, so a bearer token for an API gateway in front of the Service Layer is sent along with the session cookie. The gateway must remove it before forwarding `POST /Login`, which the Service Layer would otherwise reject, and a token in `HttpClient.DefaultRequestHeaders` goes on that request too. Don't use a header there to select the Service Layer user, as the cookie wins: use `AccessTokenSource` or `IdentityResolver` for that.
-- A `Cookie` header in `HttpClient.DefaultRequestHeaders` fails token requests in the same way, as it can't be removed per request and could follow a redirect to another origin.
+- A `Cookie` header in `HttpClient.DefaultRequestHeaders` fails token and ambient session requests in the same way, as it can't be removed per request and could follow a redirect to another origin.
 - `SLConnection.HttpClient` is the transport, not a send path. Requests you send directly through it aren't covered.
 - If you provide `SLConnectionOptions.HttpClient`, disable cookies on its handler, since B1SLayer can't inspect it. A connection with both session credentials and access tokens rejects a provided `HttpClient` with an `ArgumentException`, as a login through it could store the session's cookie for the token requests. A handler given through `HttpMessageHandler` has this done for you, unless it has already served requests, when it can no longer be changed. On a connection using access tokens, such a handler with cookies enabled is rejected with an `ArgumentException`.
 

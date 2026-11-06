@@ -138,6 +138,11 @@ If the Service Layer answers 401 to a token the SLD accepts, the token's audienc
 client ID, which SAP requires for Single Page Apps as of FP 2602. The guide covers this, along with the CORS
 configuration a browser client needs and tokens from other identity providers.
 
+**Web Client tile extensions.** `UseAmbientSession = true` lets a Blazor WebAssembly tile hosted by the SAP Business One
+Web Client inherit the signed-in user, with no login or token. However, the Content Security Policy of the Web Client
+10.0 FP 2608 doesn't allow WebAssembly, so such a tile doesn't start there. See
+the [guide](https://github.com/bgmulinari/B1SLayer/blob/3.X.X/OAUTH.md#web-client-tile-extensions).
+
 **Certificates are validated for OAuth traffic by default**, unlike session requests. For the self-signed certificates
 of a typical landscape, pin them through `AccessTokenServerCertificateValidationCallback` and
 `SLOidcClientOptions.ServerCertificateValidationCallback`, or opt out with

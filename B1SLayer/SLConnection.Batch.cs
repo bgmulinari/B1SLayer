@@ -145,8 +145,9 @@ public partial class SLConnection
     ///     Builds an <see cref="HttpContent" /> from a given <see cref="SLBatchRequest" />.
     /// </summary>
     /// <remarks>
-    ///     The inner requests of a token batch run with the outer request's identity, so credential headers
-    ///     set on them are dropped: that identity is the only one such a batch runs with, like any other of its requests.
+    ///     The inner requests of a token or ambient session batch run with the outer request's identity, so credential
+    ///     headers set on them are dropped: that identity is the only one such a batch runs with, like any other of its
+    ///     requests.
     /// </remarks>
     private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest, SLRequestCredential credential, CancellationToken cancellationToken = default)
     {
@@ -159,14 +160,14 @@ public partial class SLConnection
         }
 
         // The same rule PrepareForSend applies to any other session request, which can't see the headers in here
-        if (IsUsingAccessTokens && !credential.IsToken && HasBearerToken(batchRequest.Headers))
+        if (IsUsingAccessTokens && !credential.IsToken && !credential.IsAmbient && HasBearerToken(batchRequest.Headers))
         {
             throw new InvalidOperationException(SessionRequestWithBearerTokenMessage);
         }
 
         foreach (var header in batchRequest.Headers)
         {
-            if (credential.IsToken
+            if ((credential.IsToken || credential.IsAmbient)
                 && (header.Key.Equals(CookieHeader, StringComparison.OrdinalIgnoreCase)
                     || header.Key.Equals(AuthorizationHeader, StringComparison.OrdinalIgnoreCase)
                     || header.Key.Equals(CompanyIdHeader, StringComparison.OrdinalIgnoreCase)))

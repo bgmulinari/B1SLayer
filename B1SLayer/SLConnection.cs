@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -52,6 +53,12 @@ public partial class SLConnection
 
         IsUsingSingleSignOn = options.GetServiceLayerConnectionContext != null;
         IsUsingAccessTokens = options.AccessTokenSource != null || options.IdentityResolver != null;
+        IsUsingAmbientSession = options.UseAmbientSession;
+
+        if (IsUsingAmbientSession)
+        {
+            ValidateAmbientSessionOptions(options);
+        }
 
         if (IsUsingAccessTokens)
         {
@@ -72,7 +79,7 @@ public partial class SLConnection
                                       || !string.IsNullOrWhiteSpace(options.UserName)
                                       || !string.IsNullOrWhiteSpace(options.Password);
 
-        if (!IsUsingSingleSignOn && (!IsUsingAccessTokens || hasAnySessionCredential))
+        if (!IsUsingSingleSignOn && !IsUsingAmbientSession && (!IsUsingAccessTokens || hasAnySessionCredential))
         {
             if (string.IsNullOrWhiteSpace(options.CompanyDB))
             {
@@ -459,8 +466,15 @@ public partial class SLConnection
     public bool IsUsingAccessTokens { get; }
 
     /// <summary>
+    ///     Gets whether this <see cref="SLConnection" /> instance relies on the session
+    ///     the browser already holds, through <see cref="SLConnectionOptions.UseAmbientSession" />.
+    /// </summary>
+    public bool IsUsingAmbientSession { get; }
+
+    /// <summary>
     ///     Gets whether this <see cref="SLConnection" /> instance has a session account to log in with, through a username and
-    ///     password or Single Sign-On (SSO). Always true for a connection that doesn't use access tokens.
+    ///     password or Single Sign-On (SSO). Always true for a connection that uses neither access tokens nor an ambient
+    ///     session.
     /// </summary>
     public bool HasSessionCredentials { get; }
 
@@ -501,6 +515,42 @@ public partial class SLConnection
         HttpStatusCode.GatewayTimeout
     ];
 
+    private static bool IsRunningInBrowser => RuntimeInformation.IsOSPlatform(OSPlatform.Create("BROWSER"));
+
+
+    /// <summary>
+    ///     Validates the options specific to an ambient session. Each of the credentials it rejects
+    ///     would mean running a request as someone other than the user of the browser's session.
+    /// </summary>
+    private static void ValidateAmbientSessionOptions(SLConnectionOptions options)
+    {
+        if (options.AccessTokenSource != null
+            || options.IdentityResolver != null
+            || options.GetServiceLayerConnectionContext != null
+            || !string.IsNullOrEmpty(options.CompanyId)
+            || !string.IsNullOrWhiteSpace(options.CompanyDB)
+            || !string.IsNullOrWhiteSpace(options.UserName)
+            || !string.IsNullOrWhiteSpace(options.Password))
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.UseAmbientSession)} can not be combined with session credentials or access tokens, as the session of the browser is the only identity it runs with.");
+        }
+
+        // Silently ignoring a requested pin would validate differently than asked. A browser validates on its own, and a provided transport is configured by its owner
+        if (options.ServerCertificateValidationCallback != null || options.AccessTokenServerCertificateValidationCallback != null)
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.UseAmbientSession)} can not be combined with a certificate validation callback, as it can't be applied.");
+        }
+
+        if (!options.ServiceLayerRoot.IsAbsoluteUri)
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.UseAmbientSession)} requires an absolute {nameof(SLConnectionOptions.ServiceLayerRoot)}. In Blazor, it can be built from NavigationManager.BaseUri.");
+        }
+
+        if (options.HttpClient == null && options.HttpMessageHandler == null && !IsRunningInBrowser)
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.UseAmbientSession)} requires a browser, as nothing else holds the session. Outside of one, provide an {nameof(SLConnectionOptions.HttpClient)} or {nameof(SLConnectionOptions.HttpMessageHandler)} that supplies the credential.");
+        }
+    }
 
     /// <summary>
     ///     Validates the options specific to access tokens.
@@ -551,7 +601,11 @@ public partial class SLConnection
         }
         else if (options.HttpMessageHandler != null)
         {
-            SLHttpHandlers.DisableCookieManagement(options.HttpMessageHandler);
+            // The cookies of a handler are the credential of an ambient session outside a browser. Nothing else uses them
+            if (!options.UseAmbientSession)
+            {
+                SLHttpHandlers.DisableCookieManagement(options.HttpMessageHandler);
+            }
 
             if (options.AccessTokenSource != null || options.IdentityResolver != null)
             {
@@ -570,7 +624,9 @@ public partial class SLConnection
         }
         else
         {
-            httpClient = new HttpClient(CreateDefaultHandler(options));
+            // An ambient session gets a handler with the browser's defaults. Its redirects have to stay with the browser, which is what adds the session's
+            // cookies to them: asking it not to follow them means a "manual" fetch, whose response hides both the status code and the Location header
+            httpClient = new HttpClient(options.UseAmbientSession ? new HttpClientHandler() : CreateDefaultHandler(options));
         }
 
         return ConfigureHttpClient(httpClient);

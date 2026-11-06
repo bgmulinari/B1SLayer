@@ -155,6 +155,32 @@ public class SLConnectionOptions
     public HttpClient HttpClient { get; set; }
 
     /// <summary>
+    ///     Gets or sets whether requests rely on the session the browser already holds, as in a tile extension
+    ///     (for example, a Blazor WebAssembly app) hosted by the SAP Business One Web Client.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         SAP designed these extensions to reach the Service Layer without logging in to it, so B1SLayer sends no
+    ///         credential and never
+    ///         logs in. A 401 means the Web Client's session has ended, so it surfaces right away, and the user has to log in
+    ///         again.
+    ///     </para>
+    ///     <para>
+    ///         The Content Security Policy of the Web Client 10.0 FP 2608 doesn't allow WebAssembly, so a Blazor tile doesn't
+    ///         start there.
+    ///     </para>
+    ///     <para>
+    ///         <see cref="ServiceLayerRoot" /> must be the absolute Service Layer address on the origin of the app, for
+    ///         example
+    ///         new Uri(new Uri(navigationManager.BaseUri), "/b1s/v2"), as a browser only adds its cookies to same-origin
+    ///         requests by default.
+    ///         Can not be combined with session credentials or access tokens. Outside a browser, it
+    ///         requires a provided <see cref="HttpClient" /> or <see cref="HttpMessageHandler" /> to supply the credential.
+    ///     </para>
+    /// </remarks>
+    public bool UseAmbientSession { get; set; }
+
+    /// <summary>
     ///     Gets or sets a custom <see cref="System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service
     ///     Layer.
     /// </summary>

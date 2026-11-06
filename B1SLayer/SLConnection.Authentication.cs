@@ -39,6 +39,11 @@ public partial class SLConnection
     /// </summary>
     private async Task<SLRequestIdentity> ResolveIdentityAsync(TimeSpan? requestTimeout, CancellationToken cancellationToken)
     {
+        if (IsUsingAmbientSession)
+        {
+            return SLRequestIdentity.AmbientSession;
+        }
+
         if (_identityResolver == null)
         {
             return SLRequestIdentity.Session;
@@ -108,6 +113,11 @@ public partial class SLConnection
     /// </summary>
     private void EnsureSessionCredentials()
     {
+        if (IsUsingAmbientSession)
+        {
+            throw new InvalidOperationException("This connection relies on the session the browser already holds, which it can't log in to or out of. That is up to the application hosting it, such as the SAP Business One Web Client.");
+        }
+
         if (!HasSessionCredentials)
         {
             throw new InvalidOperationException("This connection authenticates with access tokens and has no session credentials, so it can't log in, log out or run a request with the session identity. "
@@ -143,6 +153,11 @@ public partial class SLConnection
             headers.TryAddWithoutValidation(CompanyIdHeader, credential.Identity.CompanyId);
             OmitBrowserCredentials(requestMessage);
         }
+        else if (credential.IsAmbient)
+        {
+            // Browsers ignore this header, so it could only ever work outside of one, as a second identity
+            headers.Remove(CookieHeader);
+        }
 
         var httpClient = credential.IsToken ? _accessTokenHttpClient : HttpClient;
         var defaultHeaders = httpClient.DefaultRequestHeaders;
@@ -152,6 +167,18 @@ public partial class SLConnection
         // request fails instead of running as an account other than the one intended, which also covers session requests
         var hasCookie = headers.Contains(CookieHeader) || defaultHeaders.Contains(CookieHeader);
         var hasBearerToken = headers.Contains(AuthorizationHeader) ? HasBearerToken(headers) : HasBearerToken(defaultHeaders);
+
+        if (credential.IsAmbient && hasCookie)
+        {
+            // Unlike a cookie held by a handler, which stays within its domain, this one would also go out on a redirect to another origin
+            throw new InvalidOperationException($"The {nameof(HttpClient)}.{nameof(HttpClient.DefaultRequestHeaders)} of this connection set a Cookie header, which relying on an ambient session can't keep from leaving on a redirect. Keep the session's cookie in the CookieContainer of the handler instead.");
+        }
+
+        if (credential.IsAmbient && hasBearerToken)
+        {
+            throw new InvalidOperationException("This request has a bearer token in its Authorization header while relying on the session the browser holds, in which case the Service Layer honors the session's cookie and ignores the token. "
+                                                + $"To run a request with an access token, use {nameof(SLConnectionOptions.AccessTokenSource)} instead of {nameof(SLConnectionOptions.UseAmbientSession)}.");
+        }
 
         if (IsUsingAccessTokens && hasCookie && hasBearerToken)
         {
