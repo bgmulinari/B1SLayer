@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -20,6 +22,7 @@ public class SLConnectionOptions
 
     /// <summary>
     ///     Gets or sets the Company database (schema) to connect to.
+    ///     Requests sent with an access token select the company through <see cref="CompanyId" /> or the identity instead.
     /// </summary>
     public string CompanyDB { get; set; }
 
@@ -37,6 +40,7 @@ public class SLConnectionOptions
     ///     Gets or sets the language code to be used. Specify a code if you want error messages in some specific language
     ///     other than English.
     ///     A GET request to the UserLanguages resource will return all available languages and their respective codes.
+    ///     This is a parameter of the session login, so it doesn't affect requests sent with an access token.
     /// </summary>
     public int? Language { get; set; }
 
@@ -67,6 +71,77 @@ public class SLConnectionOptions
     public int SsoSessionTimeout { get; set; } = 30;
 
     /// <summary>
+    ///     Gets or sets the source of the access token that every request of this connection is sent with, along with
+    ///     <see cref="CompanyId" />. This is the single-identity token mode: for one token per user on the same connection,
+    ///     use <see cref="IdentityResolver" /> instead.
+    /// </summary>
+    /// <remarks>
+    ///     <see cref="CompanyDB" />, <see cref="UserName" /> and <see cref="Password" /> become optional, and even when
+    ///     provided, a request sent with an access token never falls back to a login. Can not be combined with
+    ///     <see cref="IdentityResolver" />.
+    /// </remarks>
+    public ISLAccessTokenSource AccessTokenSource { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the SLD company ID sent with <see cref="AccessTokenSource" /> in the X-b1-companyid header,
+    ///     as obtained from <see cref="SLOidcClient.GetCompanyIdAsync" />. This is not the company database name.
+    /// </summary>
+    public string CompanyId { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the delegate that decides which identity each request runs with, when it is sent. It lets a single
+    ///     cached connection serve many users: return <see cref="SLRequestIdentity.Session" /> to use the session cookies, or
+    ///     <see cref="SLRequestIdentity.FromTokenSource" /> to use a user's token, typically based on an ambient user context.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         Called once per request, whose retries keep that identity, across every request of this connection, so it
+    ///         must be thread-safe and should be fast. An exception thrown by it propagates to the caller of the request.
+    ///         It must not return null, which fails the request rather than being read as the session identity.
+    ///     </para>
+    ///     <para>
+    ///         Session credentials are optional, as they are only needed for the identities that use the session.
+    ///         Can not be combined with <see cref="AccessTokenSource" />.
+    ///     </para>
+    /// </remarks>
+    public Func<CancellationToken, Task<SLRequestIdentity>> IdentityResolver { get; set; }
+
+    /// <summary>
+    ///     Gets or sets whether the server certificate is validated for requests sent with an access token. The default
+    ///     value is true: unlike <see cref="ValidateServerCertificate" />, which keeps its default of false
+    ///     for session requests, a bearer token is at stake here (RFC 6749 section 10.9, RFC 9700).
+    /// </summary>
+    /// <remarks>
+    ///     Set to false as an explicit opt-out for landscapes with self-signed certificates, or preferably use
+    ///     <see cref="AccessTokenServerCertificateValidationCallback" /> to pin the certificate. Session requests have
+    ///     a separate connection pool when B1SLayer creates the handlers, so they can't weaken this.
+    ///     Only applied when B1SLayer creates its own handlers, that is, when neither
+    ///     <see cref="HttpClient" /> nor <see cref="HttpMessageHandler" /> is provided, in which case certificate validation
+    ///     is
+    ///     up to the provided instance, which also serves both session and token requests through a single connection pool.
+    /// </remarks>
+    public bool ValidateAccessTokenServerCertificate { get; set; } = true;
+
+    /// <summary>
+    ///     Gets or sets a callback that custom-validates the server certificate for requests sent with an access token,
+    ///     enabling scenarios like pinning the server's self-signed certificate without trusting it machine-wide.
+    ///     When set, it takes precedence over <see cref="ValidateAccessTokenServerCertificate" />.
+    /// </summary>
+    /// <remarks>
+    ///     <see cref="ServerCertificateValidationCallback" /> only applies to session requests and doesn't apply here.
+    ///     Can not be combined with <see cref="HttpClient" /> or <see cref="HttpMessageHandler" />, where it couldn't be
+    ///     honored.
+    /// </remarks>
+    public Func<HttpRequestMessage, X509Certificate2, X509Chain, SslPolicyErrors, bool> AccessTokenServerCertificateValidationCallback { get; set; }
+
+    /// <summary>
+    ///     Gets or sets whether access tokens may be sent to a <see cref="ServiceLayerRoot" /> that isn't HTTPS. The default
+    ///     value
+    ///     is false, as RFC 6750 section 5.3 requires TLS. Only meant for a local TLS-terminating proxy or for testing.
+    /// </summary>
+    public bool AllowAccessTokensOverHttp { get; set; }
+
+    /// <summary>
     ///     Gets or sets a custom <see cref="System.Net.Http.HttpClient" /> to be used for the requests to the Service Layer.
     /// </summary>
     /// <remarks>
@@ -74,12 +149,14 @@ public class SLConnectionOptions
     ///     <see cref="System.Net.Http.HttpClient.Timeout" />
     ///     is set to infinite (timeouts are managed per request by B1SLayer) and it will not be disposed by B1SLayer.
     ///     The underlying handler must have cookies disabled (UseCookies = false), otherwise the session cookies managed
-    ///     by B1SLayer will not be sent. Can not be combined with <see cref="HttpMessageHandler" />.
+    ///     by B1SLayer will not be sent and, when using access tokens, a cookie stored by the handler could override
+    ///     the token. Can not be combined with <see cref="HttpMessageHandler" />.
     /// </remarks>
     public HttpClient HttpClient { get; set; }
 
     /// <summary>
-    ///     Gets or sets a custom <see cref="System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service Layer.
+    ///     Gets or sets a custom <see cref="System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service
+    ///     Layer.
     /// </summary>
     /// <remarks>
     ///     The handler will be wrapped in an <see cref="System.Net.Http.HttpClient" /> managed by B1SLayer and will not be
@@ -97,10 +174,11 @@ public class SLConnectionOptions
     public HttpMessageHandler HttpMessageHandler { get; set; }
 
     /// <summary>
-    ///     Gets or sets whether the server certificate should be validated. The default value is false,
+    ///     Gets or sets whether the server certificate should be validated for session requests. The default value is false,
     ///     as SAP Business One servers typically use self-signed certificates.
     /// </summary>
     /// <remarks>
+    ///     Doesn't apply to requests sent with an access token, see <see cref="ValidateAccessTokenServerCertificate" />.
     ///     Only applied when B1SLayer creates its own handler, that is, when neither
     ///     <see cref="HttpClient" /> nor <see cref="HttpMessageHandler" /> is provided.
     ///     Ignored when <see cref="ServerCertificateValidationCallback" /> is set.
@@ -108,11 +186,13 @@ public class SLConnectionOptions
     public bool ValidateServerCertificate { get; set; }
 
     /// <summary>
-    ///     Gets or sets a callback that custom-validates the server certificate, enabling scenarios like pinning
-    ///     the server's self-signed certificate without trusting it machine-wide.
+    ///     Gets or sets a callback that custom-validates the server certificate for session requests, enabling scenarios
+    ///     like pinning the server's self-signed certificate without trusting it machine-wide.
     ///     When set, it takes precedence over <see cref="ValidateServerCertificate" />.
     /// </summary>
     /// <remarks>
+    ///     Doesn't apply to requests sent with an access token, see
+    ///     <see cref="AccessTokenServerCertificateValidationCallback" />.
     ///     Only applied when B1SLayer creates its own handler, that is, when neither
     ///     <see cref="HttpClient" /> nor <see cref="HttpMessageHandler" /> is provided.
     /// </remarks>

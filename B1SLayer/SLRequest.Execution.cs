@@ -652,7 +652,7 @@ public partial class SLRequest
         CancellationToken cancellationToken = default)
     {
         return _slConnection.ExecuteRequestAsync(
-            (sessionCookies, _) => Task.FromResult(BuildRequestMessage(method, contentFactory?.Invoke(), sessionCookies)),
+            (credential, _) => Task.FromResult(BuildRequestMessage(method, contentFactory?.Invoke(), credential.SessionCookies)),
             responseHandler,
             IsAllowedStatus,
             completionOption,

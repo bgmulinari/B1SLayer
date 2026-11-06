@@ -21,6 +21,14 @@ public class SLCallContext
     /// <summary>
     ///     Gets the HTTP request message of this call.
     /// </summary>
+    /// <remarks>
+    ///     On a request sent with an access token, the Authorization header is only present while the request
+    ///     is being sent, so it is never visible to the call event handlers and can't leak through a logged message.
+    ///     When OnError reports a failure to get the identity or access token, this describes the request that wasn't sent. It
+    ///     is
+    ///     null in the unlikely case that it couldn't be built, and for such a failure <see cref="Identity" /> is null if the
+    ///     identity is what failed.
+    /// </remarks>
     public HttpRequestMessage RequestMessage { get; internal set; }
 
     /// <summary>
@@ -45,6 +53,11 @@ public class SLCallContext
     ///     Always 1 for calls that are not retried (Login, Logout and Ping).
     /// </summary>
     public int AttemptNumber { get; internal set; }
+
+    /// <summary>
+    ///     Gets the identity this call runs with, or null for a call that doesn't authenticate (Login and Ping).
+    /// </summary>
+    public SLRequestIdentity Identity { get; internal set; }
 
     /// <summary>
     ///     Gets the UTC timestamp when the request was sent.

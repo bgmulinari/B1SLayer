@@ -58,17 +58,21 @@ public partial class SLConnection
                 : $"{resource}({Convert.ToString(id, CultureInfo.InvariantCulture)})");
 
     /// <summary>
-    ///     Ensures a valid session and then executes the request built by the provided factory,
-    ///     handing the successful response to the provided handler.
+    ///     Resolves the identity of the request, ensures a valid session or access token and then executes the request
+    ///     built by the provided factory, handing the successful response to the provided handler.
     ///     If the request is unsuccessfull with any return code present in <see cref="HttpStatusCodesToRetry" />,
     ///     it will be retried for <see cref="NumberOfAttempts" /> number of times, waiting <see cref="RetryDelay" /> between
     ///     attempts.
     /// </summary>
     /// <remarks>
-    ///     The factory is invoked once per attempt, as an <see cref="HttpRequestMessage" /> and its content can not be reused.
+    ///     The identity is resolved once, so a retry can't run the request as another account. The factory runs once
+    ///     per attempt, as an <see cref="HttpRequestMessage" /> and its content can not be reused.
+    ///     On a 401, a session request logs in again, while a token request asks the token source for a fresh token and
+    ///     retries once.
+    ///     A token request never falls back to a login, even when the connection has session credentials.
     /// </remarks>
     internal async Task<T> ExecuteRequestAsync<T>(
-        Func<SLCookieJar, CancellationToken, Task<HttpRequestMessage>> requestFactory,
+        Func<SLRequestCredential, CancellationToken, Task<HttpRequestMessage>> requestFactory,
         Func<HttpResponseMessage, Task<T>> responseHandler,
         Func<HttpStatusCode, bool> isAllowedStatus = null,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
@@ -77,6 +81,8 @@ public partial class SLConnection
         CancellationToken cancellationToken = default)
     {
         var loginReattempted = false;
+        var tokenRefreshAttempted = false;
+        string rejectedAccessToken = null;
         List<Exception> exceptions = null;
 
         if (NumberOfAttempts < 1)
@@ -84,33 +90,78 @@ public partial class SLConnection
             throw new ArgumentException("The number of attempts can not be lower than 1.");
         }
 
+        SLRequestIdentity identity;
+
+        try
+        {
+            identity = await ResolveIdentityAsync(requestTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await RaiseOnErrorBeforeSendAsync(requestFactory, SLRequestCredential.None, capturedRequestBody, 1, ex).ConfigureAwait(false);
+            throw;
+        }
+
         for (var i = 0; i < NumberOfAttempts || loginReattempted; i++)
         {
             loginReattempted = false;
+            SLRequestCredential credential;
 
-            SLCookieJar sessionCookies;
-
-            try
+            if (identity.IsSession)
             {
-                sessionCookies = await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false);
+                EnsureSessionCredentials();
+
+                SLCookieJar sessionCookies;
+
+                try
+                {
+                    sessionCookies = await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch (SLException ex) when (IsTransientLoginFailure(ex))
+                {
+                    // A transient infrastructure failure on the automatic login (e.g. a 502 from a load
+                    // balancer) participates in the retry policy; authentication failures propagate immediately
+                    exceptions ??= [];
+                    exceptions.Add(ex);
+                    await Task.Delay(RetryDelay, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                credential = SLRequestCredential.ForSession(sessionCookies);
             }
-            catch (SLException ex) when (IsTransientLoginFailure(ex))
+            else
             {
-                // A transient infrastructure failure on the automatic login (e.g. a 502 from a load
-                // balancer) participates in the retry policy; authentication failures propagate immediately
-                exceptions ??= [];
-                exceptions.Add(ex);
-                await Task.Delay(RetryDelay, cancellationToken).ConfigureAwait(false);
-                continue;
+                var tokenToReplace = rejectedAccessToken;
+                string accessToken;
+
+                try
+                {
+                    accessToken = await RunWithRequestTimeoutAsync(token => AcquireAccessTokenAsync(identity, tokenToReplace, token), "Acquiring the access token", requestTimeout, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    // The empty token only tells the factory that this is a token request, whose message is never sent
+                    await RaiseOnErrorBeforeSendAsync(requestFactory, SLRequestCredential.ForToken(identity, string.Empty), capturedRequestBody, i + 1, ex).ConfigureAwait(false);
+                    throw;
+                }
+
+                // The source has nothing fresher, so sending the same token again can only result in another 401
+                if (rejectedAccessToken != null && string.Equals(accessToken, rejectedAccessToken, StringComparison.Ordinal))
+                {
+                    break;
+                }
+
+                rejectedAccessToken = null;
+                credential = SLRequestCredential.ForToken(identity, accessToken);
             }
 
-            using var requestMessage = await requestFactory(sessionCookies, cancellationToken).ConfigureAwait(false);
+            using var requestMessage = await requestFactory(credential, cancellationToken).ConfigureAwait(false);
 
             SLCallContext callContext;
 
             try
             {
-                callContext = await SendCoreAsync(requestMessage, sessionCookies, isAllowedStatus, completionOption, requestTimeout, capturedRequestBody, i + 1, cancellationToken).ConfigureAwait(false);
+                callContext = await SendCoreAsync(requestMessage, credential, isAllowedStatus, completionOption, requestTimeout, capturedRequestBody, i + 1, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -134,8 +185,22 @@ public partial class SLConnection
                     break;
                 }
 
+                // A rejected access token is refreshed once. Like the login below, this is an extra attempt: the Service
+                // Layer refused the request before processing it. Never a login, as that would run the
+                // request as the session account, not as the user it was meant to run as
+                if (statusCode == HttpStatusCode.Unauthorized && credential.IsToken)
+                {
+                    if (tokenRefreshAttempted)
+                    {
+                        break;
+                    }
+
+                    tokenRefreshAttempted = true;
+                    rejectedAccessToken = credential.AccessToken;
+                    loginReattempted = true;
+                }
                 // Forces a new login request in case the response is 401 Unauthorized
-                if (statusCode == HttpStatusCode.Unauthorized)
+                else if (statusCode == HttpStatusCode.Unauthorized)
                 {
                     if (i >= NumberOfAttempts)
                     {
@@ -145,7 +210,7 @@ public partial class SLConnection
                     try
                     {
                         await ExecuteLoginAsync(skipIfSessionRefreshed: true,
-                                staleSessionValue: GetSerializedSessionValue(sessionCookies),
+                                staleSessionValue: GetSerializedSessionValue(credential.SessionCookies),
                                 cancellationToken: cancellationToken)
                             .ConfigureAwait(false);
                         loginReattempted = true;
@@ -201,6 +266,54 @@ public partial class SLConnection
         && HttpStatusCodesToRetry.Contains(statusCode);
 
     /// <summary>
+    ///     Reports a failure to get the identity or the access token of a request to the OnError handlers, the same way a
+    ///     failed automatic
+    ///     login is, as that is where failures get monitored. BeforeCall and AfterCall don't run, as nothing was or will be
+    ///     sent.
+    /// </summary>
+    private async Task RaiseOnErrorBeforeSendAsync(
+        Func<SLRequestCredential, CancellationToken, Task<HttpRequestMessage>> requestFactory,
+        SLRequestCredential credential,
+        byte[] capturedRequestBody,
+        int attemptNumber,
+        Exception exception)
+    {
+        if (_onErrorHandlers.Count == 0)
+        {
+            return;
+        }
+
+        HttpRequestMessage requestMessage = null;
+
+        try
+        {
+            requestMessage = await requestFactory(credential, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Only describes the request to the handlers, so it must not replace the failure being reported
+        }
+
+        using (requestMessage)
+        {
+            var now = DateTime.UtcNow;
+
+            await RaiseEventsAsync(_onErrorHandlers,
+                    new SLCallContext
+                    {
+                        RequestMessage = requestMessage,
+                        RequestBodyBytes = capturedRequestBody,
+                        AttemptNumber = attemptNumber,
+                        Identity = credential.Identity,
+                        Exception = exception,
+                        StartedUtc = now,
+                        EndedUtc = now
+                    })
+                .ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
     ///     Sends the given request message, invoking the registered call event handlers and enforcing the request timeout.
     /// </summary>
     /// <remarks>
@@ -211,7 +324,7 @@ public partial class SLConnection
     /// </remarks>
     private async Task<SLCallContext> SendCoreAsync(
         HttpRequestMessage requestMessage,
-        SLCookieJar cookieJar,
+        SLRequestCredential credential,
         Func<HttpStatusCode, bool> isAllowedStatus,
         HttpCompletionOption completionOption,
         TimeSpan? requestTimeout,
@@ -223,7 +336,8 @@ public partial class SLConnection
         {
             RequestMessage = requestMessage,
             RequestBodyBytes = capturedRequestBody,
-            AttemptNumber = attemptNumber
+            AttemptNumber = attemptNumber,
+            Identity = credential.Identity
         };
 
         // BeforeCall handler exceptions deliberately propagate to the caller
@@ -245,7 +359,7 @@ public partial class SLConnection
 
         try
         {
-            callContext.ResponseMessage = await SendWithRedirectsAsync(requestMessage, cookieJar, callContext, completionOption, sendToken).ConfigureAwait(false);
+            callContext.ResponseMessage = await SendWithRedirectsAsync(requestMessage, credential, callContext, completionOption, sendToken).ConfigureAwait(false);
             callContext.Succeeded = callContext.ResponseMessage.IsSuccessStatusCode
                                     || (isAllowedStatus?.Invoke(callContext.ResponseMessage.StatusCode) ?? false);
 
@@ -318,7 +432,7 @@ public partial class SLConnection
     ///     Sends the request, following redirects itself — the handler has redirects disabled — so
     ///     Set-Cookie headers on every hop are captured and the applicable cookies re-evaluated per hop URL.
     /// </summary>
-    private async Task<HttpResponseMessage> SendWithRedirectsAsync(HttpRequestMessage requestMessage, SLCookieJar cookieJar,
+    private async Task<HttpResponseMessage> SendWithRedirectsAsync(HttpRequestMessage requestMessage, SLRequestCredential credential,
         SLCallContext callContext, HttpCompletionOption completionOption, CancellationToken sendToken)
     {
         var currentRequest = requestMessage;
@@ -329,20 +443,36 @@ public partial class SLConnection
         {
             while (true)
             {
-                var response = await HttpClient.SendAsync(currentRequest, completionOption, sendToken).ConfigureAwait(false);
+                HttpResponseMessage response;
+
+                try
+                {
+                    // The only place requests leave this library: every send path goes through here, on every hop.
+                    // Inside the try, as preparing can fail after the token is on the message, which the handlers then get to see
+                    var httpClient = PrepareForSend(currentRequest, credential);
+                    response = await httpClient.SendAsync(currentRequest, completionOption, sendToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    if (credential.IsToken)
+                    {
+                        RemoveAccessToken(currentRequest);
+                    }
+                }
 
                 // Cookies set by any response in the chain are merged into a per-call jar seeded from the
                 // request's own cookies, so intermediate hops (e.g. a load balancer issuing its affinity
-                // cookie on a redirect) are not lost and later hops send the updated cookie set
-                if (response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
+                // cookie on a redirect) are not lost and later hops send the updated cookie set.
+                // Token requests carry no cookies, so they ignore the ROUTEID cookie the Service Layer sets on them
+                if (!credential.IsToken && response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders))
                 {
-                    chainCookies ??= cookieJar?.Clone() ?? new SLCookieJar();
+                    chainCookies ??= credential.SessionCookies?.Clone() ?? new SLCookieJar();
                     chainCookies.MergeSetCookieHeaders(setCookieHeaders, currentRequest.RequestUri);
                     callContext.ResponseCookies = chainCookies;
                 }
 
                 var redirectRequest = redirectCount < MaxRedirects
-                    ? BuildRedirectRequestMessage(currentRequest, response, chainCookies ?? cookieJar)
+                    ? BuildRedirectRequestMessage(currentRequest, response, chainCookies ?? credential.SessionCookies, credential, requestMessage.RequestUri)
                     : null;
 
                 if (redirectRequest == null)
@@ -377,8 +507,12 @@ public partial class SLConnection
     ///     Builds the request message for a redirect hop, or null when the response is not a followable
     ///     redirect. The verb-conversion rules match HttpClient and browsers: 303 always converts to GET,
     ///     301/302 convert only POST, 307/308 preserve the method and body.
+    ///     A token request only follows redirects within its original origin, where its credentials are applied again by
+    ///     <see cref="PrepareForSend" />; any other redirect is handed back as the final response, so the token never leaves
+    ///     it.
     /// </summary>
-    private static HttpRequestMessage BuildRedirectRequestMessage(HttpRequestMessage previousRequest, HttpResponseMessage redirectResponse, SLCookieJar cookieJar)
+    private static HttpRequestMessage BuildRedirectRequestMessage(HttpRequestMessage previousRequest, HttpResponseMessage redirectResponse, SLCookieJar cookieJar,
+        SLRequestCredential credential, Uri originalUri)
     {
         var statusCode = (int)redirectResponse.StatusCode;
 
@@ -392,6 +526,11 @@ public partial class SLConnection
         // A downgrade from https to http would leak the session cookies over an insecure channel
         if (string.Equals(previousRequest.RequestUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(targetUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        if (credential.IsToken && !IsSameOrigin(originalUri, targetUri))
         {
             return null;
         }
@@ -540,7 +679,7 @@ public partial class SLConnection
         // The ping endpoints live at the server root, outside the versioned Service Layer path
         using var requestMessage = new HttpRequestMessage(HttpMethod.Get, new Uri(ServiceLayerRoot, "/" + path));
 
-        var callContext = await SendCoreAsync(requestMessage, null, _ => true, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
+        var callContext = await SendCoreAsync(requestMessage, SLRequestCredential.None, _ => true, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
         using var response = callContext.ResponseMessage;
         var responseContent = await response.ReadStringAsync(cancellationToken).ConfigureAwait(false);
 
@@ -617,7 +756,8 @@ public partial class SLConnection
     }
 
     /// <summary>
-    ///     Sets a <see cref="Func{T, TResult}" /> delegate that is called after every unsuccessful Service Layer request.
+    ///     Sets a <see cref="Func{T, TResult}" /> delegate that is called after every unsuccessful Service Layer request,
+    ///     including one that failed before being sent, because its identity or access token couldn't be obtained.
     /// </summary>
     /// <remarks>
     ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and
@@ -630,7 +770,8 @@ public partial class SLConnection
     }
 
     /// <summary>
-    ///     Sets a <see cref="Action{T}" /> delegate that is called after every unsuccessful Service Layer request.
+    ///     Sets a <see cref="Action{T}" /> delegate that is called after every unsuccessful Service Layer request,
+    ///     including one that failed before being sent, because its identity or access token couldn't be obtained.
     /// </summary>
     /// <remarks>
     ///     The <see cref="SLCallContext" /> object provides various details about the call than can be used for logging and

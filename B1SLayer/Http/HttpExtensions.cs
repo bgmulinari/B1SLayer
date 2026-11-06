@@ -111,13 +111,17 @@ internal static class HttpExtensions
         return memoryStream.ToArray();
     }
 
-#if NETSTANDARD2_0
     /// <summary>
-    ///     Applies best-effort cancellation to a body read that lacks a token-taking overload on this target:
-    ///     the caller is released as soon as the token fires, while the underlying read is left to run out.
-    ///     Without this, a stalled body read could not be bounded by the request timeout or the caller's token.
+    ///     Stops waiting for a task when the token fires, while the task itself is left to run out. This is
+    ///     also what bounds a body read lacking a token-taking overload on some targets by the request timeout.
     /// </summary>
-    private static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
+#if !NETSTANDARD2_0
+    internal static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken) => task.WaitAsync(cancellationToken);
+
+    /// <inheritdoc cref="WithCancellation{T}" />
+    internal static Task WithCancellation(this Task task, CancellationToken cancellationToken) => task.WaitAsync(cancellationToken);
+#else
+    internal static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken)
     {
         if (!cancellationToken.CanBeCanceled || task.IsCompleted)
         {
@@ -135,6 +139,18 @@ internal static class HttpExtensions
         }
 
         return await task.ConfigureAwait(false);
+    }
+
+    /// <inheritdoc cref="WithCancellation{T}" />
+    internal static async Task WithCancellation(this Task task, CancellationToken cancellationToken)
+    {
+        await CompleteAsync(task).WithCancellation(cancellationToken).ConfigureAwait(false);
+
+        static async Task<bool> CompleteAsync(Task inner)
+        {
+            await inner.ConfigureAwait(false);
+            return true;
+        }
     }
 #endif
 }

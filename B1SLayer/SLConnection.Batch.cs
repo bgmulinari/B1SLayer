@@ -61,12 +61,12 @@ public partial class SLConnection
         }
 
         return await ExecuteRequestAsync(
-                async (sessionCookies, innerCancellationToken) =>
+                async (credential, innerCancellationToken) =>
                 {
-                    var batchContents = await BuildBatchContentsAsync(slBatchRequests, singleChangeSet, innerCancellationToken).ConfigureAwait(false);
+                    var batchContents = await BuildBatchContentsAsync(slBatchRequests, singleChangeSet, credential, innerCancellationToken).ConfigureAwait(false);
                     return CreateResourceRequestMessage(HttpMethod.Post,
                         "$batch",
-                        sessionCookies,
+                        credential.SessionCookies,
                         MultipartHelper.CreateMultipartContent("mixed", batchContents));
                 },
                 async batchResponse =>
@@ -87,7 +87,7 @@ public partial class SLConnection
     ///     Builds the list of <see cref="HttpContent" /> parts for a batch request.
     ///     GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
     /// </summary>
-    private async Task<List<HttpContent>> BuildBatchContentsAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet, CancellationToken cancellationToken = default)
+    private async Task<List<HttpContent>> BuildBatchContentsAsync(IEnumerable<SLBatchRequest> requests, bool singleChangeSet, SLRequestCredential credential, CancellationToken cancellationToken = default)
     {
         var parts = new List<HttpContent>();
 
@@ -99,7 +99,7 @@ public partial class SLConnection
 
             foreach (var batchRequest in requests)
             {
-                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, credential, cancellationToken).ConfigureAwait(false);
 
                 if (IsQueryMethod(batchRequest.HttpMethod))
                 {
@@ -123,7 +123,7 @@ public partial class SLConnection
         {
             foreach (var batchRequest in requests)
             {
-                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+                var httpContent = await BuildHttpContentFromBatchRequestAsync(batchRequest, credential, cancellationToken).ConfigureAwait(false);
 
                 if (IsQueryMethod(batchRequest.HttpMethod))
                 {
@@ -144,7 +144,11 @@ public partial class SLConnection
     /// <summary>
     ///     Builds an <see cref="HttpContent" /> from a given <see cref="SLBatchRequest" />.
     /// </summary>
-    private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest, CancellationToken cancellationToken = default)
+    /// <remarks>
+    ///     The inner requests of a token batch run with the outer request's identity, so credential headers
+    ///     set on them are dropped: that identity is the only one such a batch runs with, like any other of its requests.
+    /// </remarks>
+    private async Task<HttpContent> BuildHttpContentFromBatchRequestAsync(SLBatchRequest batchRequest, SLRequestCredential credential, CancellationToken cancellationToken = default)
     {
         var request = new HttpRequestMessage(batchRequest.HttpMethod,
             SLUrl.Combine(ServiceLayerRoot.ToString(), batchRequest.Resource));
@@ -154,8 +158,22 @@ public partial class SLConnection
             request.Version = batchRequest.HttpVersion;
         }
 
+        // The same rule PrepareForSend applies to any other session request, which can't see the headers in here
+        if (IsUsingAccessTokens && !credential.IsToken && HasBearerToken(batchRequest.Headers))
+        {
+            throw new InvalidOperationException(SessionRequestWithBearerTokenMessage);
+        }
+
         foreach (var header in batchRequest.Headers)
         {
+            if (credential.IsToken
+                && (header.Key.Equals(CookieHeader, StringComparison.OrdinalIgnoreCase)
+                    || header.Key.Equals(AuthorizationHeader, StringComparison.OrdinalIgnoreCase)
+                    || header.Key.Equals(CompanyIdHeader, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
             request.Headers.Add(header.Key, header.Value);
         }
 

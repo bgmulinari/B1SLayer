@@ -80,6 +80,69 @@ HttpResponseMessage[] batchResult = await serviceLayer.PostBatchAsync(req1, req2
 await serviceLayer.LogoutAsync();
 ````
 
+## OAuth / OpenID Connect
+
+Besides username and password, B1SLayer can authenticate with access tokens from the SAP Business One authentication
+server (10.0 FP 2208 and later). Tokens can't be exchanged for a session, so every request carries the token and its
+company ID. Sessions keep working exactly as above.
+The [full guide](https://github.com/bgmulinari/B1SLayer/blob/3.X.X/OAUTH.md) covers the behavior in detail and
+references SAP's documentation.
+
+**Daemon service (client credentials).** Available as of 10.0 FP 2502. Register a Daemon Service in the Extension Single
+Sign-On Manager and let B1SLayer handle the rest:
+
+````c#
+// Keep it for as long as the token source is used, as the source requests its tokens through it
+var oidc = new SLOidcClient(new SLOidcClientOptions
+{
+    SldAddress = new Uri("https://sapserver:40000"),
+    ClientId = config.ClientId,
+    ClientCredential = SLClientCredential.FromPrivateKey(config.PrivateKey) // or FromClientSecret(...)
+});
+
+// Cached, renewed before it expires, and shared by concurrent requests
+var tokenSource = oidc.CreateClientCredentialsTokenSource();
+
+// The company is selected by its SLD company ID, which isn't the database name
+var companyId = await oidc.GetCompanyIdAsync(await tokenSource.GetAccessTokenAsync(SLAccessTokenRequest.Default), "SBODEMOUS");
+
+var serviceLayer = new SLConnection(new SLConnectionOptions
+{
+    ServiceLayerRoot = new Uri("https://sapserver:50000/b1s/v2"),
+    AccessTokenSource = tokenSource,
+    CompanyId = companyId
+});
+
+var items = await serviceLayer.Request("Items").Select("ItemCode").Top(2).GetAsync<List<MyItemModel>>();
+````
+
+**Web apps (authorization code).** Signing users in stays with your OIDC library, as SAP recommends, and B1SLayer takes
+the tokens it produces. One connection serves all users, and the identity is decided at send time:
+
+````c#
+var serviceLayer = new SLConnection(new SLConnectionOptions
+{
+    ServiceLayerRoot = new Uri("https://sapserver:50000/b1s/v2"),
+    IdentityResolver = cancellationToken => Task.FromResult(
+        ambientUser.Value is { } user
+            ? SLRequestIdentity.FromTokenSource(user.TokenSource, user.CompanyId)
+            : throw new InvalidOperationException("The current user could not be determined."))
+});
+````
+
+A request never carries both a session cookie and a token, and a token request never falls back to the session account.
+A connection can also have session credentials, for example for background jobs, in which case a resolver can return
+`SLRequestIdentity.Session` for them.
+
+If the Service Layer answers 401 to a token the SLD accepts, the token's audience probably lacks the Service Layer
+client ID, which SAP requires for Single Page Apps as of FP 2602. The guide covers this, along with the CORS
+configuration a browser client needs and tokens from other identity providers.
+
+**Certificates are validated for OAuth traffic by default**, unlike session requests. For the self-signed certificates
+of a typical landscape, pin them through `AccessTokenServerCertificateValidationCallback` and
+`SLOidcClientOptions.ServerCertificateValidationCallback`, or opt out with
+`ValidateAccessTokenServerCertificate = false` and `SLOidcClientOptions.ValidateServerCertificate = false`.
+
 ## Get it on NuGet
 
 `PM> Install-Package B1SLayer`

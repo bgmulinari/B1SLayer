@@ -21,8 +21,19 @@ public partial class SLConnection
     ///     Performs a POST Login request with the provided information, regardless of the current session state.
     /// </summary>
     /// <remarks>
-    ///     Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
+    ///     <para>
+    ///         Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever
+    ///         needed.
+    ///     </para>
+    ///     <para>
+    ///         A login always concerns the session account and never carries an access token. On a connection that also has
+    ///         session credentials it doesn't change which identity requests run with, which remains up to
+    ///         <see cref="SLConnectionOptions.IdentityResolver" />. An access token can't be exchanged for a session.
+    ///     </para>
     /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    ///     This connection authenticates with access tokens and has no session credentials.
+    /// </exception>
     /// <param name="cancellationToken">
     ///     A token to cancel the asynchronous operation.
     /// </param>
@@ -47,6 +58,8 @@ public partial class SLConnection
     private async Task<SLLoginResponse> ExecuteLoginAsync(bool expectReturn = false, bool skipIfSessionRefreshed = false,
         string staleSessionValue = null, CancellationToken cancellationToken = default)
     {
+        EnsureSessionCredentials();
+
         // Prevents multiple login requests in a multi-threaded scenario
         await _semaphoreSlim.WaitAsync(cancellationToken).ConfigureAwait(false);
 
@@ -72,7 +85,7 @@ public partial class SLConnection
 
                 // The RequestBody helper is deliberately not populated for the call event handlers so the
                 // password doesn't end up in logs through it (the raw request message remains accessible)
-                var callContext = await SendCoreAsync(requestMessage, null, null, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
+                var callContext = await SendCoreAsync(requestMessage, SLRequestCredential.None, null, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
                 using var response = callContext.ResponseMessage;
                 var responseContent = await response.ReadStringAsync(cancellationToken).ConfigureAwait(false);
 
@@ -292,11 +305,22 @@ public partial class SLConnection
     /// <summary>
     ///     Performs a POST Logout request, ending the current session.
     /// </summary>
+    /// <remarks>
+    ///     A logout always concerns the session account, and neither ends nor revokes access tokens. To sign a user out
+    ///     of an access token, use the end session endpoint of the OpenID Connect provider (see
+    ///     <see cref="SLOidcProviderMetadata.EndSessionEndpoint" />);
+    ///     the Service Layer keeps accepting an access token until it expires, even after that.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    ///     This connection authenticates with access tokens and has no session credentials.
+    /// </exception>
     /// <param name="cancellationToken">
     ///     A token to cancel the asynchronous operation.
     /// </param>
     public async Task LogoutAsync(CancellationToken cancellationToken = default)
     {
+        EnsureSessionCredentials();
+
         var currentSessionCookies = await GetSessionCookiesAsync(cancellationToken).ConfigureAwait(false);
 
         if (currentSessionCookies == null)
@@ -305,7 +329,7 @@ public partial class SLConnection
         }
 
         using var requestMessage = CreateResourceRequestMessage(HttpMethod.Post, "Logout", currentSessionCookies);
-        var callContext = await SendCoreAsync(requestMessage, currentSessionCookies, null, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
+        var callContext = await SendCoreAsync(requestMessage, SLRequestCredential.ForSession(currentSessionCookies), null, HttpCompletionOption.ResponseContentRead, null, null, 1, cancellationToken).ConfigureAwait(false);
         callContext.ResponseMessage.Dispose();
 
         await InvalidateSessionCacheAsync(cancellationToken).ConfigureAwait(false);

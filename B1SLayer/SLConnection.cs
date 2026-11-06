@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -14,7 +15,9 @@ namespace B1SLayer;
 ///     Represents a connection to the Service Layer.
 /// </summary>
 /// <remarks>
-///     Only one instance per company/user should be used in the application.
+///     Only one instance per company/user should be used in the application. With access tokens, a single
+///     instance can serve many users, with the identity decided per request through
+///     <see cref="SLConnectionOptions.IdentityResolver" />.
 /// </remarks>
 public partial class SLConnection
 {
@@ -48,8 +51,28 @@ public partial class SLConnection
         }
 
         IsUsingSingleSignOn = options.GetServiceLayerConnectionContext != null;
+        IsUsingAccessTokens = options.AccessTokenSource != null || options.IdentityResolver != null;
 
-        if (!IsUsingSingleSignOn)
+        if (IsUsingAccessTokens)
+        {
+            ValidateAccessTokenOptions(options);
+        }
+        else if (!string.IsNullOrEmpty(options.CompanyId))
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.CompanyId)} can only be provided along with {nameof(SLConnectionOptions.AccessTokenSource)}.");
+        }
+
+        // A token-only connection has no session account, while any other connection requires a complete one
+        HasSessionCredentials = IsUsingSingleSignOn
+                                || !string.IsNullOrWhiteSpace(options.CompanyDB)
+                                && !string.IsNullOrWhiteSpace(options.UserName)
+                                && !string.IsNullOrWhiteSpace(options.Password);
+
+        var hasAnySessionCredential = !string.IsNullOrWhiteSpace(options.CompanyDB)
+                                      || !string.IsNullOrWhiteSpace(options.UserName)
+                                      || !string.IsNullOrWhiteSpace(options.Password);
+
+        if (!IsUsingSingleSignOn && (!IsUsingAccessTokens || hasAnySessionCredential))
         {
             if (string.IsNullOrWhiteSpace(options.CompanyDB))
             {
@@ -65,6 +88,13 @@ public partial class SLConnection
             {
                 throw new ArgumentException("password can not be empty.");
             }
+        }
+
+        // A login through a client whose handler stores cookies would add its session to the token requests, below the point where they
+        // have cookies removed, and the Service Layer honors a cookie over the token. An HttpClient doesn't expose its handler to check that
+        if (IsUsingAccessTokens && HasSessionCredentials && options.HttpClient != null)
+        {
+            throw new ArgumentException($"A provided {nameof(SLConnectionOptions.HttpClient)} can not serve both session and token requests, as B1SLayer can't verify that it doesn't store the session's cookies. Provide an {nameof(SLConnectionOptions.HttpMessageHandler)} instead.");
         }
 
         ServiceLayerRoot = options.ServiceLayerRoot;
@@ -84,10 +114,38 @@ public partial class SLConnection
         DistributedCache = options.DistributedCache ?? B1SLayerSettings.DistributedCache;
         _getServiceLayerConnectionContext = options.GetServiceLayerConnectionContext;
         _ssoSessionTimeout = options.SsoSessionTimeout;
-        SessionCacheKey = IsUsingSingleSignOn
+        CompanyId = options.CompanyId;
+        SessionCacheKey = IsUsingSingleSignOn || !HasSessionCredentials
             ? $"B1SLayer:SessionCookies:{ServiceLayerRoot}:{Guid.NewGuid()}"
             : $"B1SLayer:SessionCookies:{ServiceLayerRoot}:{CompanyDB}:{UserName}";
-        HttpClient = BuildHttpClient(options);
+
+        // The single-identity token mode is the identity resolver with a constant answer
+        _identityResolver = options.IdentityResolver;
+
+        if (options.AccessTokenSource != null)
+        {
+            var identity = SLRequestIdentity.FromTokenSource(options.AccessTokenSource, options.CompanyId);
+            var resolvedIdentity = Task.FromResult(identity);
+            _identityResolver = _ => resolvedIdentity;
+        }
+
+        if (!IsUsingAccessTokens)
+        {
+            HttpClient = BuildHttpClient(options);
+        }
+        else if (options.HttpClient != null || options.HttpMessageHandler != null)
+        {
+            // The provided transport is up to the caller, certificate validation included, and serves every request
+            HttpClient = BuildHttpClient(options);
+            _accessTokenHttpClient = HttpClient;
+        }
+        else
+        {
+            // Certificate validation only happens when a TLS connection is established, and connections are pooled per
+            // handler, so the session's permissive default can only be kept from token requests through a separate handler
+            _accessTokenHttpClient = ConfigureHttpClient(new HttpClient(CreateAccessTokenHandler(options)));
+            HttpClient = HasSessionCredentials ? BuildHttpClient(options) : _accessTokenHttpClient;
+        }
     }
 
     /// <summary>
@@ -275,6 +333,11 @@ public partial class SLConnection
     /// <summary>
     ///     Gets the <see cref="System.Net.Http.HttpClient" /> responsible for the requests to Service Layer.
     /// </summary>
+    /// <remarks>
+    ///     A connection with both session credentials and access tokens sends token requests through a separate
+    ///     client when B1SLayer creates its own handlers, see
+    ///     <see cref="SLConnectionOptions.ValidateAccessTokenServerCertificate" />.
+    /// </remarks>
     public HttpClient HttpClient { get; }
 
     /// <summary>
@@ -389,6 +452,24 @@ public partial class SLConnection
     public bool IsUsingSingleSignOn { get; }
 
     /// <summary>
+    ///     Gets whether this <see cref="SLConnection" /> instance sends requests with access tokens,
+    ///     through <see cref="SLConnectionOptions.AccessTokenSource" /> or <see cref="SLConnectionOptions.IdentityResolver" />
+    ///     .
+    /// </summary>
+    public bool IsUsingAccessTokens { get; }
+
+    /// <summary>
+    ///     Gets whether this <see cref="SLConnection" /> instance has a session account to log in with, through a username and
+    ///     password or Single Sign-On (SSO). Always true for a connection that doesn't use access tokens.
+    /// </summary>
+    public bool HasSessionCredentials { get; }
+
+    /// <summary>
+    ///     Gets the SLD company ID provided for the single-identity token mode, or null otherwise.
+    /// </summary>
+    public string CompanyId { get; }
+
+    /// <summary>
     ///     Gets information about the latest Login request.
     /// </summary>
     public SLLoginResponse LoginResponse
@@ -421,6 +502,40 @@ public partial class SLConnection
     ];
 
 
+    /// <summary>
+    ///     Validates the options specific to access tokens.
+    /// </summary>
+    private static void ValidateAccessTokenOptions(SLConnectionOptions options)
+    {
+        if (options.AccessTokenSource != null && options.IdentityResolver != null)
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.AccessTokenSource)} and {nameof(SLConnectionOptions.IdentityResolver)} can not be provided together.");
+        }
+
+        if (options.AccessTokenSource != null && !SLRequestCredential.IsValidCompanyId(options.CompanyId))
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.CompanyId)} is required with {nameof(SLConnectionOptions.AccessTokenSource)}, and must only contain printable ASCII characters.");
+        }
+
+        if (options.AccessTokenSource == null && !string.IsNullOrEmpty(options.CompanyId))
+        {
+            throw new ArgumentException($"{nameof(SLConnectionOptions.CompanyId)} can only be provided along with {nameof(SLConnectionOptions.AccessTokenSource)}. An {nameof(SLConnectionOptions.IdentityResolver)} provides it through {nameof(SLRequestIdentity)}.");
+        }
+
+        if (options.ServiceLayerRoot.IsAbsoluteUri
+            && !string.Equals(options.ServiceLayerRoot.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && !options.AllowAccessTokensOverHttp)
+        {
+            throw new ArgumentException($"Access tokens require an HTTPS {nameof(SLConnectionOptions.ServiceLayerRoot)} (RFC 6750 section 5.3). To send them over HTTP regardless, set {nameof(SLConnectionOptions.AllowAccessTokensOverHttp)}.");
+        }
+
+        if (options.AccessTokenServerCertificateValidationCallback != null && (options.HttpClient != null || options.HttpMessageHandler != null))
+        {
+            // Silently ignoring a requested pin would validate differently than asked, with a credential at stake
+            throw new ArgumentException($"{nameof(SLConnectionOptions.AccessTokenServerCertificateValidationCallback)} can not be combined with a provided {nameof(SLConnectionOptions.HttpClient)} or {nameof(SLConnectionOptions.HttpMessageHandler)}. Configure certificate validation on the provided instance instead.");
+        }
+    }
+
     private static HttpClient BuildHttpClient(SLConnectionOptions options)
     {
         if (options.HttpClient != null && options.HttpMessageHandler != null)
@@ -436,7 +551,21 @@ public partial class SLConnection
         }
         else if (options.HttpMessageHandler != null)
         {
-            DisableHandlerCookieManagement(options.HttpMessageHandler);
+            SLHttpHandlers.DisableCookieManagement(options.HttpMessageHandler);
+
+            if (options.AccessTokenSource != null || options.IdentityResolver != null)
+            {
+                // Redirects a handler follows by itself would skip the rule that a token request only follows them within its origin
+                SLHttpHandlers.DisableAutomaticRedirects(options.HttpMessageHandler);
+
+                // Cookies a handler stores are added below the point where a token request has them removed, and the Service Layer
+                // honors a cookie over the token, so such a handler would silently run token requests as the session account
+                if (SLHttpHandlers.IsCookieManagementEnabled(options.HttpMessageHandler) || SLHttpHandlers.IsAutomaticRedirectEnabled(options.HttpMessageHandler))
+                {
+                    throw new ArgumentException($"The provided {nameof(SLConnectionOptions.HttpMessageHandler)} has already served requests with cookies or automatic redirects enabled, so it can't be used with access tokens. Provide a new handler, or one with both disabled.");
+                }
+            }
+
             httpClient = new HttpClient(options.HttpMessageHandler, false);
         }
         else
@@ -444,6 +573,14 @@ public partial class SLConnection
             httpClient = new HttpClient(CreateDefaultHandler(options));
         }
 
+        return ConfigureHttpClient(httpClient);
+    }
+
+    /// <summary>
+    ///     Applies the settings every client of a connection needs.
+    /// </summary>
+    private static HttpClient ConfigureHttpClient(HttpClient httpClient)
+    {
         // Timeouts are managed per request by B1SLayer, so the HttpClient's own timeout must not interfere
         httpClient.Timeout = Timeout.InfiniteTimeSpan;
 
@@ -457,92 +594,11 @@ public partial class SLConnection
     ///     Creates and configures the handler used when no custom <see cref="System.Net.Http.HttpClient" />
     ///     or <see cref="HttpMessageHandler" /> is provided.
     /// </summary>
-    internal static HttpClientHandler CreateDefaultHandler(SLConnectionOptions options)
-    {
-        var handler = new HttpClientHandler();
-
-        try
-        {
-            handler.UseCookies = false;
-        }
-        catch (PlatformNotSupportedException)
-        {
-            // Not configurable on some platforms (e.g. Blazor WebAssembly)
-        }
-
-        if (handler.SupportsRedirectConfiguration)
-        {
-            // Redirects are followed by B1SLayer itself (see SendWithRedirectsAsync) rather than by the
-            // handler, so Set-Cookie headers on intermediate hops (e.g. a load balancer's affinity
-            // cookie) are captured and the applicable cookies re-evaluated against each hop's URL
-            handler.AllowAutoRedirect = false;
-        }
-
-        if (handler.SupportsAutomaticDecompression)
-        {
-            handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-        }
-
-        if (options.ServerCertificateValidationCallback != null)
-        {
-            // A custom validation callback (e.g. certificate pinning) takes precedence over the validation toggle.
-            // Deliberately not guarded: an explicitly requested callback that can not be applied
-            // (e.g. on Blazor WebAssembly) must fail loudly rather than silently validate differently
-            handler.ServerCertificateCustomValidationCallback = options.ServerCertificateValidationCallback;
-        }
-        else if (!options.ValidateServerCertificate)
-        {
-            try
-            {
-                handler.ServerCertificateCustomValidationCallback = (a, b, c, d) => true;
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // Not configurable on some platforms (e.g. Blazor WebAssembly), where certificate
-                // validation is handled by the platform itself
-            }
-        }
-
-        return handler;
-    }
+    internal static HttpClientHandler CreateDefaultHandler(SLConnectionOptions options) => SLHttpHandlers.Create(options.ServerCertificateValidationCallback, options.ValidateServerCertificate);
 
     /// <summary>
-    ///     Disables cookie management on the innermost handler of the provided handler (chain).
-    ///     Session cookies are managed by B1SLayer and sent through the Cookie header,
-    ///     which handler-level cookie management would silently discard or interfere with.
+    ///     Creates and configures the handler for requests sent with an access token when no custom
+    ///     <see cref="System.Net.Http.HttpClient" /> or <see cref="HttpMessageHandler" /> is provided.
     /// </summary>
-    private static void DisableHandlerCookieManagement(HttpMessageHandler handler)
-    {
-        while (handler is DelegatingHandler delegatingHandler && delegatingHandler.InnerHandler != null) handler = delegatingHandler.InnerHandler;
-
-        if (handler is HttpClientHandler httpClientHandler)
-        {
-            try
-            {
-                httpClientHandler.UseCookies = false;
-            }
-            catch (PlatformNotSupportedException)
-            {
-                // Not configurable on some platforms (e.g. Blazor WebAssembly)
-            }
-            catch (InvalidOperationException)
-            {
-                // The handler has already served requests and can no longer be configured; it is
-                // left untouched, as cookie management may have been disabled beforehand by the caller
-            }
-        }
-#if !NETSTANDARD2_0
-        else if (handler is SocketsHttpHandler socketsHttpHandler)
-        {
-            try
-            {
-                socketsHttpHandler.UseCookies = false;
-            }
-            catch (InvalidOperationException)
-            {
-                // Same as above: an already-started handler can no longer be configured
-            }
-        }
-#endif
-    }
+    internal static HttpClientHandler CreateAccessTokenHandler(SLConnectionOptions options) => SLHttpHandlers.Create(options.AccessTokenServerCertificateValidationCallback, options.ValidateAccessTokenServerCertificate);
 }
