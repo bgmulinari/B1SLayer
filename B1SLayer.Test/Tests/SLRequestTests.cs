@@ -5,6 +5,143 @@ namespace B1SLayer.Test;
 
 public class SLRequestTests : TestBase
 {
+    private string RequestedUri => HttpTest.CallLog.Single(x => !x.Uri.AbsolutePath.EndsWith("/Login")).Uri.AbsoluteUri;
+
+    [Theory]
+    [InlineData("v1", "Orders?$select=DocEntry&$filter=CardName%20eq%20%27AT%26T%20%231%27", "/Orders?$select=DocEntry&$filter=CardName%20eq%20%27AT%26T%20%231%27")]
+    [InlineData("v2", "Orders?$select=DocEntry&$filter=CardName%20eq%20%27AT%26T%20%231%27", "/Orders?$select=DocEntry&$filter=CardName%20eq%20%27AT%26T%20%231%27")]
+    [InlineData("v1", "Orders?$filter=DocNum eq 1", "/Orders?$filter=DocNum%20eq%201")]
+    [InlineData("v2", "Orders?$filter=DocNum eq 1", "/Orders?$filter=DocNum%20eq%201")]
+    [InlineData("v1", "BusinessPartners('A?B')", "/BusinessPartners('A%3FB')")]
+    [InlineData("v2", "BusinessPartners('A?B')", "/BusinessPartners('A%3FB')")]
+    [InlineData("v1", "BusinessPartners('A?B')?$select=CardCode", "/BusinessPartners('A%3FB')?$select=CardCode")]
+    [InlineData("v2", "BusinessPartners('A?B')?$select=CardCode", "/BusinessPartners('A%3FB')?$select=CardCode")]
+    [InlineData("v2", "BusinessPartners(%27A?B%27)?$select=CardCode", "/BusinessPartners(%27A%3FB%27)?$select=CardCode")]
+    [InlineData("v2", "Items?$filter=ItemName eq %27A'&$top=2", "/Items?$filter=ItemName%20eq%20%27A'&$top=2")]
+    [InlineData("v2", "Items?$filter=ItemName eq %27A&B%27&$top=2", "/Items?$filter=ItemName%20eq%20%27A%26B%27&$top=2")]
+    [InlineData("v1", "Items?$filter=ItemName eq 'A+B'&$top=2", "/Items?$filter=ItemName%20eq%20'A%2BB'&$top=2")]
+    [InlineData("v2", "Items?$filter=ItemName eq 'A+B'&$top=2", "/Items?$filter=ItemName%20eq%20'A%2BB'&$top=2")]
+    [InlineData("v2", "Items?$filter=ItemName+eq+%27A+B%27&$top=2", "/Items?$filter=ItemName+eq+%27A+B%27&$top=2")]
+    [InlineData("v2", "BusinessPartners('A+B')", "/BusinessPartners('A+B')")]
+    public async Task Resource_KeepsItsOwnQueryString(string version, string resource, string expectedPathAndQuery)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request(resource).GetStringAsync();
+
+        Assert.EndsWith(expectedPathAndQuery, RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task Resource_QueryString_FluentParametersAreMerged(string version)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("Orders?$select=DocEntry&$top=5").Top(1).Skip(2).GetStringAsync();
+
+        Assert.EndsWith("/Orders?$select=DocEntry&$top=1&$skip=2", RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task Resource_QueryString_EncodedParameterNamesAreReplaced(string version)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("Orders?%24top=5&%24select=DocEntry").Top(1).GetStringAsync();
+
+        Assert.EndsWith("/Orders?%24select=DocEntry&$top=1", RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task Resource_QueryString_AmpersandInAQuotedLiteralIsData(string version)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("Items?$filter=ItemName eq 'A&$top=9'&$top=2").Top(5).GetStringAsync();
+
+        Assert.EndsWith("/Items?$filter=ItemName%20eq%20'A%26$top=9'&$top=5", RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1", "O'Brien", "/BusinessPartners('O''Brien')")]
+    [InlineData("v2", "O'Brien", "/BusinessPartners('O''Brien')")]
+    [InlineData("v2", "x')/ContactEmployees('y", "/BusinessPartners('x'')/ContactEmployees(''y')")]
+    [InlineData("v2", "x%27)/ContactEmployees(%27y", "/BusinessPartners('x%27%27)/ContactEmployees(%27%27y')")]
+    public async Task ResourceWithId_EscapesTheKeyAsData(string version, string id, string expectedPath)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("BusinessPartners", id).GetStringAsync();
+
+        Assert.EndsWith(expectedPath, RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task ResourceWithId_CanNotStartAQueryString(string version)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("Items", "x')?$select=U_Secret&z=('").GetStringAsync();
+
+        var uri = HttpTest.CallLog.Single(x => !x.Uri.AbsolutePath.EndsWith("/Login")).Uri;
+        Assert.Empty(uri.Query);
+        Assert.Contains("%3F", uri.AbsolutePath);
+    }
+
+    [Theory]
+    [InlineData("v1", "Items?name=O'Brien&$top=1", "/Items?name=O'Brien&$top=5")]
+    [InlineData("v2", "Items?name=O'Brien&$top=1", "/Items?name=O'Brien&$top=5")]
+    [InlineData("v2", "Items('O'Brien')?$top=1", "/Items('O'Brien')?$top=5")]
+    public async Task Resource_UnbalancedQuotes_DoNotMergeParameters(string version, string resource, string expectedPathAndQuery)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request(resource).Top(5).GetStringAsync();
+
+        Assert.EndsWith(expectedPathAndQuery, RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1")]
+    [InlineData("v2")]
+    public async Task Resource_OnlyAQueryString_StaysOnTheRoot(string version)
+    {
+        HttpTest.RespondWith("{}");
+
+        await GetConnection(version).Request("?$top=1").GetStringAsync();
+
+        Assert.EndsWith($"/{version}?$top=1", RequestedUri);
+    }
+
+    [Theory]
+    [InlineData("v1", "BusinessPartners('A?B')?$select=CardCode", "/BusinessPartners('A%3FB')?$select=CardCode")]
+    [InlineData("v2", "BusinessPartners('A?B')?$select=CardCode", "/BusinessPartners('A%3FB')?$select=CardCode")]
+    [InlineData("v1", "Items?$filter=ItemName eq 'A&B'&$top=2", "/Items?$filter=ItemName%20eq%20'A%26B'&$top=2")]
+    [InlineData("v2", "Items?$filter=ItemName eq 'A&B'&$top=2", "/Items?$filter=ItemName%20eq%20'A%26B'&$top=2")]
+    [InlineData("v2", "Items?name=O'Brien&$top=1", "/Items?name=O'Brien&$top=1")]
+    [InlineData("v2", "?$top=1", "/v2?$top=1")]
+    [InlineData("v1", "Items?$filter=ItemName eq 'A+B'", "/Items?$filter=ItemName%20eq%20'A%252BB'")]
+    [InlineData("v2", "Items?$filter=ItemName eq 'A+B'", "/Items?$filter=ItemName%20eq%20'A%252BB'")]
+    [InlineData("v2", "Items?$filter=ItemName eq 'A%2BB'", "/Items?$filter=ItemName%20eq%20'A%252BB'")]
+    [InlineData("v1", "BusinessPartners('A+B')", "/BusinessPartners('A%2BB')")]
+    [InlineData("v2", "BusinessPartners('A+B')", "/BusinessPartners('A%2BB')")]
+    public async Task BatchResource_FollowsTheSameQueryRulesAsARequest(string version, string resource, string expectedPathAndQuery)
+    {
+        HttpTest.RespondWith("--b\r\n\r\nHTTP/1.1 200 OK\r\n\r\n{}\r\n--b--");
+
+        await GetConnection(version).PostBatchAsync(new SLBatchRequest(HttpMethod.Get, resource));
+
+        Assert.Contains(expectedPathAndQuery + " HTTP/", HttpTest.CallLog.Single(x => x.Uri.AbsolutePath.EndsWith("/$batch")).RequestBody);
+    }
+
     [Theory]
     [InlineData("v1")]
     [InlineData("v2")]

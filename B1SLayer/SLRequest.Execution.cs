@@ -567,21 +567,40 @@ public partial class SLRequest
     /// <summary>
     ///     Builds the request URI from the connection root, resource, extra path segments and query parameters.
     /// </summary>
+    /// <remarks>
+    ///     A resource may carry its own query string (e.g. a composed OData query or a next link), which stays
+    ///     after the path. A parameter set through the fluent methods replaces the one of the same name in it.
+    /// </remarks>
     internal Uri BuildUri()
     {
-        var url = SLUrl.AppendPathSegment(_slConnection.ServiceLayerRoot.ToString(), Resource);
+        var queryStart = SLUrl.FindQueryStart(Resource);
+        var url = SLUrl.AppendResourcePath(_slConnection.ServiceLayerRoot.ToString(), queryStart < 0 ? Resource : Resource.Substring(0, queryStart));
 
         foreach (var pathSegment in ExtraPathSegments)
         {
             url = SLUrl.AppendPathSegment(url, pathSegment);
         }
 
-        if (QueryParams.Count > 0)
+        var queryParts = new List<string>();
+
+        if (queryStart >= 0)
         {
-            url += "?" + SLUrl.BuildQueryString(QueryParams);
+            var fluentNames = new HashSet<string>(QueryParams.Select(x => x.Key), StringComparer.Ordinal);
+            queryParts.AddRange(SLUrl.SplitQuery(Resource.Substring(queryStart + 1)).Where(x => !fluentNames.Contains(GetQueryParameterName(x))));
         }
 
-        return new Uri(url);
+        if (QueryParams.Count > 0)
+        {
+            queryParts.Add(SLUrl.BuildQueryString(QueryParams));
+        }
+
+        return new Uri(queryParts.Count > 0 ? url + "?" + string.Join("&", queryParts) : url);
+    }
+
+    private static string GetQueryParameterName(string parameter)
+    {
+        var nameEnd = parameter.IndexOf('=');
+        return Uri.UnescapeDataString(nameEnd < 0 ? parameter : parameter.Substring(0, nameEnd));
     }
 
     /// <summary>

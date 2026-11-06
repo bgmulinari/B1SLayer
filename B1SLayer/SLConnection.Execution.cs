@@ -30,7 +30,8 @@ public partial class SLConnection
     ///     The request can be configured through the fluent methods of <see cref="SLRequest" />.
     /// </remarks>
     /// <param name="resource">
-    ///     The resource name to be requested.
+    ///     The resource name to be requested. It may carry its own query string, in which a '%' followed by two hex digits
+    ///     is taken as already encoded. For a literal that may hold one, use <see cref="SLRequest.Filter" />.
     /// </param>
     public SLRequest Request(string resource) => new(this, resource);
 
@@ -45,13 +46,15 @@ public partial class SLConnection
     ///     The resource name to be requested.
     /// </param>
     /// <param name="id">
-    ///     The entity ID to be requested.
+    ///     The entity ID to be requested. A string is the value of the key as it is, so its single quotes are escaped
+    ///     by B1SLayer and must not be doubled by the caller.
     /// </param>
     public SLRequest Request(string resource, object id) =>
         // Numeric ids must render culture-invariantly (e.g. "1.5", never "1,5") for the URL to be valid
         new(this,
-            id is string
-                ? $"{resource}('{id}')"
+            // An ID is data, so it must never be able to close its literal, in any encoding, or start a query string
+            id is string key
+                ? $"{resource}('{key.Replace("'", "''").Replace("%27", "%27%27").Replace("?", "%3F")}')"
                 : $"{resource}({Convert.ToString(id, CultureInfo.InvariantCulture)})");
 
     /// <summary>
