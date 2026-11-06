@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="B1SLayer.Test/B1SLayer.Test.csproj" />
+  <Project Path="B1SLayer/B1SLayer.csproj" />
+</Solution>
