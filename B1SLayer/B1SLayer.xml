@@ -11,7 +11,8 @@
         </member>
         <member name="P:B1SLayer.B1SLayerSettings.DistributedCache">
             <summary>
-                Gets or sets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
+                Gets or sets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an
+                in-memory implementation is used.
             </summary>
         </member>
         <member name="T:B1SLayer.HttpExtensions">
@@ -40,6 +41,15 @@
             <summary>
                 Copies the given stream, from its current position, to a new byte array.
             </summary>
+        </member>
+        <member name="M:B1SLayer.HttpExtensions.WithCancellation``1(System.Threading.Tasks.Task{``0},System.Threading.CancellationToken)">
+            <summary>
+                Stops waiting for a task when the token fires, while the task itself is left to run out. This is
+                also what bounds a body read lacking a token-taking overload on some targets by the request timeout.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.HttpExtensions.WithCancellation(System.Threading.Tasks.Task,System.Threading.CancellationToken)">
+            <inheritdoc cref="M:B1SLayer.HttpExtensions.WithCancellation``1(System.Threading.Tasks.Task{``0},System.Threading.CancellationToken)" />
         </member>
         <member name="M:B1SLayer.HttpExtensions.&lt;G&gt;$92316C0C70E95BFBE1458B14513FFE31.ReadStringAsync(System.Threading.CancellationToken)">
             <summary>
@@ -73,7 +83,10 @@
                 Reads a multipart HTTP response and parses it into an array of <see cref="T:System.Net.Http.HttpResponseMessage" /> objects.
             </summary>
             <param name="response">The HTTP response containing the multipart content.</param>
-            <returns>An array of <see cref="T:System.Net.Http.HttpResponseMessage" /> objects representing the individual parts of the multipart response.</returns>
+            <returns>
+                An array of <see cref="T:System.Net.Http.HttpResponseMessage" /> objects representing the individual parts of the multipart
+                response.
+            </returns>
         </member>
         <member name="M:B1SLayer.MultipartHelper.CreateHttpContentAsync(System.Net.Http.HttpRequestMessage,System.Threading.CancellationToken)">
             <summary>
@@ -92,6 +105,52 @@
             <summary>
                 Creates a form-data file part for attachment uploads.
             </summary>
+        </member>
+        <member name="T:B1SLayer.Pkcs8RsaKeyReader">
+            <summary>
+                Reads an unencrypted RSA private key in PKCS#8 DER format, the format of the credentials issued by the
+                SAP Business One Extension Single Sign-On Manager, into <see cref="T:System.Security.Cryptography.RSAParameters" />.
+            </summary>
+            <remarks>
+                Only used on netstandard2.0, where <c>RSA.ImportPkcs8PrivateKey</c> doesn't exist. Compiled on every target so
+                tests can compare it against that method. It is an encoding parser, with no cryptography of its own, and its input
+                is the
+                application's own key. Error messages never include any part of the key.
+            </remarks>
+        </member>
+        <member name="T:B1SLayer.SingleFlight`1">
+            <summary>
+                Runs an operation at most once at a time, with concurrent callers sharing the outcome of the one in flight.
+            </summary>
+            <remarks>
+                The operation is detached from its callers, and a caller's cancellation only stops that caller from waiting.
+                That is what makes it safe for a token refresh: cancelling one could otherwise lose a rotated refresh
+                token the server has already issued, which invalidates the previous one, or fail unrelated waiting callers.
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SingleFlight`1.RunAsync(System.Func{System.Threading.Tasks.Task{`0}},System.Threading.CancellationToken,System.Func{`0})">
+            <param name="operation">
+                The operation to run when none is in flight.
+            </param>
+            <param name="cancellationToken">
+                A token to stop waiting for the outcome.
+            </param>
+            <param name="getCompleted">
+                Gets an outcome that makes running the operation unnecessary, or null when there is none. Called only when no
+                operation is in
+                flight, so it sees what the previous operation published, provided that operation published it before completing.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SingleFlight`1.Start(System.Func{System.Threading.Tasks.Task{`0}},System.Func{`0})">
+            <summary>
+                Starts the operation unless one is in flight, without waiting for its outcome.
+            </summary>
+            <param name="operation">
+                The operation to run when none is in flight.
+            </param>
+            <param name="getCompleted">
+                Gets an outcome that makes running the operation unnecessary, or null when there is none.
+            </param>
         </member>
         <member name="T:B1SLayer.SLCookie">
             <summary>
@@ -219,6 +278,97 @@
                 the origin URL's path up to, but not including, its last '/'.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLHttpHandlers">
+            <summary>
+                Creates and configures the handlers of <see cref="T:B1SLayer.SLConnection" /> and <see cref="T:B1SLayer.SLOidcClient" />.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLHttpHandlers.Create(System.Func{System.Net.Http.HttpRequestMessage,System.Security.Cryptography.X509Certificates.X509Certificate2,System.Security.Cryptography.X509Certificates.X509Chain,System.Net.Security.SslPolicyErrors,System.Boolean},System.Boolean)">
+            <summary>
+                Creates a handler with the settings B1SLayer relies on and the given certificate validation.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLHttpHandlers.DisableCookieManagement(System.Net.Http.HttpMessageHandler)">
+            <summary>
+                Disables cookie management on the innermost handler of the provided handler (chain).
+                Session cookies are managed by B1SLayer and sent through the Cookie header,
+                which handler-level cookie management would silently discard or interfere with.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLHttpHandlers.DisableAutomaticRedirects(System.Net.Http.HttpMessageHandler)">
+            <summary>
+                Disables automatic redirects on the innermost handler of the provided handler (chain), leaving them to B1SLayer.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLHttpHandlers.IsCookieManagementEnabled(System.Net.Http.HttpMessageHandler)">
+            <summary>
+                Determines whether the innermost handler of the provided handler (chain) stores and sends cookies of its own.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLHttpHandlers.IsAutomaticRedirectEnabled(System.Net.Http.HttpMessageHandler)">
+            <summary>
+                Determines whether the innermost handler of the provided handler (chain) follows redirects by itself.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLRequestCredential">
+            <summary>
+                The credential a single send attempt carries: nothing (Login, Ping), session cookies, an access token or
+                whatever the browser adds on its own (an ambient session).
+                Having one value hold exactly one of them is what makes a request carrying both unrepresentable before
+                <see cref="T:B1SLayer.SLConnection" /> enforces it on the wire.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.None">
+            <summary>
+                An attempt that doesn't authenticate, such as the Login request itself or Ping.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.Ambient">
+            <summary>
+                An attempt that relies on the session the browser holds, which B1SLayer neither sees nor sends itself.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.Identity">
+            <summary>
+                The identity this credential was resolved from, or null when the attempt doesn't authenticate.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.SessionCookies">
+            <summary>
+                The session cookies to send, or null when this isn't a session credential.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.AccessToken">
+            <summary>
+                The access token to send, or null when this isn't a token credential.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.IsToken">
+            <summary>
+                Whether this attempt authenticates with an access token.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestCredential.IsAmbient">
+            <summary>
+                Whether this attempt relies on the session the browser holds.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestCredential.IsValidBearerToken(System.String)">
+            <summary>
+                Determines whether the value is a syntactically valid RFC 6750 bearer token (b64token), which
+                also rules out anything that could break out of the Authorization header.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestCredential.IsValidCompanyId(System.String)">
+            <summary>
+                Determines whether the value can be sent as the X-b1-companyid header value.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestCredential.ToString">
+            <summary>
+                Returns a description of this credential, which never includes a token or cookie.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLUrl">
             <summary>
                 Provides URL building and encoding helpers.
@@ -231,8 +381,28 @@
         </member>
         <member name="M:B1SLayer.SLUrl.Combine(System.String,System.String)">
             <summary>
-                Combines the given URL parts, ensuring a single '/' separator and encoding illegal characters.
+                Combines the given URL parts of a batch part, ensuring a single '/' separator and encoding illegal characters.
                 The relative part may carry its own query string.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLUrl.AppendResourcePath(System.String,System.String)">
+            <summary>
+                Appends the path of a resource to the URL, which is empty for a resource made up of only a query string.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLUrl.FindQueryStart(System.String)">
+            <summary>
+                Finds the '?' that starts the query string of a resource, or -1 when it has none. A '?' within a quoted key
+                (e.g. BusinessPartners('A?B')) is data, not a query delimiter, unless the quotes aren't balanced, which leaves
+                nothing to tell it from one.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLUrl.SplitQuery(System.String)">
+            <summary>
+                Encodes the query string of a resource and splits it into its parameters. A '&amp;' within a quoted
+                literal (e.g. $filter=ItemName eq 'A&amp;B') is data, not a parameter delimiter, so it gets encoded as such, like a
+                '+' within one.
+                Unbalanced quotes (e.g. name=O'Brien&amp;$top=1) are no literal, so they don't merge the parameters after them.
             </summary>
         </member>
         <member name="M:B1SLayer.SLUrl.AppendPathSegment(System.String,System.String)">
@@ -258,15 +428,114 @@
                 preserving '%' when it begins a valid percent-encoded sequence to avoid double encoding.
             </summary>
         </member>
+        <member name="M:B1SLayer.SLUrl.IsQuote(System.String,System.Int32)">
+            <summary>
+                Determines whether a quote starts at the given position, in its plain or percent-encoded form, as a resource may
+                mix them. An OData literal escapes a quote by doubling it, which also holds for an encoded one, so the quotes stay
+                balanced.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLUrl.IsAllowedInUri(System.Char)">
             <summary>
-                Determines whether the character is an RFC 3986 unreserved or reserved character, allowed to appear unencoded in a URI.
+                Determines whether the character is an RFC 3986 unreserved or reserved character, allowed to appear unencoded in a
+                URI.
             </summary>
         </member>
         <member name="M:B1SLayer.SLUrl.IsEscapeSequenceStart(System.String,System.Int32)">
             <summary>
                 Determines whether the character at the given position starts a valid percent-encoded sequence.
             </summary>
+        </member>
+        <member name="T:B1SLayer.ISLAccessTokenSource">
+            <summary>
+                Supplies the OAuth access token a request is sent with. Implemented by the application (typically on top of
+                its own OIDC library) or obtained from <see cref="T:B1SLayer.SLOidcClient" /> and <see cref="T:B1SLayer.SLCachingAccessTokenSource" />.
+            </summary>
+            <remarks>
+                <para>
+                    Called once per send attempt, so implementations should be fast and return a cached token whenever possible.
+                    Implementations are called concurrently and must be thread-safe. The call is bounded separately from the send
+                    by the request
+                    timeout, resulting in a <see cref="T:B1SLayer.SLTimeoutException" />, and implementations should honor the cancellation
+                    token.
+                </para>
+                <para>
+                    A failure must be reported by throwing: B1SLayer surfaces it to the caller of the request as a
+                    <see cref="T:B1SLayer.SLAuthenticationException" /> and never falls back to a session login.
+                </para>
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.ISLAccessTokenSource.GetAccessTokenAsync(B1SLayer.SLAccessTokenRequest,System.Threading.CancellationToken)">
+            <summary>
+                Gets the access token to send.
+            </summary>
+            <param name="request">
+                Describes why the token is being requested. When <see cref="P:B1SLayer.SLAccessTokenRequest.ForceRefresh" /> is set,
+                the Service Layer has just rejected a token and a cached one must not be returned.
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+            <returns>
+                The raw access token, without the "Bearer " prefix.
+            </returns>
+        </member>
+        <member name="T:B1SLayer.SLAccessTokenRequest">
+            <summary>
+                Describes a request for an access token, passed to <see cref="M:B1SLayer.ISLAccessTokenSource.GetAccessTokenAsync(B1SLayer.SLAccessTokenRequest,System.Threading.CancellationToken)" />.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLAccessTokenRequest.#ctor(System.Boolean,System.String)">
+            <summary>
+                Initializes a new instance of the <see cref="T:B1SLayer.SLAccessTokenRequest" /> class.
+            </summary>
+            <param name="forceRefresh">
+                Whether a fresh token is required instead of a cached one.
+            </param>
+            <param name="rejectedAccessToken">
+                The token the Service Layer rejected, when applicable.
+            </param>
+        </member>
+        <member name="P:B1SLayer.SLAccessTokenRequest.Default">
+            <summary>
+                Gets a request for the current token, which may be served from a cache.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAccessTokenRequest.ForceRefresh">
+            <summary>
+                Gets whether a fresh token is required, because the Service Layer responded with 401 to the previous one.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAccessTokenRequest.RejectedAccessToken">
+            <summary>
+                Gets the token the Service Layer rejected, or null when no token was rejected. When concurrent requests fail
+                with the same token, this lets a cache return the token another caller has already refreshed instead of
+                refreshing it again. Never included in <see cref="M:B1SLayer.SLAccessTokenRequest.ToString" />.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLAccessTokenRequest.ToString">
+            <summary>
+                Returns a description of this request that never includes the rejected token.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLAccessTokenSource">
+            <summary>
+                Creates <see cref="T:B1SLayer.ISLAccessTokenSource" /> instances from delegates.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLAccessTokenSource.FromDelegate(System.Func{B1SLayer.SLAccessTokenRequest,System.Threading.CancellationToken,System.Threading.Tasks.Task{System.String}})">
+            <summary>
+                Creates a token source from the given delegate, which is how an application that owns its OIDC flow
+                (for example, authorization code with PKCE through a certified OIDC library) plugs in its tokens.
+            </summary>
+            <remarks>
+                The delegate is called once per send attempt with no caching. Use <see cref="T:B1SLayer.SLCachingAccessTokenSource" />
+                when obtaining a token is expensive. A delegate that returns the rejected token again after a 401
+                results in the 401 being surfaced, rather than the request being retried with a token already known to be invalid.
+            </remarks>
+            <param name="getAccessToken">
+                The delegate that returns the raw access token.
+            </param>
         </member>
         <member name="T:B1SLayer.SLAttachment">
             <summary>
@@ -325,12 +594,14 @@
         </member>
         <member name="M:B1SLayer.SLBatchRequest.#ctor">
             <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
+                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to
+                be sent in a batch.
             </summary>
         </member>
         <member name="M:B1SLayer.SLBatchRequest.#ctor(System.Net.Http.HttpMethod,System.String,System.Object,System.Nullable{System.Int32})">
             <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to be sent in a batch.
+                Initializes a new instance of the <see cref="T:B1SLayer.SLBatchRequest" /> class, which represents the details of a request to
+                be sent in a batch.
             </summary>
             <param name="httpMethod">
                 The HTTP method to be used for this request.
@@ -342,7 +613,8 @@
                 The JSON body to be sent. It can be either an object to be serialized as JSON or a JSON string.
             </param>
             <param name="contentID">
-                Entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+                Entity reference that can be used by subsequent requests to refer to a new entity created within the same change
+                set.
                 This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
             </param>
         </member>
@@ -363,7 +635,8 @@
         </member>
         <member name="P:B1SLayer.SLBatchRequest.ContentID">
             <summary>
-                Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer to a new entity created within the same change set.
+                Gets or sets the Content-ID for this request, an entity reference that can be used by subsequent requests to refer
+                to a new entity created within the same change set.
                 This is optional for OData Version 3 (b1s/v1) but mandatory for OData Version 4 (b1s/v2).
             </summary>
         </member>
@@ -390,7 +663,8 @@
         </member>
         <member name="M:B1SLayer.SLBatchRequest.CreateHeaders">
             <summary>
-                <see cref="T:System.Net.Http.Headers.HttpRequestHeaders" /> has no public constructor, so an instance is obtained from a throwaway request message.
+                <see cref="T:System.Net.Http.Headers.HttpRequestHeaders" /> has no public constructor, so an instance is obtained from a throwaway request
+                message.
             </summary>
         </member>
         <member name="M:B1SLayer.SLBatchRequest.WithCaseInsensitive">
@@ -412,8 +686,18 @@
                 This is suitable for better performance in demanding scenarios where the return content is not needed.
             </summary>
             <remarks>
-                On success, <see cref="F:System.Net.HttpStatusCode.NoContent" /> is returned, instead of <see cref="F:System.Net.HttpStatusCode.Created" />.
+                On success, <see cref="F:System.Net.HttpStatusCode.NoContent" /> is returned, instead of
+                <see cref="F:System.Net.HttpStatusCode.Created" />.
             </remarks>
+        </member>
+        <member name="M:B1SLayer.SLBatchRequest.WithETag(System.String)">
+            <summary>
+                Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+            </summary>
+            <param name="etag">
+                The ETag returned by a previous Service Layer request, such as through <see cref="M:B1SLayer.SLRequest.GetWithETagAsync``1(System.Boolean,System.Threading.CancellationToken)" />
+                .
+            </param>
         </member>
         <member name="M:B1SLayer.SLBatchRequest.WithHeader(System.String,System.String)">
             <summary>
@@ -452,6 +736,93 @@
                 Gets the skip number to obtain the entities of the next page.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLCurrentUserInfo">
+            <summary>
+                Represents the user an access token belongs to and the companies the user can access,
+                as returned by the CurrentUserInfo API of the System Landscape Directory (SLD).
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCurrentUserInfo.UserIdentity">
+            <summary>
+                Gets the identity of the user.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCurrentUserInfo.UserName">
+            <summary>
+                Gets the name of the user.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCurrentUserInfo.CompanyBindings">
+            <summary>
+                Gets the companies the user is bound to.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCurrentUserInfo.RawJson">
+            <summary>
+                Gets the CurrentUserInfo object as returned by the SLD, for what isn't modeled here, such
+                as the user roles SAP documents as part of this response without specifying their format.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLCompanyBinding">
+            <summary>
+                Represents a company a user is bound to, along with the SAP Business One user it is bound through.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.CompanyId">
+            <summary>
+                Gets the SLD company ID, which is what a request sent with an access token selects the company with.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.CompanySchemaName">
+            <summary>
+                Gets the database schema name of the company.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.CompanyDisplayName">
+            <summary>
+                Gets the display name of the company.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.UserCode">
+            <summary>
+                Gets the code of the SAP Business One user that requests to this company run as.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.ServiceUnitId">
+            <summary>
+                Gets the ID of the service unit the company belongs to.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.ServiceUnitName">
+            <summary>
+                Gets the name of the service unit the company belongs to.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.DatabaseInstanceName">
+            <summary>
+                Gets the name of the database instance the company belongs to.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.Version">
+            <summary>
+                Gets the version of the company.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.Localization">
+            <summary>
+                Gets the localization of the company.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.IsConfirmed">
+            <summary>
+                Gets whether the user binding is confirmed.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCompanyBinding.IsSuperuser">
+            <summary>
+                Gets whether the user is a superuser in the company.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLLoginResponse">
             <summary>
                 Represents the response details of a login request.
@@ -475,6 +846,53 @@
         <member name="P:B1SLayer.SLLoginResponse.LastLogin">
             <summary>
                 Gets or sets the <see cref="T:System.DateTime" /> of the last login.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLOidcProviderMetadata">
+            <summary>
+                Represents the OpenID Connect provider metadata of the landscape's authentication server,
+                discovered through the System Landscape Directory (SLD) with its issuer validated.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.DiscoveryUri">
+            <summary>
+                Gets the discovery document URI returned by the SLD. An application that signs users in
+                through its own OIDC library should configure it with this URI or with <see cref="P:B1SLayer.SLOidcProviderMetadata.Issuer" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.Issuer">
+            <summary>
+                Gets the issuer identifier of the provider.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.TokenEndpoint">
+            <summary>
+                Gets the token endpoint.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.AuthorizationEndpoint">
+            <summary>
+                Gets the authorization endpoint, or null when not advertised.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.UserInfoEndpoint">
+            <summary>
+                Gets the UserInfo endpoint, or null when not advertised.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.EndSessionEndpoint">
+            <summary>
+                Gets the end session (logout) endpoint, or null when not advertised.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.RevocationEndpoint">
+            <summary>
+                Gets the token revocation endpoint, or null when not advertised.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcProviderMetadata.JwksUri">
+            <summary>
+                Gets the URI of the provider's JSON Web Key Set, or null when not advertised.
             </summary>
         </member>
         <member name="T:B1SLayer.SLPingResponse">
@@ -552,6 +970,198 @@
                 Gets or sets the message text of a Service Layer error.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLTokenResponse">
+            <summary>
+                Represents the tokens issued by the authentication server, either obtained through <see cref="T:B1SLayer.SLOidcClient" />
+                or built by the application from the tokens of its own OIDC library.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLTokenResponse.#ctor(System.String,System.Nullable{System.DateTimeOffset},System.String,System.String,System.String,System.Nullable{System.DateTimeOffset})">
+            <summary>
+                Initializes a new instance of the <see cref="T:B1SLayer.SLTokenResponse" /> class.
+            </summary>
+            <param name="accessToken">
+                The access token.
+            </param>
+            <param name="expiresAtUtc">
+                When the access token expires, or null when unknown, in which case it is used until it is rejected.
+            </param>
+            <param name="refreshToken">
+                The refresh token, when there is one.
+            </param>
+            <param name="idToken">
+                The ID token, when there is one.
+            </param>
+            <param name="scope">
+                The scope of the access token, when known.
+            </param>
+            <param name="refreshExpiresAtUtc">
+                When the refresh token expires, or null when unknown or when it has no expiry of its own.
+            </param>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.AccessToken">
+            <summary>
+                Gets the access token.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.ExpiresAtUtc">
+            <summary>
+                Gets when the access token expires, or null when unknown.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.RefreshToken">
+            <summary>
+                Gets the refresh token, or null when there is none, as is the case of the client credentials grant.
+                After <see cref="M:B1SLayer.SLOidcClient.RefreshTokenAsync(System.String,System.String,System.Threading.CancellationToken)" />, this is always the refresh token to use next,
+                whether the server rotated it or not, and it is the one the application must persist.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.RefreshExpiresAtUtc">
+            <summary>
+                Gets when the refresh token expires, or null when unknown or when it has no expiry of its own, as
+                the authentication server reports for an offline token. Once it has expired, the user must sign in again.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.IdToken">
+            <summary>
+                Gets the ID token, or null when there is none.
+            </summary>
+            <remarks>
+                B1SLayer does not validate it, so it must not be used as proof of the user's identity.
+                It is exposed to be sent as the id_token_hint of the end session endpoint. A refresh may omit it (OpenID Connect
+                Core section 12.2), in which case <see cref="M:B1SLayer.SLOidcClient.RefreshTokenAsync(System.String,System.String,System.Threading.CancellationToken)" /> returns null here and the previous
+                one still applies. A source from <see cref="M:B1SLayer.SLOidcClient.CreateRefreshTokenSource(B1SLayer.SLTokenResponse,System.Func{B1SLayer.SLTokenResponse,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Nullable{System.TimeSpan})" /> carries the previous one
+                over.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLTokenResponse.Scope">
+            <summary>
+                Gets the scope of the access token, or null when not known.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLTokenResponse.ToString">
+            <summary>
+                Returns a description of this response, which never includes a token.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLAuthenticationException">
+            <summary>
+                Represents a failure to authenticate with an access token: a token source that failed, or an OpenID Connect
+                provider or System Landscape Directory (SLD) request that was rejected or returned an invalid response.
+            </summary>
+            <remarks>
+                A rejection of the token by the Service Layer itself is a regular <see cref="T:B1SLayer.SLException" /> with status code 401.
+                This exception never carries tokens, secrets, client assertions or the raw body of a token response, so
+                <see cref="P:B1SLayer.SLException.ResponseContent" /> is always null.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLAuthenticationException.OAuthError">
+            <summary>
+                Gets the OAuth error code returned by the token endpoint (RFC 6749 section 5.2), or null when there is none.
+                For example, "invalid_grant" on a refresh means the refresh token is no longer valid and the user must sign in
+                again.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLAuthenticationException.OAuthErrorDescription">
+            <summary>
+                Gets the human-readable description the token endpoint returned along with <see cref="P:B1SLayer.SLAuthenticationException.OAuthError" />, or null when
+                there is none.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLCachingAccessTokenSource">
+            <summary>
+                A thread-safe <see cref="T:B1SLayer.ISLAccessTokenSource" /> that caches the token obtained from a delegate and renews it
+                shortly before it expires, with concurrent callers sharing a single acquisition (single-flight).
+            </summary>
+            <remarks>
+                <para>
+                    <see cref="M:B1SLayer.SLOidcClient.CreateClientCredentialsTokenSource(System.String,System.Nullable{System.TimeSpan})" /> and
+                    <see cref="M:B1SLayer.SLOidcClient.CreateRefreshTokenSource(B1SLayer.SLTokenResponse,System.Func{B1SLayer.SLTokenResponse,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Nullable{System.TimeSpan})" />
+                    return instances of this class. Create one directly to cache tokens from an application's own OIDC library.
+                    Create one instance per user, as an instance holds a single token.
+                </para>
+                <para>
+                    The acquisition isn't tied to any one caller, whose cancellation only stops that caller from waiting. It is
+                    limited
+                    to 100 seconds, after which it no longer holds up the next one, even when its delegate ignores the token and
+                    keeps
+                    running. When it fails, every caller waiting for it gets the failure, and the next call tries again.
+                </para>
+                <para>
+                    An early renewal runs in the background while callers keep getting the current token, so an unresponsive server
+                    doesn't delay them. When it fails, it is tried again no sooner than 10 seconds later, until the token expires.
+                </para>
+                <para>
+                    A token acquired by this source and rejected within 30 seconds isn't replaced: it is returned again, so the
+                    rejection
+                    surfaces instead of spending a token request on each failed request when the cause is not the token, such as a
+                    missing audience.
+                </para>
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLCachingAccessTokenSource.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{B1SLayer.SLTokenResponse}},System.Nullable{System.TimeSpan})">
+            <summary>
+                Initializes a new instance of the <see cref="T:B1SLayer.SLCachingAccessTokenSource" /> class.
+            </summary>
+            <param name="acquireToken">
+                The delegate that acquires a new token. Called one at a time, unless a call ignores its token past the 100 second
+                limit.
+            </param>
+            <param name="expirySkew">
+                How long before its expiry a token is renewed, 60 seconds by default, so it doesn't expire on its way to the
+                server. Capped at half the lifetime of the token, so a short-lived token isn't renewed on every request.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLCachingAccessTokenSource.#ctor(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{B1SLayer.SLTokenResponse}},System.Nullable{System.TimeSpan},B1SLayer.SLTokenResponse,System.Func{System.DateTimeOffset},System.Func{B1SLayer.SLTokenResponse,System.Threading.CancellationToken,System.Threading.Tasks.Task})">
+            <param name="acquireToken">
+                The delegate that acquires a new token.
+            </param>
+            <param name="expirySkew">
+                How long before its expiry a token is renewed.
+            </param>
+            <param name="initialToken">
+                A token obtained elsewhere to start with, which is always replaced when it is rejected, as its real age is unknown.
+            </param>
+            <param name="utcNow">
+                Gets the current time.
+            </param>
+            <param name="onAcquired">
+                Called with each acquired token once it has been published. Its failure reaches the next caller, once.
+            </param>
+        </member>
+        <member name="P:B1SLayer.SLCachingAccessTokenSource.AcquireTimeout">
+            <summary>
+                Gets the limit of an acquisition. Replaceable for testing.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLCachingAccessTokenSource.GetAccessTokenAsync(B1SLayer.SLAccessTokenRequest,System.Threading.CancellationToken)">
+            <summary>
+                Gets the cached token while it is valid, or acquires a new one.
+            </summary>
+            <param name="request">
+                Describes why the token is being requested. A forced refresh doesn't acquire a new token when
+                <see cref="P:B1SLayer.SLAccessTokenRequest.RejectedAccessToken" /> is no longer the cached one, as another caller has already
+                refreshed it,
+                or when the cached one was acquired less than 30 seconds ago, in which case it is returned again.
+            </param>
+            <param name="cancellationToken">
+                A token to stop waiting for the token.
+            </param>
+            <returns>
+                The raw access token.
+            </returns>
+        </member>
+        <member name="M:B1SLayer.SLCachingAccessTokenSource.Invalidate">
+            <summary>
+                Discards the cached token, so the next call acquires a new one. That includes the token of an acquisition already
+                in flight.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLCachingAccessTokenSource.ToString">
+            <summary>
+                Returns a description of this instance, which never includes a token.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLCallContext">
             <summary>
                 Provides details about a Service Layer HTTP call, exposed to the delegates
@@ -570,6 +1180,14 @@
             <summary>
                 Gets the HTTP request message of this call.
             </summary>
+            <remarks>
+                On a request sent with an access token, the Authorization header is only present while the request
+                is being sent, so it is never visible to the call event handlers and can't leak through a logged message.
+                When OnError reports a failure to get the identity or access token, this describes the request that wasn't sent. It
+                is
+                null in the unlikely case that it couldn't be built, and for such a failure <see cref="P:B1SLayer.SLCallContext.Identity" /> is null if the
+                identity is what failed.
+            </remarks>
         </member>
         <member name="P:B1SLayer.SLCallContext.ResponseMessage">
             <summary>
@@ -592,6 +1210,11 @@
             <summary>
                 Gets the 1-based number of this attempt within the connection's retry policy.
                 Always 1 for calls that are not retried (Login, Logout and Ping).
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLCallContext.Identity">
+            <summary>
+                Gets the identity this call runs with, or null for a call that doesn't authenticate (Login and Ping).
             </summary>
         </member>
         <member name="P:B1SLayer.SLCallContext.StartedUtc">
@@ -632,12 +1255,59 @@
                 cookie jar so redirect hops send the updated cookie set.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLClientCredential">
+            <summary>
+                The credential a confidential client authenticates to the token endpoint with:
+                a signed JWT (<c>private_key_jwt</c>, RFC 7523), which SAP highly recommends, or a client secret.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLClientCredential.FromPrivateKey(System.String)">
+            <summary>
+                Creates a credential that authenticates with a signed JWT, using the given RSA private key.
+            </summary>
+            <param name="base64Pkcs8PrivateKey">
+                The credentials issued by the SAP Business One Extension Single Sign-On Manager for
+                Signed JWT: a base64 encoded, unencrypted PKCS#8 RSA private key, without PEM armor.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLClientCredential.FromSigner(System.Func{System.Byte[],System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Byte[]}})">
+            <summary>
+                Creates a credential that authenticates with a signed JWT through a caller-supplied signer, for
+                keys that are not available to the application, like those kept in a key vault or an HSM.
+            </summary>
+            <param name="rs256Signer">
+                A delegate that returns the RS256 signature (RSASSA-PKCS1-v1_5 with SHA-256) of the given bytes. Signing and
+                sending the
+                request must take under about 50 seconds, as SAP's Keycloak rejects an assertion issued over 60 seconds earlier.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLClientCredential.FromClientSecret(System.String)">
+            <summary>
+                Creates a credential that authenticates with a client secret, sent in the
+                request body (<c>client_secret_post</c>), as described by SAP's documentation.
+            </summary>
+            <param name="clientSecret">
+                The client secret.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLClientCredential.ToString">
+            <summary>
+                Returns a description of this credential, which never includes any part of it.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLClientCredential.AddToTokenRequestAsync(System.Collections.Generic.IList{System.Collections.Generic.KeyValuePair{System.String,System.String}},System.String,System.Uri,System.DateTimeOffset,System.Threading.CancellationToken)">
+            <summary>
+                Adds the parameters that authenticate the client to the given token request.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLConnection">
             <summary>
                 Represents a connection to the Service Layer.
             </summary>
             <remarks>
-                Only one instance per company/user should be used in the application.
+                Only one instance per company/user should be used in the application. With access tokens, a single
+                instance can serve many users, with the identity decided per request through
+                <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" />.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.PostAttachmentAsync(System.String,System.Threading.CancellationToken)">
@@ -645,7 +1315,8 @@
                 Uploads the provided file as an attachment.
             </summary>
             <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+                Manual for more details.
             </remarks>
             <param name="path">
                 The path to the file to be uploaded.
@@ -662,7 +1333,8 @@
                 Uploads the provided file as an attachment.
             </summary>
             <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+                Manual for more details.
             </remarks>
             <param name="fileName">
                 The file name of the file to be uploaded including the file extension.
@@ -682,7 +1354,8 @@
                 Uploads the provided file as an attachment.
             </summary>
             <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+                Manual for more details.
             </remarks>
             <param name="fileName">
                 The file name of the file to be uploaded including the file extension.
@@ -699,10 +1372,12 @@
         </member>
         <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.Byte[]},System.Threading.CancellationToken)">
             <summary>
-                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment
+                entry.
             </summary>
             <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+                Manual for more details.
             </remarks>
             <param name="files">
                 A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
@@ -716,10 +1391,12 @@
         </member>
         <member name="M:B1SLayer.SLConnection.PostAttachmentsAsync(System.Collections.Generic.IDictionary{System.String,System.IO.Stream},System.Threading.CancellationToken)">
             <summary>
-                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment entry.
+                Uploads the provided files as an attachment. All files will be posted as attachment lines in a single attachment
+                entry.
             </summary>
             <remarks>
-                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User Manual for more details.
+                An attachment folder must be defined. See section 'Setting up an Attachment Folder' in the Service Layer User
+                Manual for more details.
             </remarks>
             <param name="files">
                 A Dictionary containing the files to be uploaded, where the file name is the Key and the file is the Value.
@@ -824,7 +1501,8 @@
         </member>
         <member name="M:B1SLayer.SLConnection.BufferAttachmentFilesAsync(System.Collections.Generic.IDictionary{System.String,System.IO.Stream},System.Threading.CancellationToken)">
             <summary>
-                Validates and buffers the given files upfront so the multipart content can be rebuilt in case the request is retried.
+                Validates and buffers the given files upfront so the multipart content can be rebuilt in case the request is
+                retried.
             </summary>
         </member>
         <member name="M:B1SLayer.SLConnection.ToBufferedFiles(System.Collections.Generic.IDictionary{System.String,System.Byte[]})">
@@ -870,9 +1548,80 @@
                 A token to cancel the asynchronous operation.
             </param>
         </member>
+        <member name="F:B1SLayer.SLConnection.CompanyIdHeader">
+            <summary>
+                The header carrying the SLD company ID of a token request.
+            </summary>
+        </member>
+        <member name="F:B1SLayer.SLConnection.BrowserFetchOptions">
+            <summary>
+                The option through which the browser handler of Blazor WebAssembly takes the options of its fetch call.
+            </summary>
+        </member>
+        <member name="F:B1SLayer.SLConnection._accessTokenHttpClient">
+            <summary>
+                The client for requests sent with an access token, which has its own connection pool as certificate
+                validation only happens on new TLS connections, or null when this connection doesn't use access tokens.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.ResolveIdentityAsync(System.Nullable{System.TimeSpan},System.Threading.CancellationToken)">
+            <summary>
+                Gets the identity a request runs with. Connections without access tokens always use the session.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.RunWithRequestTimeoutAsync``1(System.Func{System.Threading.CancellationToken,System.Threading.Tasks.Task{``0}},System.String,System.Nullable{System.TimeSpan},System.Threading.CancellationToken)">
+            <summary>
+                Bounds a phase before the send by the request timeout, even when the delegate running it ignores its token. The
+                work itself may carry on, which a token acquisition depends on, as it must not lose a rotated refresh token.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.AcquireAccessTokenAsync(B1SLayer.SLRequestIdentity,System.String,System.Threading.CancellationToken)">
+            <summary>
+                Gets a validated access token for the given identity. Any failure surfaces as an exception, with no retry and no
+                login fallback.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.EnsureSessionCredentials">
+            <summary>
+                Fails when the connection has no session account to run a request or a login with.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.PrepareForSend(System.Net.Http.HttpRequestMessage,B1SLayer.SLRequestCredential)">
+            <summary>
+                The one place every send passes through, right before going on the wire and on every redirect hop. On a connection
+                using access tokens, it enforces the rule that a request never carries both a session cookie and a bearer token,
+                because
+                the Service Layer honors the cookie and ignores the token, even an invalid one, so the request would silently run
+                as the
+                cookie's account. A connection without access tokens has no identities to mix up, so its headers are left to the
+                caller.
+            </summary>
+            <returns>
+                The client to send the request with.
+            </returns>
+        </member>
+        <member name="M:B1SLayer.SLConnection.OmitBrowserCredentials(System.Net.Http.HttpRequestMessage)">
+            <summary>
+                Keeps a browser from adding a cookie of its own to a token request: Blazor WebAssembly has no
+                handler-level cookie setting, and fetch sends same-origin cookies by default, out of reach of the headers.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.RemoveAccessToken(System.Net.Http.HttpRequestMessage)">
+            <summary>
+                Removes the access token from a request that has been sent, so it can't leak through the call event handlers
+                or the response's RequestMessage, where a logged <see cref="M:System.Net.Http.HttpRequestMessage.ToString" /> would include it.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.IsSameOrigin(System.Uri,System.Uri)">
+            <summary>
+                Determines whether two URIs share the same scheme, host and port, the condition for an access token to follow a
+                redirect.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLConnection.PostBatchAsync(B1SLayer.SLBatchRequest[])">
             <summary>
-                Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest" /> instances.
+                Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+                <see cref="T:B1SLayer.SLBatchRequest" /> instances.
                 All requests are sent in a single change set.
             </summary>
             <remarks>
@@ -887,7 +1636,8 @@
         </member>
         <member name="M:B1SLayer.SLConnection.PostBatchAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean,System.Threading.CancellationToken)">
             <summary>
-                Sends a batch request (multiple operations sent in a single HTTP request) with the provided <see cref="T:B1SLayer.SLBatchRequest" /> collection.
+                Sends a batch request (multiple operations sent in a single HTTP request) with the provided
+                <see cref="T:B1SLayer.SLBatchRequest" /> collection.
             </summary>
             <remarks>
                 See section 'Batch Operations' in the Service Layer User Manual for more details.
@@ -896,7 +1646,8 @@
                 A collection of <see cref="T:B1SLayer.SLBatchRequest" /> to be sent in the batch.
             </param>
             <param name="singleChangeSet">
-                Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful request will cause the whole batch to be rolled back.
+                Whether all the requests in this batch should be sent in a single change set. This means that any unsuccessful
+                request will cause the whole batch to be rolled back.
             </param>
             <returns>
                 An <see cref="T:System.Net.Http.HttpResponseMessage" /> array containg the response messages of the batch request.
@@ -905,16 +1656,21 @@
                 A token to cancel the asynchronous operation.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildBatchContentsAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean,System.Threading.CancellationToken)">
+        <member name="M:B1SLayer.SLConnection.BuildBatchContentsAsync(System.Collections.Generic.IEnumerable{B1SLayer.SLBatchRequest},System.Boolean,B1SLayer.SLRequestCredential,System.Threading.CancellationToken)">
             <summary>
                 Builds the list of <see cref="T:System.Net.Http.HttpContent" /> parts for a batch request.
                 GET/HEAD requests are placed directly in the batch body, while mutation requests are wrapped in changesets.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildHttpContentFromBatchRequestAsync(B1SLayer.SLBatchRequest,System.Threading.CancellationToken)">
+        <member name="M:B1SLayer.SLConnection.BuildHttpContentFromBatchRequestAsync(B1SLayer.SLBatchRequest,B1SLayer.SLRequestCredential,System.Threading.CancellationToken)">
             <summary>
                 Builds an <see cref="T:System.Net.Http.HttpContent" /> from a given <see cref="T:B1SLayer.SLBatchRequest" />.
             </summary>
+            <remarks>
+                The inner requests of a token or ambient session batch run with the outer request's identity, so credential
+                headers set on them are dropped: that identity is the only one such a batch runs with, like any other of its
+                requests.
+            </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.IsQueryMethod(System.Net.Http.HttpMethod)">
             <summary>
@@ -954,7 +1710,8 @@
                 The password for the provided user.
             </param>
             <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
+                The language code to be used. Specify a code if you want error messages in some specific language other than
+                English.
                 A GET request to the UserLanguages resource will return all available languages and their respective codes.
             </param>
             <param name="numberOfAttempts">
@@ -980,7 +1737,8 @@
                 The password for the provided user.
             </param>
             <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
+                The language code to be used. Specify a code if you want error messages in some specific language other than
+                English.
                 A GET request to the UserLanguages resource will return all available languages and their respective codes.
             </param>
             <param name="numberOfAttempts">
@@ -1024,7 +1782,8 @@
                 The password for the provided user.
             </param>
             <param name="language">
-                The language code to be used. Specify a code if you want error messages in some specific language other than English.
+                The language code to be used. Specify a code if you want error messages in some specific language other than
+                English.
                 A GET request to the UserLanguages resource will return all available languages and their respective codes.
             </param>
         </member>
@@ -1040,7 +1799,8 @@
                 (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
             </param>
             <param name="sessionTimeout">
-                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30
+                minutes,
                 specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
             </param>
             <param name="numberOfAttempts">
@@ -1060,7 +1820,8 @@
                 (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
             </param>
             <param name="sessionTimeout">
-                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30 minutes,
+                The timeout value in minutes for a Service Layer session. If the configured value differs from the default 30
+                minutes,
                 specify it through this parameter. Check the "SessionTimeout" property in the file "b1s.conf" on the server.
             </param>
             <param name="numberOfAttempts">
@@ -1072,10 +1833,16 @@
             <summary>
                 Gets the <see cref="T:System.Net.Http.HttpClient" /> responsible for the requests to Service Layer.
             </summary>
+            <remarks>
+                A connection with both session credentials and access tokens sends token requests through a separate
+                client when B1SLayer creates its own handlers, see
+                <see cref="P:B1SLayer.SLConnectionOptions.ValidateAccessTokenServerCertificate" />.
+            </remarks>
         </member>
         <member name="P:B1SLayer.SLConnection.DistributedCache">
             <summary>
-                Gets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an in-memory implementation is used.
+                Gets the <see cref="T:Microsoft.Extensions.Caching.Distributed.IDistributedCache" /> implementation to be used for session management. By default, an
+                in-memory implementation is used.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.SessionCacheKey">
@@ -1110,7 +1877,8 @@
         </member>
         <member name="P:B1SLayer.SLConnection.NumberOfAttempts">
             <summary>
-                Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />.
+                Gets or sets the number of attempts for each unsuccessful request in case of an HTTP status code contained in
+                <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnection.RetryDelay">
@@ -1120,7 +1888,8 @@
         </member>
         <member name="P:B1SLayer.SLConnection.JsonSerializerOptions">
             <summary>
-                Gets or sets the <see cref="T:System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request and response bodies.
+                Gets or sets the <see cref="T:System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request
+                and response bodies.
                 By default, null values are ignored when serializing. Can be overridden per request with
                 <see cref="M:B1SLayer.SLRequest.WithJsonSerializerOptions(System.Text.Json.JsonSerializerOptions)" />.
             </summary>
@@ -1141,6 +1910,31 @@
                 Gets whether this <see cref="T:B1SLayer.SLConnection" /> instance is using Single Sign-On (SSO) authentication.
             </summary>
         </member>
+        <member name="P:B1SLayer.SLConnection.IsUsingAccessTokens">
+            <summary>
+                Gets whether this <see cref="T:B1SLayer.SLConnection" /> instance sends requests with access tokens,
+                through <see cref="P:B1SLayer.SLConnectionOptions.AccessTokenSource" /> or <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" />
+                .
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.IsUsingAmbientSession">
+            <summary>
+                Gets whether this <see cref="T:B1SLayer.SLConnection" /> instance relies on the session
+                the browser already holds, through <see cref="P:B1SLayer.SLConnectionOptions.UseAmbientSession" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.HasSessionCredentials">
+            <summary>
+                Gets whether this <see cref="T:B1SLayer.SLConnection" /> instance has a session account to log in with, through a username and
+                password or Single Sign-On (SSO). Always true for a connection that uses neither access tokens nor an ambient
+                session.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnection.CompanyId">
+            <summary>
+                Gets the SLD company ID provided for the single-identity token mode, or null otherwise.
+            </summary>
+        </member>
         <member name="P:B1SLayer.SLConnection.LoginResponse">
             <summary>
                 Gets information about the latest Login request.
@@ -1154,17 +1948,32 @@
                 The number of attempts is defined by <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" />.
             </remarks>
         </member>
+        <member name="M:B1SLayer.SLConnection.ValidateAmbientSessionOptions(B1SLayer.SLConnectionOptions)">
+            <summary>
+                Validates the options specific to an ambient session. Each of the credentials it rejects
+                would mean running a request as someone other than the user of the browser's session.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.ValidateAccessTokenOptions(B1SLayer.SLConnectionOptions)">
+            <summary>
+                Validates the options specific to access tokens.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.ConfigureHttpClient(System.Net.Http.HttpClient)">
+            <summary>
+                Applies the settings every client of a connection needs.
+            </summary>
+        </member>
         <member name="M:B1SLayer.SLConnection.CreateDefaultHandler(B1SLayer.SLConnectionOptions)">
             <summary>
                 Creates and configures the handler used when no custom <see cref="T:System.Net.Http.HttpClient" />
                 or <see cref="T:System.Net.Http.HttpMessageHandler" /> is provided.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.DisableHandlerCookieManagement(System.Net.Http.HttpMessageHandler)">
+        <member name="M:B1SLayer.SLConnection.CreateAccessTokenHandler(B1SLayer.SLConnectionOptions)">
             <summary>
-                Disables cookie management on the innermost handler of the provided handler (chain).
-                Session cookies are managed by B1SLayer and sent through the Cookie header,
-                which handler-level cookie management would silently discard or interfere with.
+                Creates and configures the handler for requests sent with an access token when no custom
+                <see cref="T:System.Net.Http.HttpClient" /> or <see cref="T:System.Net.Http.HttpMessageHandler" /> is provided.
             </summary>
         </member>
         <member name="F:B1SLayer.SLConnection.MaxRedirects">
@@ -1175,18 +1984,21 @@
         </member>
         <member name="M:B1SLayer.SLConnection.Request(System.String)">
             <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection" />.
+                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated
+                <see cref="T:B1SLayer.SLConnection" />.
             </summary>
             <remarks>
                 The request can be configured through the fluent methods of <see cref="T:B1SLayer.SLRequest" />.
             </remarks>
             <param name="resource">
-                The resource name to be requested.
+                The resource name to be requested. It may carry its own query string, in which a '%' followed by two hex digits
+                is taken as already encoded. For a literal that may hold one, use <see cref="M:B1SLayer.SLRequest.Filter(System.String)" />.
             </param>
         </member>
         <member name="M:B1SLayer.SLConnection.Request(System.String,System.Object)">
             <summary>
-                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated <see cref="T:B1SLayer.SLConnection" />.
+                Initializes a new instance of the <see cref="T:B1SLayer.SLRequest" /> class that represents a request to the associated
+                <see cref="T:B1SLayer.SLConnection" />.
             </summary>
             <remarks>
                 The request can be configured through the fluent methods of <see cref="T:B1SLayer.SLRequest" />.
@@ -1195,18 +2007,26 @@
                 The resource name to be requested.
             </param>
             <param name="id">
-                The entity ID to be requested.
+                The entity ID to be requested. A string is the value of the key as it is, so its single quotes are escaped
+                by B1SLayer and must not be doubled by the caller.
             </param>
         </member>
-        <member name="M:B1SLayer.SLConnection.ExecuteRequestAsync``1(System.Func{B1SLayer.SLCookieJar,System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Net.Http.HttpRequestMessage}},System.Func{System.Net.Http.HttpResponseMessage,System.Threading.Tasks.Task{``0}},System.Func{System.Net.HttpStatusCode,System.Boolean},System.Net.Http.HttpCompletionOption,System.Nullable{System.TimeSpan},System.Byte[],System.Threading.CancellationToken)">
+        <member name="M:B1SLayer.SLConnection.ExecuteRequestAsync``1(System.Func{B1SLayer.SLRequestCredential,System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Net.Http.HttpRequestMessage}},System.Func{System.Net.Http.HttpResponseMessage,System.Threading.Tasks.Task{``0}},System.Func{System.Net.HttpStatusCode,System.Boolean},System.Net.Http.HttpCompletionOption,System.Nullable{System.TimeSpan},System.Byte[],System.Threading.CancellationToken)">
             <summary>
-                Ensures a valid session and then executes the request built by the provided factory,
-                handing the successful response to the provided handler.
+                Resolves the identity of the request, ensures a valid session or access token and then executes the request
+                built by the provided factory, handing the successful response to the provided handler.
                 If the request is unsuccessfull with any return code present in <see cref="P:B1SLayer.SLConnection.HttpStatusCodesToRetry" />,
-                it will be retried for <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" /> number of times, waiting <see cref="P:B1SLayer.SLConnection.RetryDelay" /> between attempts.
+                it will be retried for <see cref="P:B1SLayer.SLConnection.NumberOfAttempts" /> number of times, waiting <see cref="P:B1SLayer.SLConnection.RetryDelay" /> between
+                attempts.
             </summary>
             <remarks>
-                The factory is invoked once per attempt, as an <see cref="T:System.Net.Http.HttpRequestMessage" /> and its content can not be reused.
+                The identity is resolved once, so a retry can't run the request as another account. The factory runs once
+                per attempt, as an <see cref="T:System.Net.Http.HttpRequestMessage" /> and its content can not be reused.
+                On a 401, a session request logs in again, while a token request asks the token source for a fresh token and
+                retries once.
+                A token request never falls back to a login, even when the connection has session credentials.
+                A request relying on the browser's session surfaces the 401, as only the application holding that session can renew
+                it.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.IsTransientLoginFailure(B1SLayer.SLException)">
@@ -1216,7 +2036,15 @@
                 and timeouts are excluded, propagating immediately.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.SendCoreAsync(System.Net.Http.HttpRequestMessage,B1SLayer.SLCookieJar,System.Func{System.Net.HttpStatusCode,System.Boolean},System.Net.Http.HttpCompletionOption,System.Nullable{System.TimeSpan},System.Byte[],System.Int32,System.Threading.CancellationToken)">
+        <member name="M:B1SLayer.SLConnection.RaiseOnErrorBeforeSendAsync(System.Func{B1SLayer.SLRequestCredential,System.Threading.CancellationToken,System.Threading.Tasks.Task{System.Net.Http.HttpRequestMessage}},B1SLayer.SLRequestCredential,System.Byte[],System.Int32,System.Exception)">
+            <summary>
+                Reports a failure to get the identity or the access token of a request to the OnError handlers, the same way a
+                failed automatic
+                login is, as that is where failures get monitored. BeforeCall and AfterCall don't run, as nothing was or will be
+                sent.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLConnection.SendCoreAsync(System.Net.Http.HttpRequestMessage,B1SLayer.SLRequestCredential,System.Func{System.Net.HttpStatusCode,System.Boolean},System.Net.Http.HttpCompletionOption,System.Nullable{System.TimeSpan},System.Byte[],System.Int32,System.Threading.CancellationToken)">
             <summary>
                 Sends the given request message, invoking the registered call event handlers and enforcing the request timeout.
             </summary>
@@ -1227,17 +2055,20 @@
                 <see cref="T:System.OperationCanceledException" /> and transport failures surface as <see cref="T:System.Net.Http.HttpRequestException" />.
             </remarks>
         </member>
-        <member name="M:B1SLayer.SLConnection.SendWithRedirectsAsync(System.Net.Http.HttpRequestMessage,B1SLayer.SLCookieJar,B1SLayer.SLCallContext,System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
+        <member name="M:B1SLayer.SLConnection.SendWithRedirectsAsync(System.Net.Http.HttpRequestMessage,B1SLayer.SLRequestCredential,B1SLayer.SLCallContext,System.Net.Http.HttpCompletionOption,System.Threading.CancellationToken)">
             <summary>
                 Sends the request, following redirects itself — the handler has redirects disabled — so
                 Set-Cookie headers on every hop are captured and the applicable cookies re-evaluated per hop URL.
             </summary>
         </member>
-        <member name="M:B1SLayer.SLConnection.BuildRedirectRequestMessage(System.Net.Http.HttpRequestMessage,System.Net.Http.HttpResponseMessage,B1SLayer.SLCookieJar)">
+        <member name="M:B1SLayer.SLConnection.BuildRedirectRequestMessage(System.Net.Http.HttpRequestMessage,System.Net.Http.HttpResponseMessage,B1SLayer.SLCookieJar,B1SLayer.SLRequestCredential,System.Uri)">
             <summary>
                 Builds the request message for a redirect hop, or null when the response is not a followable
                 redirect. The verb-conversion rules match HttpClient and browsers: 303 always converts to GET,
                 301/302 convert only POST, 307/308 preserve the method and body.
+                A token request only follows redirects within its original origin, where its credentials are applied again by
+                <see cref="M:B1SLayer.SLConnection.PrepareForSend(System.Net.Http.HttpRequestMessage,B1SLayer.SLRequestCredential)" />; any other redirect is handed back as the final response, so the token never leaves
+                it.
             </summary>
         </member>
         <member name="M:B1SLayer.SLConnection.CreateResourceRequestMessage(System.Net.Http.HttpMethod,System.String,B1SLayer.SLCookieJar,System.Net.Http.HttpContent)">
@@ -1260,10 +2091,12 @@
         <member name="M:B1SLayer.SLConnection.PingAsync(System.Threading.CancellationToken)">
             <summary>
                 Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG
+                response.
             </summary>
             <remarks>
-                This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+                This feature is only available on version 9.3 PL10 or above. See SAP Note
+                <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
             </remarks>
             <returns>
                 A <see cref="T:B1SLayer.SLPingResponse" /> object containing the response details.
@@ -1275,10 +2108,12 @@
         <member name="M:B1SLayer.SLConnection.PingNodeAsync(System.Nullable{System.Int32},System.Threading.CancellationToken)">
             <summary>
                 Provides a direct response from the Apache server that can be used for network testing and component monitoring.
-                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG response.
+                In response to a PING request, the Apache server (load balancer or node) will respond directly with a simple PONG
+                response.
             </summary>
             <remarks>
-                This feature is only available on version 9.3 PL10 or above. See SAP Note <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
+                This feature is only available on version 9.3 PL10 or above. See SAP Note
+                <see href="https://launchpad.support.sap.com/#/notes/2796799">2796799</see> for more details.
             </remarks>
             <param name="node">
                 The specific node to be monitored. If not specified, the request will be directed to the load balancer.
@@ -1304,7 +2139,8 @@
                 Sets a <see cref="T:System.Func`2" /> delegate that is called before every Service Layer request.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
                 Response-related properties will be null in BeforeCall.
             </remarks>
         </member>
@@ -1313,7 +2149,8 @@
                 Sets a <see cref="T:System.Action`1" /> delegate that is called before every Service Layer request.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
                 Response-related properties will be null in BeforeCall.
             </remarks>
         </member>
@@ -1322,7 +2159,8 @@
                 Sets a <see cref="T:System.Func`2" /> delegate that is called after every Service Layer request.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.AfterCall(System.Action{B1SLayer.SLCallContext})">
@@ -1330,23 +2168,28 @@
                 Sets a <see cref="T:System.Action`1" /> delegate that is called after every Service Layer request.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.OnError(System.Func{B1SLayer.SLCallContext,System.Threading.Tasks.Task})">
             <summary>
-                Sets a <see cref="T:System.Func`2" /> delegate that is called after every unsuccessful Service Layer request.
+                Sets a <see cref="T:System.Func`2" /> delegate that is called after every unsuccessful Service Layer request,
+                including one that failed before being sent, because its identity or access token couldn't be obtained.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
             </remarks>
         </member>
         <member name="M:B1SLayer.SLConnection.OnError(System.Action{B1SLayer.SLCallContext})">
             <summary>
-                Sets a <see cref="T:System.Action`1" /> delegate that is called after every unsuccessful Service Layer request.
+                Sets a <see cref="T:System.Action`1" /> delegate that is called after every unsuccessful Service Layer request,
+                including one that failed before being sent, because its identity or access token couldn't be obtained.
             </summary>
             <remarks>
-                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and error handling.
+                The <see cref="T:B1SLayer.SLCallContext" /> object provides various details about the call than can be used for logging and
+                error handling.
             </remarks>
         </member>
         <member name="T:B1SLayer.SLConnection.ExceptionEqualityComparer">
@@ -1365,8 +2208,19 @@
                 Performs a POST Login request with the provided information, regardless of the current session state.
             </summary>
             <remarks>
-                Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever needed.
+                <para>
+                    Manually performing the Login is often unnecessary because it will be performed automatically anyway whenever
+                    needed.
+                </para>
+                <para>
+                    A login always concerns the session account and never carries an access token. On a connection that also has
+                    session credentials it doesn't change which identity requests run with, which remains up to
+                    <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" />. An access token can't be exchanged for a session.
+                </para>
             </remarks>
+            <exception cref="T:System.InvalidOperationException">
+                This connection authenticates with access tokens and has no session credentials.
+            </exception>
             <param name="cancellationToken">
                 A token to cancel the asynchronous operation.
             </param>
@@ -1433,7 +2287,8 @@
         </member>
         <member name="M:B1SLayer.SLConnection.CreateCookieJarFromConnectionContext(System.String)">
             <summary>
-                Creates a <see cref="T:B1SLayer.SLCookieJar" /> instance from the context string obtained from the UI API method "GetServiceLayerConnectionContext";
+                Creates a <see cref="T:B1SLayer.SLCookieJar" /> instance from the context string obtained from the UI API method
+                "GetServiceLayerConnectionContext";
             </summary>
             <param name="connectionContext">
                 The connection context string obtained from UI API.
@@ -1446,6 +2301,15 @@
             <summary>
                 Performs a POST Logout request, ending the current session.
             </summary>
+            <remarks>
+                A logout always concerns the session account, and neither ends nor revokes access tokens. To sign a user out
+                of an access token, use the end session endpoint of the OpenID Connect provider (see
+                <see cref="P:B1SLayer.SLOidcProviderMetadata.EndSessionEndpoint" />);
+                the Service Layer keeps accepting an access token until it expires, even after that.
+            </remarks>
+            <exception cref="T:System.InvalidOperationException">
+                This connection authenticates with access tokens and has no session credentials.
+            </exception>
             <param name="cancellationToken">
                 A token to cancel the asynchronous operation.
             </param>
@@ -1468,6 +2332,7 @@
         <member name="P:B1SLayer.SLConnectionOptions.CompanyDB">
             <summary>
                 Gets or sets the Company database (schema) to connect to.
+                Requests sent with an access token select the company through <see cref="P:B1SLayer.SLConnectionOptions.CompanyId" /> or the identity instead.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.UserName">
@@ -1482,8 +2347,10 @@
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.Language">
             <summary>
-                Gets or sets the language code to be used. Specify a code if you want error messages in some specific language other than English.
+                Gets or sets the language code to be used. Specify a code if you want error messages in some specific language
+                other than English.
                 A GET request to the UserLanguages resource will return all available languages and their respective codes.
+                This is a parameter of the session login, so it doesn't affect requests sent with an access token.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.NumberOfAttempts">
@@ -1499,15 +2366,88 @@
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.GetServiceLayerConnectionContext">
             <summary>
-                Gets or sets the reference for the UI API method responsible for obtaining the connection context when using Single Sign-On (SSO) authentication
+                Gets or sets the reference for the UI API method responsible for obtaining the connection context when using Single
+                Sign-On (SSO) authentication
                 (SAPbouiCOM.Framework.Application.SBO_Application.Company.GetServiceLayerConnectionContext).
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.SsoSessionTimeout">
             <summary>
-                Gets or sets the timeout value in minutes for a Service Layer session when using Single Sign-On (SSO) authentication.
+                Gets or sets the timeout value in minutes for a Service Layer session when using Single Sign-On (SSO)
+                authentication.
                 If the configured value differs from the default 30 minutes, specify it through this property.
                 Check the "SessionTimeout" property in the file "b1s.conf" on the server.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.AccessTokenSource">
+            <summary>
+                Gets or sets the source of the access token that every request of this connection is sent with, along with
+                <see cref="P:B1SLayer.SLConnectionOptions.CompanyId" />. This is the single-identity token mode: for one token per user on the same connection,
+                use <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" /> instead.
+            </summary>
+            <remarks>
+                <see cref="P:B1SLayer.SLConnectionOptions.CompanyDB" />, <see cref="P:B1SLayer.SLConnectionOptions.UserName" /> and <see cref="P:B1SLayer.SLConnectionOptions.Password" /> become optional, and even when
+                provided, a request sent with an access token never falls back to a login. Can not be combined with
+                <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" />.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.CompanyId">
+            <summary>
+                Gets or sets the SLD company ID sent with <see cref="P:B1SLayer.SLConnectionOptions.AccessTokenSource" /> in the X-b1-companyid header,
+                as obtained from <see cref="M:B1SLayer.SLOidcClient.GetCompanyIdAsync(System.String,System.String,System.Threading.CancellationToken)" />. This is not the company database name.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.IdentityResolver">
+            <summary>
+                Gets or sets the delegate that decides which identity each request runs with, when it is sent. It lets a single
+                cached connection serve many users: return <see cref="P:B1SLayer.SLRequestIdentity.Session" /> to use the session cookies, or
+                <see cref="M:B1SLayer.SLRequestIdentity.FromTokenSource(B1SLayer.ISLAccessTokenSource,System.String)" /> to use a user's token, typically based on an ambient user context.
+            </summary>
+            <remarks>
+                <para>
+                    Called once per request, whose retries keep that identity, across every request of this connection, so it
+                    must be thread-safe and should be fast. An exception thrown by it propagates to the caller of the request.
+                    It must not return null, which fails the request rather than being read as the session identity.
+                </para>
+                <para>
+                    Session credentials are optional, as they are only needed for the identities that use the session.
+                    Can not be combined with <see cref="P:B1SLayer.SLConnectionOptions.AccessTokenSource" />.
+                </para>
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.ValidateAccessTokenServerCertificate">
+            <summary>
+                Gets or sets whether the server certificate is validated for requests sent with an access token. The default
+                value is true: unlike <see cref="P:B1SLayer.SLConnectionOptions.ValidateServerCertificate" />, which keeps its default of false
+                for session requests, a bearer token is at stake here (RFC 6749 section 10.9, RFC 9700).
+            </summary>
+            <remarks>
+                Set to false as an explicit opt-out for landscapes with self-signed certificates, or preferably use
+                <see cref="P:B1SLayer.SLConnectionOptions.AccessTokenServerCertificateValidationCallback" /> to pin the certificate. Session requests have
+                a separate connection pool when B1SLayer creates the handlers, so they can't weaken this.
+                Only applied when B1SLayer creates its own handlers, that is, when neither
+                <see cref="P:B1SLayer.SLConnectionOptions.HttpClient" /> nor <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" /> is provided, in which case certificate validation
+                is
+                up to the provided instance, which also serves both session and token requests through a single connection pool.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.AccessTokenServerCertificateValidationCallback">
+            <summary>
+                Gets or sets a callback that custom-validates the server certificate for requests sent with an access token,
+                enabling scenarios like pinning the server's self-signed certificate without trusting it machine-wide.
+                When set, it takes precedence over <see cref="P:B1SLayer.SLConnectionOptions.ValidateAccessTokenServerCertificate" />.
+            </summary>
+            <remarks>
+                <see cref="P:B1SLayer.SLConnectionOptions.ServerCertificateValidationCallback" /> only applies to session requests and doesn't apply here.
+                Can not be combined with <see cref="P:B1SLayer.SLConnectionOptions.HttpClient" /> or <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" />, where it couldn't be
+                honored.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.AllowAccessTokensOverHttp">
+            <summary>
+                Gets or sets whether access tokens may be sent to a <see cref="P:B1SLayer.SLConnectionOptions.ServiceLayerRoot" /> that isn't HTTPS. The default
+                value
+                is false, as RFC 6750 section 5.3 requires TLS. Only meant for a local TLS-terminating proxy or for testing.
             </summary>
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.HttpClient">
@@ -1515,20 +2455,51 @@
                 Gets or sets a custom <see cref="T:System.Net.Http.HttpClient" /> to be used for the requests to the Service Layer.
             </summary>
             <remarks>
-                The provided instance must be exclusive to this connection and unused, as its <see cref="P:System.Net.Http.HttpClient.Timeout" />
+                The provided instance must be exclusive to this connection and unused, as its
+                <see cref="P:System.Net.Http.HttpClient.Timeout" />
                 is set to infinite (timeouts are managed per request by B1SLayer) and it will not be disposed by B1SLayer.
                 The underlying handler must have cookies disabled (UseCookies = false), otherwise the session cookies managed
-                by B1SLayer will not be sent. Can not be combined with <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" />.
+                by B1SLayer will not be sent and, when using access tokens, a cookie stored by the handler could override
+                the token. Can not be combined with <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" />.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLConnectionOptions.UseAmbientSession">
+            <summary>
+                Gets or sets whether requests rely on the session the browser already holds, as in a tile extension
+                (for example, a Blazor WebAssembly app) hosted by the SAP Business One Web Client.
+            </summary>
+            <remarks>
+                <para>
+                    SAP designed these extensions to reach the Service Layer without logging in to it, so B1SLayer sends no
+                    credential and never
+                    logs in. A 401 means the Web Client's session has ended, so it surfaces right away, and the user has to log in
+                    again.
+                </para>
+                <para>
+                    The Content Security Policy of the Web Client 10.0 FP 2608 doesn't allow WebAssembly, so a Blazor tile doesn't
+                    start there.
+                </para>
+                <para>
+                    <see cref="P:B1SLayer.SLConnectionOptions.ServiceLayerRoot" /> must be the absolute Service Layer address on the origin of the app, for
+                    example
+                    new Uri(new Uri(navigationManager.BaseUri), "/b1s/v2"), as a browser only adds its cookies to same-origin
+                    requests by default.
+                    Can not be combined with session credentials or access tokens. Outside a browser, it
+                    requires a provided <see cref="P:B1SLayer.SLConnectionOptions.HttpClient" /> or <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" /> to supply the credential.
+                </para>
             </remarks>
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.HttpMessageHandler">
             <summary>
-                Gets or sets a custom <see cref="T:System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service Layer.
+                Gets or sets a custom <see cref="T:System.Net.Http.HttpMessageHandler" /> to be used for the requests to the Service
+                Layer.
             </summary>
             <remarks>
-                The handler will be wrapped in an <see cref="T:System.Net.Http.HttpClient" /> managed by B1SLayer and will not be disposed by it.
+                The handler will be wrapped in an <see cref="T:System.Net.Http.HttpClient" /> managed by B1SLayer and will not be
+                disposed by it.
                 B1SLayer disables cookie management (UseCookies = false) on the innermost handler when it is an
-                <see cref="T:System.Net.Http.HttpClientHandler" /> or SocketsHttpHandler, including through DelegatingHandler chains —
+                <see cref="T:System.Net.Http.HttpClientHandler" /> or SocketsHttpHandler, including through DelegatingHandler chains
+                —
                 for any other handler type that manages cookies, cookies must be disabled manually, otherwise the session
                 cookies managed by B1SLayer will not be sent. A handler that has already served requests can no longer be
                 configured and is used as-is; in that scenario, cookie management must have been disabled beforehand.
@@ -1539,10 +2510,11 @@
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.ValidateServerCertificate">
             <summary>
-                Gets or sets whether the server certificate should be validated. The default value is false,
+                Gets or sets whether the server certificate should be validated for session requests. The default value is false,
                 as SAP Business One servers typically use self-signed certificates.
             </summary>
             <remarks>
+                Doesn't apply to requests sent with an access token, see <see cref="P:B1SLayer.SLConnectionOptions.ValidateAccessTokenServerCertificate" />.
                 Only applied when B1SLayer creates its own handler, that is, when neither
                 <see cref="P:B1SLayer.SLConnectionOptions.HttpClient" /> nor <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" /> is provided.
                 Ignored when <see cref="P:B1SLayer.SLConnectionOptions.ServerCertificateValidationCallback" /> is set.
@@ -1550,11 +2522,13 @@
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.ServerCertificateValidationCallback">
             <summary>
-                Gets or sets a callback that custom-validates the server certificate, enabling scenarios like pinning
-                the server's self-signed certificate without trusting it machine-wide.
+                Gets or sets a callback that custom-validates the server certificate for session requests, enabling scenarios
+                like pinning the server's self-signed certificate without trusting it machine-wide.
                 When set, it takes precedence over <see cref="P:B1SLayer.SLConnectionOptions.ValidateServerCertificate" />.
             </summary>
             <remarks>
+                Doesn't apply to requests sent with an access token, see
+                <see cref="P:B1SLayer.SLConnectionOptions.AccessTokenServerCertificateValidationCallback" />.
                 Only applied when B1SLayer creates its own handler, that is, when neither
                 <see cref="P:B1SLayer.SLConnectionOptions.HttpClient" /> nor <see cref="P:B1SLayer.SLConnectionOptions.HttpMessageHandler" /> is provided.
             </remarks>
@@ -1567,7 +2541,8 @@
         </member>
         <member name="P:B1SLayer.SLConnectionOptions.JsonSerializerOptions">
             <summary>
-                Gets or sets the default <see cref="T:System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize request and response bodies.
+                Gets or sets the default <see cref="T:System.Text.Json.JsonSerializerOptions" /> used to serialize and deserialize
+                request and response bodies.
                 By default, null values are ignored when serializing. Can be overridden per request with
                 <see cref="M:B1SLayer.SLRequest.WithJsonSerializerOptions(System.Text.Json.JsonSerializerOptions)" />.
             </summary>
@@ -1599,10 +2574,319 @@
                 Gets the raw content of the response that caused this exception, or null when no response was received.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLOidcClient">
+            <summary>
+                The non-interactive part of authenticating against the SAP Business One authentication server: discovery through
+                the System Landscape Directory (SLD), the client credentials and refresh token grants, and the company lookup.
+            </summary>
+            <remarks>
+                <para>
+                    SAP recommends certified third-party libraries for OpenID Connect. Signing users in (browser redirects,
+                    state, nonce, PKCE, the authorization code exchange, ID token validation and logout) is deliberately left out
+                    and belongs
+                    to such a library. An application doing that plugs its tokens in through <see cref="T:B1SLayer.ISLAccessTokenSource" />.
+                </para>
+                <para>
+                    An instance is thread-safe and should be reused. Certificates are validated by default,
+                    see <see cref="P:B1SLayer.SLOidcClientOptions.ValidateServerCertificate" />.
+                </para>
+            </remarks>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.#ctor(B1SLayer.SLOidcClientOptions)">
+            <summary>
+                Initializes a new instance of the <see cref="T:B1SLayer.SLOidcClient" /> class.
+            </summary>
+            <param name="options">
+                The configuration options for this client.
+            </param>
+        </member>
+        <member name="P:B1SLayer.SLOidcClient.UtcNow">
+            <summary>
+                Gets the current time. Replaceable for testing.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.Dispose">
+            <summary>
+                Releases the resources of the <see cref="T:System.Net.Http.HttpClient" /> created by this
+                instance. An instance provided through the options is left untouched.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.GetProviderMetadataAsync(System.Threading.CancellationToken)">
+            <summary>
+                Discovers the provider metadata through the SLD's GetOpenIDConnectProvider API, validating
+                that the issuer matches the discovery URI as required by OpenID Connect Discovery section 4.3.
+            </summary>
+            <remarks>
+                The metadata is cached for <see cref="P:B1SLayer.SLOidcClientOptions.ProviderMetadataLifetime" />, and keeps being used
+                past that when the SLD or the provider is unavailable, asking again every 30 seconds. See
+                "GetOpenIDConnectProvider" in SAP's
+                "Identity and Authentication Management in SAP Business One".
+            </remarks>
+            <param name="cancellationToken">
+                A token to stop waiting for the metadata.
+            </param>
+            <exception cref="T:B1SLayer.SLAuthenticationException">
+                The SLD or the provider failed or returned invalid metadata, such as a mismatching issuer.
+                When the server couldn't be reached, the <see cref="P:System.Exception.InnerException" /> is the
+                <see cref="T:System.Net.Http.HttpRequestException" />.
+            </exception>
+            <exception cref="T:B1SLayer.SLTimeoutException">
+                The SLD or the provider didn't respond within <see cref="P:B1SLayer.SLOidcClientOptions.RequestTimeout" />.
+            </exception>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.RequestClientCredentialsTokenAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+                Requests an access token through the client credentials grant, the way a daemon service authenticates. It doesn't
+                cache
+                the token, see <see cref="M:B1SLayer.SLOidcClient.CreateClientCredentialsTokenSource(System.String,System.Nullable{System.TimeSpan})" /> for that.
+            </summary>
+            <param name="scope">
+                The scope to request. SAP's documentation uses "openid".
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+            <exception cref="T:B1SLayer.SLAuthenticationException">
+                The token endpoint rejected the request, returned an invalid response or couldn't be reached.
+            </exception>
+            <exception cref="T:B1SLayer.SLTimeoutException">
+                A server didn't respond within <see cref="P:B1SLayer.SLOidcClientOptions.RequestTimeout" />.
+            </exception>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.RefreshTokenAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+                Requests new tokens through the refresh token grant. It doesn't cache the tokens, see
+                <see cref="M:B1SLayer.SLOidcClient.CreateRefreshTokenSource(B1SLayer.SLTokenResponse,System.Func{B1SLayer.SLTokenResponse,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Nullable{System.TimeSpan})" /> for that.
+            </summary>
+            <remarks>
+                The server may rotate the refresh token, in which case the previous one must no longer be used, so
+                always continue with <see cref="P:B1SLayer.SLTokenResponse.RefreshToken" /> of the result, whether it is a new one or not.
+            </remarks>
+            <param name="refreshToken">
+                The current refresh token.
+            </param>
+            <param name="scope">
+                The scope to request, or null to keep the scope of the refresh token.
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+            <exception cref="T:B1SLayer.SLAuthenticationException">
+                The token endpoint rejected the request, returned an invalid response or couldn't be reached. When the refresh
+                token
+                is no longer valid and the user must sign in again, <see cref="P:B1SLayer.SLAuthenticationException.OAuthError" /> is
+                "invalid_grant".
+            </exception>
+            <exception cref="T:B1SLayer.SLTimeoutException">
+                A server didn't respond within <see cref="P:B1SLayer.SLOidcClientOptions.RequestTimeout" />.
+            </exception>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.GetCurrentUserInfoAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+                Gets the user an access token belongs to and the companies the user can access, through the SLD's CurrentUserInfo
+                API.
+            </summary>
+            <param name="accessToken">
+                The access token of the user.
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+            <exception cref="T:B1SLayer.SLAuthenticationException">
+                The SLD rejected the token (status code 401), returned an invalid response or couldn't be reached.
+            </exception>
+            <exception cref="T:B1SLayer.SLTimeoutException">
+                The SLD didn't respond within <see cref="P:B1SLayer.SLOidcClientOptions.RequestTimeout" />.
+            </exception>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.GetCompanyIdAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+                Gets the SLD company ID of the company with the given schema name, among the companies the user of the access token
+                can access.
+            </summary>
+            <remarks>
+                Like SAP's samples, this selects by the schema name alone. A binding the user hasn't confirmed yet is included,
+                which
+                <see cref="P:B1SLayer.SLCompanyBinding.IsConfirmed" /> tells through <see cref="M:B1SLayer.SLOidcClient.GetCurrentUserInfoAsync(System.String,System.Threading.CancellationToken)" />.
+            </remarks>
+            <param name="accessToken">
+                The access token of the user.
+            </param>
+            <param name="companySchemaName">
+                The database schema name of the company, with a case-insensitive match.
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+            <exception cref="T:B1SLayer.SLAuthenticationException">
+                The SLD rejected the token or couldn't be reached, the user can't access such a company, or more than one company
+                has this schema name, in which case <see cref="M:B1SLayer.SLOidcClient.GetCurrentUserInfoAsync(System.String,System.Threading.CancellationToken)" /> allows selecting one by its service
+                unit.
+            </exception>
+            <exception cref="T:B1SLayer.SLTimeoutException">
+                The SLD didn't respond within <see cref="P:B1SLayer.SLOidcClientOptions.RequestTimeout" />.
+            </exception>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.CreateClientCredentialsTokenSource(System.String,System.Nullable{System.TimeSpan})">
+            <summary>
+                Creates a token source for daemon services, which requests a token through the client credentials grant, caches it
+                and requests a new one when it is about to expire or is rejected. There is no refresh token in this grant.
+            </summary>
+            <param name="scope">
+                The scope to request. SAP's documentation uses "openid".
+            </param>
+            <remarks>
+                The source requests its tokens through this instance, which must not be disposed while the source is in use.
+            </remarks>
+            <param name="expirySkew">
+                How long before its expiry a token is renewed, 60 seconds by default.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.CreateRefreshTokenSource(B1SLayer.SLTokenResponse,System.Func{B1SLayer.SLTokenResponse,System.Threading.CancellationToken,System.Threading.Tasks.Task},System.Nullable{System.TimeSpan})">
+            <summary>
+                Creates a token source for the tokens of one signed-in user, obtained by the application through its own OIDC
+                library, which
+                caches the access token and uses the refresh token when it is about to expire or is rejected, accepting a rotated
+                refresh token.
+            </summary>
+            <remarks>
+                Refreshes are single-flight within this instance, which is what a rotating refresh token needs. When several
+                processes share a user's tokens, they need to coordinate on their own, by implementing
+                <see cref="T:B1SLayer.ISLAccessTokenSource" />.
+                When the refresh token is no longer valid, requests fail with a <see cref="T:B1SLayer.SLAuthenticationException" /> whose
+                <see cref="P:B1SLayer.SLAuthenticationException.OAuthError" /> is "invalid_grant", and the user must sign in again.
+                The source refreshes through this instance, which must not be disposed while the source is in use.
+            </remarks>
+            <param name="initialTokens">
+                The tokens of the user, whose <see cref="P:B1SLayer.SLTokenResponse.RefreshToken" /> is required.
+            </param>
+            <param name="onTokensRefreshed">
+                A delegate called after each refresh, for persisting the new tokens. The source is already using the new tokens by
+                then. When
+                the delegate fails, the next request fails with a <see cref="T:B1SLayer.SLAuthenticationException" /> carrying that failure,
+                once, and
+                the next refresh calls it again with newer tokens. The tokens aren't persisted until then, so a process restart may
+                find
+                a refresh token that was rotated away, meaning the user has to sign in again.
+            </param>
+            <param name="expirySkew">
+                How long before its expiry a token is renewed, 60 seconds by default.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.IsUnavailabilityFailure(System.Exception)">
+            <summary>
+                Determines whether a discovery failure says nothing about the metadata itself: any HTTP failure, 4xx included,
+                as that is what SAP documents the SLD returning when it fails. Invalid metadata carries no status code.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.RequestTokenAsync(System.Collections.Generic.List{System.Collections.Generic.KeyValuePair{System.String,System.String}},System.String,System.Threading.CancellationToken)">
+            <param name="form">
+                The grant parameters.
+            </param>
+            <param name="currentRefreshToken">
+                The refresh token being used, kept when the server doesn't issue a new one (RFC 6749 section 6).
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLOidcClient.ParseTokenResponse(System.String,System.DateTimeOffset,System.String)">
+            <summary>
+                Parses a successful token response. Nothing in the body makes it into an exception, as it holds tokens.
+            </summary>
+        </member>
+        <member name="T:B1SLayer.SLOidcClientOptions">
+            <summary>
+                Provides the configuration options for a <see cref="T:B1SLayer.SLOidcClient" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.SldAddress">
+            <summary>
+                Gets or sets the address of the System Landscape Directory (SLD). The expected format is https://[server]:40000
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.ClientId">
+            <summary>
+                Gets or sets the client ID registered in the SAP Business One Extension Single Sign-On Manager.
+                Required for token requests, but not for discovery or company lookups.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.ClientCredential">
+            <summary>
+                Gets or sets the credential of the client. Required for the client credentials grant, and for refreshing
+                the tokens of a confidential client. A public client, like a desktop app, doesn't have one.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.HttpClient">
+            <summary>
+                Gets or sets a custom <see cref="T:System.Net.Http.HttpClient" /> to be used for the requests. It is not modified or
+                disposed by B1SLayer.
+            </summary>
+            <remarks>
+                Certificate validation and redirects are then up to the provided instance. It should
+                not follow redirects, as a redirect could otherwise take a client credential elsewhere.
+                Can not be combined with <see cref="P:B1SLayer.SLOidcClientOptions.HttpMessageHandler" />.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.HttpMessageHandler">
+            <summary>
+                Gets or sets a custom <see cref="T:System.Net.Http.HttpMessageHandler" /> to be used for the requests. It is not
+                disposed by B1SLayer.
+            </summary>
+            <remarks>
+                Certificate validation and redirects are then up to the provided instance. It should
+                not follow redirects, as a redirect could otherwise take a client credential elsewhere.
+                Can not be combined with <see cref="P:B1SLayer.SLOidcClientOptions.HttpClient" />.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.ValidateServerCertificate">
+            <summary>
+                Gets or sets whether the server certificate is validated. The default value is true, as client credentials
+                and tokens are at stake (RFC 6749 section 10.9, RFC 9700) and the discovery is only as trustworthy as the SLD
+                connection.
+            </summary>
+            <remarks>
+                Set to false as an explicit opt-out for landscapes with self-signed certificates, or preferably use
+                <see cref="P:B1SLayer.SLOidcClientOptions.ServerCertificateValidationCallback" /> to pin the certificate. Only applied when B1SLayer creates its
+                own
+                handler, that is, when neither <see cref="P:B1SLayer.SLOidcClientOptions.HttpClient" /> nor <see cref="P:B1SLayer.SLOidcClientOptions.HttpMessageHandler" /> is provided.
+            </remarks>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.ServerCertificateValidationCallback">
+            <summary>
+                Gets or sets a callback that custom-validates the server certificate, enabling scenarios like pinning the
+                certificate
+                of the SLD and the authentication server without trusting them machine-wide. When set, it takes precedence over
+                <see cref="P:B1SLayer.SLOidcClientOptions.ValidateServerCertificate" />. Can not be combined with <see cref="P:B1SLayer.SLOidcClientOptions.HttpClient" /> or
+                <see cref="P:B1SLayer.SLOidcClientOptions.HttpMessageHandler" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.AllowInsecureHttp">
+            <summary>
+                Gets or sets whether HTTP is allowed for the SLD, the issuer and its endpoints. The default value
+                is false, as OAuth requires TLS (RFC 6749 section 3.2). Only meant for testing.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.RequestTimeout">
+            <summary>
+                Gets or sets the timeout for each request. The default value is 30 seconds.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLOidcClientOptions.ProviderMetadataLifetime">
+            <summary>
+                Gets or sets how long the discovered provider metadata is reused before being discovered again. The default value
+                is 1 hour, and it can't be negative or longer than 10 years. Zero discovers the metadata again on every use.
+            </summary>
+            <remarks>
+                When discovering it again fails because the SLD or the provider is unavailable, the previous metadata
+                keeps being used, so an SLD restart doesn't stop token renewals. Invalid metadata is never accepted.
+            </remarks>
+        </member>
         <member name="T:B1SLayer.SLRequest">
             <summary>
                 Represents a request to the Service Layer, configured through its fluent methods
-                and executed through one of its HTTP methods (e.g. <see cref="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean,System.Threading.CancellationToken)" />, <see cref="M:B1SLayer.SLRequest.PostAsync(System.Object,System.Threading.CancellationToken)" />).
+                and executed through one of its HTTP methods (e.g. <see cref="M:B1SLayer.SLRequest.GetAsync``1(System.Boolean,System.Threading.CancellationToken)" />,
+                <see cref="M:B1SLayer.SLRequest.PostAsync(System.Object,System.Threading.CancellationToken)" />).
             </summary>
         </member>
         <member name="P:B1SLayer.SLRequest.Resource">
@@ -1642,7 +2926,8 @@
         </member>
         <member name="P:B1SLayer.SLRequest.SerializerOptions">
             <summary>
-                The serializer options for this request, or null to use the connection's <see cref="P:B1SLayer.SLConnection.JsonSerializerOptions" />.
+                The serializer options for this request, or null to use the connection's
+                <see cref="P:B1SLayer.SLConnection.JsonSerializerOptions" />.
             </summary>
         </member>
         <member name="P:B1SLayer.SLRequest.EffectiveSerializerOptions">
@@ -1725,6 +3010,14 @@
                 On success, <see cref="F:System.Net.HttpStatusCode.NoContent" /> is returned, instead of <see cref="F:System.Net.HttpStatusCode.Created" />.
             </remarks>
         </member>
+        <member name="M:B1SLayer.SLRequest.WithETag(System.String)">
+            <summary>
+                Configures an update or delete request to use the supplied ETag for optimistic concurrency control.
+            </summary>
+            <param name="etag">
+                The ETag returned by a previous Service Layer request, such as through <see cref="M:B1SLayer.SLRequest.GetWithETagAsync``1(System.Boolean,System.Threading.CancellationToken)" />.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLRequest.WithHeader(System.String,System.Object)">
             <summary>
                 Adds a custom request header to be sent. A null value removes the header.
@@ -1738,7 +3031,8 @@
         </member>
         <member name="M:B1SLayer.SLRequest.AllowHttpStatus(System.Net.HttpStatusCode[])">
             <summary>
-                Configures the request to not throw an exception when the response has any of the provided <see cref="T:System.Net.HttpStatusCode" />.
+                Configures the request to not throw an exception when the response has any of the provided
+                <see cref="T:System.Net.HttpStatusCode" />.
             </summary>
             <remarks>
                 By default, every response with an unsuccessful <see cref="T:System.Net.HttpStatusCode" /> (non-2XX) will result in a throw.
@@ -1796,9 +3090,29 @@
                 A token to cancel the asynchronous operation.
             </param>
         </member>
+        <member name="M:B1SLayer.SLRequest.GetWithETagAsync``1(System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+                Performs a GET request with the provided parameters and returns the result in a value tuple containing the
+                deserialized result and the ETag returned by the Service Layer.
+            </summary>
+            <remarks>
+                The returned ETag can be supplied to <see cref="M:B1SLayer.SLRequest.WithETag(System.String)" /> on a subsequent update or delete request for
+                optimistic concurrency control.
+            </remarks>
+            <typeparam name="T">
+                The object type for the result to be deserialized into.
+            </typeparam>
+            <param name="unwrapCollection">
+                Whether the result should be unwrapped from the 'value' JSON array in case it is a collection.
+            </param>
+            <param name="cancellationToken">
+                A token to cancel the asynchronous operation.
+            </param>
+        </member>
         <member name="M:B1SLayer.SLRequest.GetWithInlineCountAsync``1(System.Boolean,System.Threading.CancellationToken)">
             <summary>
-                Performs a GET request with the provided parameters and returns the result in a value tuple containing the deserialized result and the count of matching resources.
+                Performs a GET request with the provided parameters and returns the result in a value tuple containing the
+                deserialized result and the count of matching resources.
             </summary>
             <typeparam name="T">
                 The object type for the result to be deserialized into.
@@ -1812,7 +3126,8 @@
         </member>
         <member name="M:B1SLayer.SLRequest.GetAllAsync``1(System.Threading.CancellationToken)">
             <summary>
-                Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped from the 'value' array.
+                Performs multiple GET requests until all entities in a collection are obtained. The result will always be unwrapped
+                from the 'value' array.
             </summary>
             <remarks>
                 This can be very slow depending on the total amount of entities in the company database.
@@ -1837,7 +3152,8 @@
         </member>
         <member name="M:B1SLayer.SLRequest.GetAnonymousTypeAsync``1(``0,System.Text.Json.JsonSerializerOptions,System.Threading.CancellationToken)">
             <summary>
-                Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous type.
+                Performs a GET request with the provided parameters and returns the result in an instance of the given anonymous
+                type.
             </summary>
             <param name="anonymousTypeObject">
                 The anonymous type object.
@@ -2081,6 +3397,10 @@
             <summary>
                 Builds the request URI from the connection root, resource, extra path segments and query parameters.
             </summary>
+            <remarks>
+                A resource may carry its own query string (e.g. a composed OData query or a next link), which stays
+                after the path. A parameter set through the fluent methods replaces the one of the same name in it.
+            </remarks>
         </member>
         <member name="M:B1SLayer.SLRequest.BuildRequestMessage(System.Net.Http.HttpMethod,System.Net.Http.HttpContent,B1SLayer.SLCookieJar)">
             <summary>
@@ -2120,13 +3440,76 @@
                 so options like AllowTrailingCommas are honored before deserialization runs.
             </summary>
         </member>
+        <member name="T:B1SLayer.SLRequestIdentity">
+            <summary>
+                The identity a single request runs with: the connection's session (cookies obtained through a login),
+                a user's access token, or the session the browser already holds (see
+                <see cref="P:B1SLayer.SLConnectionOptions.UseAmbientSession" />).
+                The first two can be returned by <see cref="P:B1SLayer.SLConnectionOptions.IdentityResolver" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.Session">
+            <summary>
+                Gets the identity of the connection's session account, using its session cookies and logging in automatically when
+                needed.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.AmbientSession">
+            <summary>
+                The identity of a connection using <see cref="P:B1SLayer.SLConnectionOptions.UseAmbientSession" />. Internal, as it
+                is decided by the connection: a resolver choosing it would run a request under whatever the browser holds.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.IsSession">
+            <summary>
+                Gets whether requests with this identity run with the connection's session cookies.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.IsAmbientSession">
+            <summary>
+                Gets whether requests with this identity run with the session the browser already holds,
+                such as the one of the SAP Business One Web Client, with no credential managed by B1SLayer.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.CompanyId">
+            <summary>
+                Gets the SLD company ID sent in the X-b1-companyid header, or null for <see cref="P:B1SLayer.SLRequestIdentity.Session" />.
+            </summary>
+        </member>
+        <member name="P:B1SLayer.SLRequestIdentity.TokenSource">
+            <summary>
+                Gets the source of the access token, or null for <see cref="P:B1SLayer.SLRequestIdentity.Session" />.
+            </summary>
+        </member>
+        <member name="M:B1SLayer.SLRequestIdentity.FromTokenSource(B1SLayer.ISLAccessTokenSource,System.String)">
+            <summary>
+                Creates an identity that runs requests with the access tokens of the given source.
+            </summary>
+            <remarks>
+                Creating an identity is cheap, so one can be returned per resolver call. Keep the token source
+                itself per user, as that is what holds a cached token.
+            </remarks>
+            <param name="tokenSource">
+                The source of the access token.
+            </param>
+            <param name="companyId">
+                The company to access, as the SLD company ID (see <see cref="P:B1SLayer.SLCompanyBinding.CompanyId" />).
+                This is not the company database name.
+            </param>
+        </member>
+        <member name="M:B1SLayer.SLRequestIdentity.ToString">
+            <summary>
+                Returns a description of this identity, which never includes a token.
+            </summary>
+        </member>
         <member name="T:B1SLayer.SLTimeoutException">
             <summary>
                 Represents a Service Layer request that failed due to a timeout.
             </summary>
             <remarks>
                 The default request timeout is 100 seconds and can be configured through
-                <see cref="P:B1SLayer.SLConnectionOptions.DefaultRequestTimeout" /> or per request with <see cref="M:B1SLayer.SLRequest.WithTimeout(System.TimeSpan)" />.
+                <see cref="P:B1SLayer.SLConnectionOptions.DefaultRequestTimeout" /> or per request with
+                <see cref="M:B1SLayer.SLRequest.WithTimeout(System.TimeSpan)" />.
             </remarks>
         </member>
     </members>
